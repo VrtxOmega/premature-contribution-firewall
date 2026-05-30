@@ -1,0 +1,19 @@
+{
+  "kind": "pull_request",
+  "title": "Fix webhook signature rejection for valid GitHub payloads",
+  "body": "Fixes #42.\n\n## Problem\nValid GitHub webhook payloads were rejected when the signature header used uppercase hex.\n\n## Changes\nNormalize the digest comparison and keep timing-safe comparison.\n\n## Verification\n- npm test\n- Replayed a signed fixture before and after the fix\n\n## Risk\nLow. The change is isolated to webhook signature parsing.",
+  "authorAssociation": "CONTRIBUTOR",
+  "draft": false,
+  "changedFiles": 3,
+  "additions": 74,
+  "deletions": 18,
+  "files": [
+    { "filename": "src/github/webhook.mjs", "additions": 38, "deletions": 12 },
+    { "filename": "test/webhook.test.mjs", "additions": 31, "deletions": 2 },
+    { "filename": "README.md", "additions": 5, "deletions": 4 }
+  ],
+  "checks": [
+    { "name": "test", "conclusion": "success" }
+  ],
+  "contributingText": "Pull requests must include tests or explain why tests are not applicable."
+}

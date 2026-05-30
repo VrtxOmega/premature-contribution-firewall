@@ -1,0 +1,56 @@
+name: False Negative
+description: PCF treated risky, vague, broad, or unreviewable work as more ready than it was.
+title: "false-negative: "
+labels:
+  - false-negative
+  - feedback-candidate
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when PCF was too lenient. The goal is to preserve the breakage residue as a benchmark, red-test, or feedback candidate.
+  - type: input
+    id: pcf_status
+    attributes:
+      label: PCF Status
+      placeholder: ready-for-maintainer or needs-repair
+    validations:
+      required: true
+  - type: input
+    id: expected_status
+    attributes:
+      label: Expected Status
+      placeholder: needs-repair or low-review-value
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Why This Was Not Ready
+      description: Name the missing evidence, excessive scope, unsafe behavior, context miss, or maintainer attention risk.
+    validations:
+      required: true
+  - type: textarea
+    id: residue
+    attributes:
+      label: Breakage Residue
+      description: What exact input shape fooled the firewall?
+    validations:
+      required: true
+  - type: textarea
+    id: safe_payload
+    attributes:
+      label: Safe Original Payload Or Fixture
+      description: Paste sanitized payload or fixture data when available.
+      render: json
+    validations:
+      required: false
+  - type: checkboxes
+    id: candidate
+    attributes:
+      label: Regression Candidate
+      options:
+        - label: This should become a feedback candidate, benchmark case, or adversarial red-test case.
+          required: true
+        - label: I removed secrets, private repository data, and local runtime paths.
+          required: true

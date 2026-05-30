@@ -1,0 +1,36 @@
+{
+  "kind": "pull_request",
+  "profile": "standard",
+  "title": "update",
+  "body": "I changed the core evaluator because an AI tool suggested this would be better.",
+  "authorAssociation": "FIRST_TIME_CONTRIBUTOR",
+  "changedFiles": 1,
+  "additions": 28,
+  "deletions": 4,
+  "files": [
+    {
+      "filename": "src/core/evaluator.mjs",
+      "additions": 28,
+      "deletions": 4
+    }
+  ],
+  "checks": [],
+  "repositoryFiles": [
+    {
+      "path": "CONTRIBUTING.md",
+      "content": "Every pull request must link an issue, include tests or verification, and use a Signed-off-by line for DCO accountability."
+    },
+    {
+      "path": ".github/pull_request_template.md",
+      "content": "## Description\n## Linked issue\n## Tests\n## Risk\n\n- [ ] I ran the project test command."
+    },
+    {
+      "path": "CODEOWNERS",
+      "content": "/src/core/ @maintainers/core\n/test/ @maintainers/test"
+    },
+    {
+      "path": "package.json",
+      "content": "{\"scripts\":{\"test\":\"node --test\",\"check\":\"node --check src/core/evaluator.mjs\"}}"
+    }
+  ]
+}

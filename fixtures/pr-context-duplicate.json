@@ -1,0 +1,50 @@
+{
+  "kind": "pull_request",
+  "title": "webhook: include labels in dry-run response",
+  "body": "Fixes #41.\n\nProblem: dry-run webhook responses omit the labels that would be applied.\n\nChange: return the maintainer labels beside the comment preview.\n\nRisk: low because this changes dry-run JSON only.\n\nVerification: npm test passed locally. Expected labels are present; actual before omitted labels.",
+  "authorAssociation": "CONTRIBUTOR",
+  "changedFiles": 2,
+  "additions": 45,
+  "deletions": 8,
+  "files": [
+    { "filename": "src/github/templates.mjs", "additions": 25, "deletions": 4 },
+    { "filename": "test/webhook.test.mjs", "additions": 20, "deletions": 4 }
+  ],
+  "checks": [{ "name": "test", "conclusion": "success" }],
+  "repositoryContext": {
+    "repository": "VrtxOmega/premature-contribution-firewall",
+    "issues": [
+      {
+        "number": 41,
+        "title": "Dry-run webhook response should include would-apply labels",
+        "body": "The dry-run JSON response omits labels, so maintainers cannot preview label writes.",
+        "state": "open",
+        "labels": ["bug"],
+        "htmlUrl": "https://github.example/issues/41"
+      }
+    ],
+    "pullRequests": [
+      {
+        "number": 77,
+        "title": "webhook: expose dry-run label preview",
+        "body": "Adds label preview output to dry-run webhook responses.",
+        "state": "open",
+        "files": ["src/github/templates.mjs"],
+        "htmlUrl": "https://github.example/pull/77"
+      }
+    ],
+    "upstream": {
+      "repository": "upstream/premature-contribution-firewall",
+      "pullRequests": [
+        {
+          "number": 300,
+          "title": "webhook: include dry-run labels in response",
+          "body": "Merged fix for dry-run labels.",
+          "state": "merged",
+          "files": ["src/github/templates.mjs"],
+          "htmlUrl": "https://github.example/upstream/pull/300"
+        }
+      ]
+    }
+  }
+}

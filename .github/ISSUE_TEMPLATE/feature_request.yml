@@ -1,0 +1,46 @@
+name: Feature Request
+description: Propose a focused maintainer workflow improvement.
+title: "feature: "
+labels:
+  - enhancement
+  - needs-design
+body:
+  - type: textarea
+    id: maintainer_problem
+    attributes:
+      label: Maintainer Problem
+      description: What maintainer burden does this reduce?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_change
+    attributes:
+      label: Proposed Change
+      description: Describe the smallest useful behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence Or Example
+      description: Include sample inputs, workflow screenshots, API shape, or benchmark ideas.
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-Goals
+      description: What should this feature deliberately avoid?
+    validations:
+      required: true
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Guardrails
+      options:
+        - label: This feature does not depend on AI-authorship detection.
+          required: true
+        - label: This feature can be verified with tests, benchmark cases, red-tests, or demo output.
+          required: true
+        - label: This feature does not require GitHub writes by default.
+          required: true

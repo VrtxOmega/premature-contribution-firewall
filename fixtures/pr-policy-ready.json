@@ -1,0 +1,46 @@
+{
+  "kind": "pull_request",
+  "profile": "standard",
+  "title": "core: enforce webhook payload size limit",
+  "body": "## Description\nFixes #42.\n\nProblem: oversized webhook bodies could keep the local review server busy before signature handling completed. This change rejects payloads above the documented limit and keeps the error path explicit for maintainers.\n\n## Linked issue\nFixes #42.\n\n## Tests\nVerification: npm test passed locally and covered the oversized-payload path.\n\n## Risk\nRisk is low because the limit already existed in the request reader; this only makes the policy visible and tested.\n\nSigned-off-by: Jane Maintainer <jane@example.org>",
+  "authorAssociation": "CONTRIBUTOR",
+  "changedFiles": 2,
+  "additions": 48,
+  "deletions": 12,
+  "files": [
+    {
+      "filename": "src/core/evaluator.mjs",
+      "additions": 30,
+      "deletions": 8
+    },
+    {
+      "filename": "test/evaluator.test.mjs",
+      "additions": 18,
+      "deletions": 4
+    }
+  ],
+  "checks": [
+    {
+      "name": "node-test",
+      "conclusion": "success"
+    }
+  ],
+  "repositoryFiles": [
+    {
+      "path": "CONTRIBUTING.md",
+      "content": "Every pull request must link an issue, include tests or verification, and use a Signed-off-by line for DCO accountability."
+    },
+    {
+      "path": ".github/pull_request_template.md",
+      "content": "## Description\n## Linked issue\n## Tests\n## Risk\n\n- [ ] I ran the project test command."
+    },
+    {
+      "path": "CODEOWNERS",
+      "content": "/src/core/ @maintainers/core\n/test/ @maintainers/test"
+    },
+    {
+      "path": "package.json",
+      "content": "{\"scripts\":{\"test\":\"node --test\",\"check\":\"node --check src/core/evaluator.mjs\"}}"
+    }
+  ]
+}

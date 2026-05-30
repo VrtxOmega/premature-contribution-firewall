@@ -1,0 +1,16 @@
+{
+  "kind": "pull_request",
+  "title": "Fix stuff",
+  "body": "This improves the project using AI. Please merge.",
+  "authorAssociation": "FIRST_TIME_CONTRIBUTOR",
+  "draft": false,
+  "changedFiles": 34,
+  "additions": 1600,
+  "deletions": 900,
+  "files": [
+    { "filename": "src/server.js", "additions": 300, "deletions": 120, "patch": "+const token = '[REDACTED_GITHUB_TOKEN]';" },
+    { "filename": "package-lock.json", "additions": 900, "deletions": 600 },
+    { "filename": "docs/readme.md", "additions": 100, "deletions": 10 }
+  ],
+  "checks": []
+}

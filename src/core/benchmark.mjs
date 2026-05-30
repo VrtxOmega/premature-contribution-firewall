@@ -1,0 +1,917 @@
+import { evaluateContribution } from "./evaluator.mjs";
+import { parsePatchSubmission } from "./patch.mjs";
+
+const READY_CHECK = [{ name: "maintainer-check", conclusion: "success" }];
+const FAILED_CHECK = [{ name: "maintainer-check", conclusion: "failure" }];
+const EXAMPLE_GITHUB_TOKEN = ["ghp", "example_secret_should_not_ship"].join("_");
+
+export const BENCHMARK_VERSION = "2026.05.30";
+
+export const BENCHMARK_CASES = [
+  {
+    id: "standard-ready-pr",
+    category: "standard-pr",
+    name: "Ready PR with issue, tests, and small scope",
+    input: readyPr(),
+    expect: { status: "ready-for-maintainer", minScore: 90, labels: ["ready-for-maintainer"], absentLabels: ["needs-tests"] }
+  },
+  {
+    id: "standard-secret-broad-pr",
+    category: "standard-pr",
+    name: "Broad PR with obvious secret-like material",
+    input: unreadySecretPr(),
+    expect: { status: "low-review-value", maxScore: 40, labels: ["secrets-risk", "too-broad", "needs-tests"] }
+  },
+  {
+    id: "docs-only-ready-pr",
+    category: "standard-pr",
+    name: "Documentation-only PR with explicit verification",
+    input: docsOnlyPr(),
+    expect: { status: "ready-for-maintainer", minScore: 80, labels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "dependency-unexplained-pr",
+    category: "standard-pr",
+    name: "Dependency change without rationale",
+    input: dependencyPr({ justified: false }),
+    expect: { status: "needs-repair", labels: ["dependency-review"] }
+  },
+  {
+    id: "dependency-justified-pr",
+    category: "standard-pr",
+    name: "Dependency change with security rationale",
+    input: dependencyPr({ justified: true }),
+    expect: { status: "ready-for-maintainer", minScore: 80, absentLabels: ["dependency-review"] }
+  },
+  {
+    id: "draft-pr",
+    category: "standard-pr",
+    name: "Draft PR should not request review yet",
+    input: { ...readyPr(), draft: true },
+    expect: { status: "needs-repair", labels: ["draft-pr"] }
+  },
+  {
+    id: "ci-failed-pr",
+    category: "standard-pr",
+    name: "Otherwise good PR with failing CI",
+    input: { ...readyPr(), checks: FAILED_CHECK },
+    expect: { status: "needs-repair", labels: ["ci-failed"] }
+  },
+  {
+    id: "ci-missing-pr",
+    category: "standard-pr",
+    name: "Otherwise good PR with no CI signal",
+    input: { ...readyPr(), checks: [] },
+    expect: { status: "needs-repair", labels: ["ci-missing"] }
+  },
+  {
+    id: "mega-diff-pr",
+    category: "standard-pr",
+    name: "Huge unfocused diff",
+    input: megaDiffPr(),
+    expect: { status: "low-review-value", labels: ["too-broad"], maxScore: 80 }
+  },
+  {
+    id: "ai-assisted-verified-pr",
+    category: "tool-use",
+    name: "AI-assisted PR with human verification",
+    input: aiAssistedPr({ verified: true }),
+    expect: { status: "ready-for-maintainer", absentLabels: ["needs-human-verification"] }
+  },
+  {
+    id: "ai-tool-only-pr",
+    category: "tool-use",
+    name: "Tool-only PR with no human verification",
+    input: aiAssistedPr({ verified: false }),
+    expect: { status: "low-review-value", labels: ["needs-human-verification", "needs-tests"] }
+  },
+  {
+    id: "ready-issue",
+    category: "issue",
+    name: "Ready issue with reproducer and logs",
+    input: readyIssue(),
+    expect: { status: "ready-for-maintainer", minScore: 80, labels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "unready-issue",
+    category: "issue",
+    name: "Vague issue with no reproducer",
+    input: unreadyIssue(),
+    expect: { status: "low-review-value", labels: ["needs-reproducer", "needs-real-evidence"] }
+  },
+  {
+    id: "security-no-reproducer-issue",
+    category: "issue",
+    name: "Security claim without reproducer",
+    input: securityIssue({ reproducible: false }),
+    expect: { status: "low-review-value", labels: ["security-claim-needs-reproducer", "needs-reproducer"] }
+  },
+  {
+    id: "security-reproducer-issue",
+    category: "issue",
+    name: "Security-flavored report with concrete reproducer",
+    input: securityIssue({ reproducible: true }),
+    expect: { status: "ready-for-maintainer", absentLabels: ["security-claim-needs-reproducer"] }
+  },
+  {
+    id: "issue-missing-duplicate-search",
+    category: "issue",
+    name: "Issue has reproducer but skips duplicate search",
+    input: issueWithoutDuplicateSearch(),
+    expect: { status: "needs-repair", labels: ["duplicate-search-needed"] }
+  },
+  {
+    id: "policy-ready-pr",
+    category: "repo-policy",
+    name: "Repository policy satisfied",
+    input: policyPr({ ready: true }),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], policy: true }
+  },
+  {
+    id: "policy-unready-pr",
+    category: "repo-policy",
+    name: "Repository policy ignored",
+    input: policyPr({ ready: false }),
+    expect: { status: "low-review-value", labels: ["policy-failed", "needs-project-test-command"], policy: true }
+  },
+  {
+    id: "policy-codeowners-route",
+    category: "repo-policy",
+    name: "CODEOWNERS route is discovered",
+    input: policyPr({ ready: true, ownerRouteOnly: true }),
+    expect: { status: "ready-for-maintainer", policy: true, ownerMatches: 1 }
+  },
+  {
+    id: "repo-context-similar-open-issue",
+    category: "repo-context",
+    name: "Similar open issue is surfaced before duplicate triage",
+    input: repoContextPr({ mode: "similar-open" }),
+    expect: { status: "needs-repair", labels: ["possibly-duplicate"], repoContext: true, contextFindings: 1 }
+  },
+  {
+    id: "repo-context-concurrent-pr",
+    category: "repo-context",
+    name: "Concurrent pull request overlaps touched files",
+    input: repoContextPr({ mode: "concurrent-pr" }),
+    expect: { status: "needs-repair", labels: ["concurrent-work"], repoContext: true, contextFindings: 1 }
+  },
+  {
+    id: "repo-context-upstream-fixed",
+    category: "repo-context",
+    name: "Upstream already fixed similar work",
+    input: repoContextPr({ mode: "upstream-fixed" }),
+    expect: { status: "needs-repair", labels: ["possibly-upstream-fixed"], repoContext: true, contextFindings: 1 }
+  },
+  {
+    id: "kernel-ready-pr",
+    category: "kernel-grade",
+    name: "Kernel-grade GitHub PR passes strict checks",
+    input: kernelPr({ ready: true }),
+    expect: { status: "ready-for-maintainer", profile: "kernel-grade", minScore: 90, labels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "kernel-missing-signoff",
+    category: "kernel-grade",
+    name: "Kernel-grade PR without DCO sign-off",
+    input: kernelPr({ ready: false, missingSignoff: true }),
+    expect: { status: "low-review-value", profile: "kernel-grade", labels: ["needs-dco-signoff"] }
+  },
+  {
+    id: "kernel-missing-fixes",
+    category: "kernel-grade",
+    name: "Bug fix without Fixes tag",
+    input: kernelPr({ ready: true, missingFixes: true }),
+    expect: { status: "needs-repair", profile: "kernel-grade", labels: ["needs-fixes-tag"] }
+  },
+  {
+    id: "kernel-stable-too-large",
+    category: "kernel-grade",
+    name: "Stable request is too large",
+    input: kernelPr({ ready: true, stableTooLarge: true }),
+    expect: { status: "low-review-value", profile: "kernel-grade", labels: ["stable-discipline-failed"] }
+  },
+  {
+    id: "kernel-tool-provenance-good",
+    category: "kernel-grade",
+    name: "Tool use disclosed with Assisted-by and human sign-off",
+    input: kernelPr({ ready: true, toolAssisted: true }),
+    expect: { status: "ready-for-maintainer", profile: "kernel-grade", absentLabels: ["needs-tool-provenance"] }
+  },
+  {
+    id: "kernel-tool-provenance-bad",
+    category: "kernel-grade",
+    name: "Tool-generated patch without provenance",
+    input: kernelPr({ ready: false, badToolProvenance: true }),
+    expect: { status: "low-review-value", profile: "kernel-grade", labels: ["needs-tool-provenance", "needs-dco-signoff"] }
+  },
+  {
+    id: "kernel-policy-maintainer-route",
+    category: "kernel-grade",
+    name: "Kernel-grade PR gets maintainer route from policy files",
+    input: kernelPr({ ready: true, policyRoute: true, omitCc: true }),
+    expect: { status: "ready-for-maintainer", profile: "kernel-grade", ownerMatches: 1, absentLabels: ["needs-maintainer-targeting"] }
+  },
+  {
+    id: "patch-ready-single",
+    category: "patch-series",
+    name: "Ready single patch from format-patch text",
+    patchText: readyPatch(),
+    expect: { status: "ready-for-maintainer", profile: "kernel-grade", patchCount: 1, minScore: 90 }
+  },
+  {
+    id: "patch-unready-single",
+    category: "patch-series",
+    name: "Unready patch with no sign-off or evidence",
+    patchText: unreadyPatch(),
+    expect: { status: "low-review-value", profile: "kernel-grade", patchCount: 1, labels: ["needs-dco-signoff", "needs-tool-provenance"] }
+  },
+  {
+    id: "patch-two-part-series",
+    category: "patch-series",
+    name: "Two-patch series with cover letter",
+    patchText: twoPatchSeries(),
+    expect: { status: "ready-for-maintainer", profile: "kernel-grade", patchCount: 2, minScore: 80 }
+  },
+  {
+    id: "patch-secret-leak",
+    category: "patch-series",
+    name: "Patch text leaks a fake token",
+    patchText: secretPatch(),
+    expect: { status: "low-review-value", profile: "kernel-grade", labels: ["secrets-risk"] }
+  },
+  {
+    id: "first-timer-drive-by",
+    category: "review-budget",
+    name: "First-time contributor with broad unreviewed change",
+    input: firstTimerDriveBy(),
+    expect: { status: "needs-repair", labels: ["maintainer-attention-risk"] }
+  },
+  {
+    id: "review-budget-excessive",
+    category: "review-budget",
+    name: "Excessive review budget",
+    input: reviewBudgetExcessive(),
+    expect: { status: "low-review-value", labels: ["review-budget-high"], profile: "kernel-grade" }
+  }
+];
+
+export function runBenchmark(options = {}) {
+  const started = performanceNow();
+  const cases = BENCHMARK_CASES.map((testCase) => runBenchmarkCase(testCase));
+  const durationMs = Math.round((performanceNow() - started) * 100) / 100;
+  const passed = cases.filter((item) => item.passed).length;
+  const failed = cases.length - passed;
+  return {
+    ok: failed === 0,
+    benchmark: {
+      name: "Premature Contribution Firewall Maintainer Benchmark",
+      version: BENCHMARK_VERSION,
+      total: cases.length,
+      passed,
+      failed,
+      durationMs,
+      categories: summarizeBy(cases, "category"),
+      statuses: summarizeBy(cases, "actualStatus")
+    },
+    cases: options.includeCases === false ? [] : cases
+  };
+}
+
+export function runBenchmarkCase(testCase) {
+  const input = testCase.patchText
+    ? parsePatchSubmission(testCase.patchText, {
+      profile: testCase.profile || "kernel-grade",
+      repositoryFiles: testCase.repositoryFiles || []
+    })
+    : deepClone(testCase.input);
+  const result = evaluateContribution(input, { profile: testCase.profile || input.profile });
+  const failures = compareExpectation(testCase.expect || {}, result);
+
+  return {
+    id: testCase.id,
+    category: testCase.category,
+    name: testCase.name,
+    passed: failures.length === 0,
+    failures,
+    expected: publicExpectation(testCase.expect || {}),
+    actualStatus: result.status,
+    actualScore: result.score,
+    profile: result.profile.id,
+    labels: result.labels,
+    reviewBudget: result.reviewBudget,
+    policySummary: result.policyProfile?.summary || "none",
+    patchCount: result.patchSeries?.patchCount || 0
+  };
+}
+
+export function renderBenchmarkMarkdown(benchmarkResult = runBenchmark()) {
+  const summary = benchmarkResult.benchmark;
+  const rows = benchmarkResult.cases.map((item) => [
+    item.passed ? "PASS" : "FAIL",
+    item.category,
+    item.id,
+    item.expected.status || "n/a",
+    item.actualStatus,
+    String(item.actualScore),
+    item.labels.slice(0, 4).map((label) => `\`${label}\``).join(", ") || "none"
+  ]);
+  const categoryLines = Object.entries(summary.categories)
+    .map(([category, counts]) => `- ${category}: ${counts.passed}/${counts.total} passing`)
+    .join("\n");
+
+  return [
+    "# Premature Contribution Firewall Benchmark Results",
+    "",
+    "This is a deterministic local benchmark corpus for maintainer-review readiness. It is not an AI-authorship detector and it does not claim real-world precision over private maintainer decisions.",
+    "",
+    "## Summary",
+    "",
+    `- Version: ${summary.version}`,
+    `- Cases: ${summary.passed}/${summary.total} passing`,
+    "- Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine",
+    "",
+    "## Categories",
+    "",
+    categoryLines,
+    "",
+    "## Cases",
+    "",
+    "| Result | Category | Case | Expected | Actual | Score | Labels |",
+    "| --- | --- | --- | --- | --- | ---: | --- |",
+    ...rows.map((row) => `| ${row.join(" | ")} |`),
+    ""
+  ].join("\n");
+}
+
+function compareExpectation(expect, result) {
+  const failures = [];
+  if (expect.status && result.status !== expect.status) failures.push(`status expected ${expect.status}, got ${result.status}`);
+  if (expect.profile && result.profile.id !== expect.profile) failures.push(`profile expected ${expect.profile}, got ${result.profile.id}`);
+  if (Number.isFinite(expect.minScore) && result.score < expect.minScore) failures.push(`score expected >= ${expect.minScore}, got ${result.score}`);
+  if (Number.isFinite(expect.maxScore) && result.score > expect.maxScore) failures.push(`score expected <= ${expect.maxScore}, got ${result.score}`);
+  for (const label of expect.labels || []) {
+    if (!result.labels.includes(label)) failures.push(`missing label ${label}`);
+  }
+  for (const label of expect.absentLabels || []) {
+    if (result.labels.includes(label)) failures.push(`unexpected label ${label}`);
+  }
+  if (expect.policy === true && !result.policyProfile?.hasPolicy) failures.push("expected policyProfile.hasPolicy");
+  if (expect.repoContext === true && !result.repositoryContext?.hasContext) failures.push("expected repositoryContext.hasContext");
+  if (Number.isFinite(expect.contextFindings) && (result.repositoryContext?.findings?.length || 0) < expect.contextFindings) {
+    failures.push(`expected at least ${expect.contextFindings} repository context finding(s)`);
+  }
+  if (Number.isFinite(expect.ownerMatches) && (result.policyProfile?.ownerMatches?.length || 0) < expect.ownerMatches) {
+    failures.push(`expected at least ${expect.ownerMatches} owner match(es)`);
+  }
+  if (Number.isFinite(expect.patchCount) && (result.patchSeries?.patchCount || 0) !== expect.patchCount) {
+    failures.push(`patch count expected ${expect.patchCount}, got ${result.patchSeries?.patchCount || 0}`);
+  }
+  return failures;
+}
+
+function publicExpectation(expect) {
+  return {
+    status: expect.status || "",
+    profile: expect.profile || "",
+    minScore: expect.minScore ?? null,
+    maxScore: expect.maxScore ?? null,
+    labels: expect.labels || [],
+    absentLabels: expect.absentLabels || [],
+    policy: Boolean(expect.policy),
+    repoContext: Boolean(expect.repoContext),
+    contextFindings: expect.contextFindings ?? null,
+    ownerMatches: expect.ownerMatches ?? null,
+    patchCount: expect.patchCount ?? null
+  };
+}
+
+function summarizeBy(cases, key) {
+  return cases.reduce((acc, item) => {
+    const group = item[key] || "unknown";
+    const current = acc[group] || { total: 0, passed: 0, failed: 0 };
+    current.total += 1;
+    if (item.passed) current.passed += 1;
+    else current.failed += 1;
+    acc[group] = current;
+    return acc;
+  }, {});
+}
+
+function readyPr() {
+  return {
+    kind: "pull_request",
+    title: "webhook: reject oversized payload bodies",
+    body: [
+      "Fixes #42.",
+      "",
+      "Problem: oversized webhook bodies could keep the local review server busy before signature handling completed.",
+      "Change: reject payloads above the documented limit and return a clear error to the caller.",
+      "Risk: low, because the limit already exists and this change only makes the failure path explicit.",
+      "Verification: npm test passed locally and covered the oversized-payload path."
+    ].join("\n"),
+    authorAssociation: "CONTRIBUTOR",
+    changedFiles: 2,
+    additions: 48,
+    deletions: 12,
+    files: [
+      { filename: "src/server.mjs", additions: 30, deletions: 8 },
+      { filename: "test/webhook.test.mjs", additions: 18, deletions: 4 }
+    ],
+    checks: READY_CHECK
+  };
+}
+
+function unreadySecretPr() {
+  return {
+    kind: "pull_request",
+    title: "fix stuff",
+    body: "Generated by an AI tool. It should fix lots of things.",
+    authorAssociation: "FIRST_TIME_CONTRIBUTOR",
+    changedFiles: 41,
+    additions: 1800,
+    deletions: 620,
+    files: [
+      { filename: "src/server.mjs", additions: 900, deletions: 300, patch: `+const token = '${EXAMPLE_GITHUB_TOKEN}';` },
+      { filename: "package-lock.json", additions: 900, deletions: 320 }
+    ],
+    checks: []
+  };
+}
+
+function docsOnlyPr() {
+  return {
+    kind: "pull_request",
+    title: "docs: clarify webhook dry-run setup",
+    body: [
+      "Fixes #17.",
+      "",
+      "Problem: maintainers could not tell which environment variables keep GitHub writes disabled.",
+      "Change: document the dry-run setup, labels, and expected local API smoke test.",
+      "Risk: none for runtime behavior because this touches documentation only.",
+      "Verification: manually checked the rendered Markdown and confirmed no code paths changed."
+    ].join("\n"),
+    changedFiles: 1,
+    additions: 25,
+    deletions: 3,
+    files: [{ filename: "docs/webhook.md", additions: 25, deletions: 3 }],
+    checks: READY_CHECK
+  };
+}
+
+function dependencyPr({ justified }) {
+  const body = [
+    "Fixes #51.",
+    "",
+    "Problem: webhook signature tests should run on the current test harness.",
+    justified ? "Change: updates package metadata and keeps the test script aligned with Node." : "Change: updates generated metadata and keeps the test script aligned with Node.",
+    justified ? "Dependency rationale: security update for the package metadata path; no runtime dependency is introduced." : "Change was generated from automated output without a maintainer-facing reason.",
+    justified ? "Risk: low because the lockfile diff is constrained." : "Risk: not explained.",
+    "Verification: npm test passed locally."
+  ].join("\n");
+  return {
+    ...readyPr(),
+    title: "deps: update test harness metadata",
+    body,
+    changedFiles: 2,
+    additions: 120,
+    deletions: 90,
+    files: [
+      { filename: "package.json", additions: 5, deletions: 2 },
+      { filename: "package-lock.json", additions: 115, deletions: 88 }
+    ]
+  };
+}
+
+function megaDiffPr() {
+  return {
+    ...readyPr(),
+    title: "app: rewrite maintainer workflow",
+    changedFiles: 55,
+    additions: 3200,
+    deletions: 2100,
+    files: [{ filename: "src/everything.mjs", additions: 3200, deletions: 2100 }]
+  };
+}
+
+function aiAssistedPr({ verified }) {
+  return {
+    ...readyPr(),
+    title: "parser: handle repeated patch trailers",
+    body: verified
+      ? [
+        "Fixes #68.",
+        "",
+        "Problem: repeated trailers in patch text were collapsed in the parser.",
+        "Change: preserve repeated trailer keys while keeping the output deterministic.",
+        "AI disclosure: Claude suggested the initial parser shape, but I reviewed the diff, rewrote the edge-case handling, and verified it locally.",
+        "Risk: low because output remains additive.",
+        "Verification: npm test passed locally and I manually checked before/after parser output."
+      ].join("\n")
+      : "ChatGPT generated this parser update. It should work.",
+    files: verified
+      ? [{ filename: "src/core/patch.mjs", additions: 44, deletions: 9 }, { filename: "test/patch.test.mjs", additions: 30, deletions: 0 }]
+      : [{ filename: "src/core/patch.mjs", additions: 44, deletions: 9 }],
+    checks: verified ? READY_CHECK : []
+  };
+}
+
+function readyIssue() {
+  return {
+    kind: "issue",
+    title: "Webhook dry-run response omits would-post labels",
+    body: [
+      "Steps to reproduce:",
+      "1. Start the server on current main.",
+      "2. Send a pull_request webhook with PCF_DRY_RUN=true.",
+      "3. Inspect the JSON response.",
+      "",
+      "Expected: response includes the labels that would be applied.",
+      "Actual: response includes the comment but omits labels.",
+      "",
+      "Environment: commit abc1234 on Node 22, Linux x86_64.",
+      "Logs:",
+      "```",
+      "webhook status=200 event=pull_request dryRun=true",
+      "```",
+      "Duplicate search: searched existing issues and current main; not a duplicate.",
+      "Root cause: formatWebhookDryRun returns only the comment body."
+    ].join("\n")
+  };
+}
+
+function unreadyIssue() {
+  return {
+    kind: "issue",
+    title: "bug",
+    body: "AI says there is a vulnerability. Please fix."
+  };
+}
+
+function securityIssue({ reproducible }) {
+  if (!reproducible) {
+    return {
+      kind: "issue",
+      title: "Possible security vulnerability",
+      body: "A scanner says this may be an RCE security vulnerability. I do not have logs or steps."
+    };
+  }
+  return {
+    kind: "issue",
+    title: "Webhook parser accepts unsigned payload in dry-run mode",
+    body: [
+      "Steps to reproduce:",
+      "1. Configure PCF_WEBHOOK_SECRET=test.",
+      "2. Send a webhook with an invalid signature.",
+      "3. Compare response before and after the check.",
+      "",
+      "Expected: the request is rejected with 401.",
+      "Actual: the old branch accepted the request.",
+      "",
+      "Environment: current main, Node 22, Linux x86_64.",
+      "Logs:",
+      "```",
+      "signature mismatch",
+      "```",
+      "Duplicate search: searched existing issues and current main; not a duplicate.",
+      "Root cause: signature verification returned skipped when a secret was configured."
+    ].join("\n")
+  };
+}
+
+function issueWithoutDuplicateSearch() {
+  return {
+    kind: "issue",
+    title: "Policy files are ignored for ready PRs",
+    body: [
+      "Steps to reproduce:",
+      "1. Add a CONTRIBUTING.md requiring npm test.",
+      "2. Submit a PR body with expected and actual behavior.",
+      "3. Run the evaluator.",
+      "",
+      "Expected: missing npm test evidence creates a repair item.",
+      "Actual: the submission passes without the project command.",
+      "",
+      "Environment: commit abc1234, Node 22.",
+      "Logs:",
+      "```",
+      "policyProfile.hasPolicy=true",
+      "```"
+    ].join("\n")
+  };
+}
+
+function policyPr({ ready, ownerRouteOnly = false }) {
+  return {
+    ...readyPr(),
+    title: ready ? "core: enforce repository policy checks" : "update",
+    body: ready
+      ? [
+        "## Description",
+        "Fixes #80.",
+        "Problem: repository-specific rules were invisible to the evaluator.",
+        "Change: load policy files and enforce required PR template sections.",
+        "",
+        "## Linked issue",
+        "Fixes #80.",
+        "",
+        "## Tests",
+        "Verification: npm test passed locally.",
+        "",
+        "## Risk",
+        "Risk is low because the checks only add repair guidance.",
+        "",
+        "Signed-off-by: Jane Maintainer <jane@example.org>"
+      ].join("\n")
+      : "I changed the evaluator because an AI tool suggested this would be better.",
+    files: [{ filename: "src/core/evaluator.mjs", additions: 48, deletions: 12 }],
+    checks: ready ? READY_CHECK : [],
+    repositoryFiles: [
+      { path: "CONTRIBUTING.md", content: "Every pull request must link an issue, include tests or verification, and use a Signed-off-by line for DCO accountability." },
+      { path: ".github/pull_request_template.md", content: "## Description\n## Linked issue\n## Tests\n## Risk\n\n- [ ] I ran the project test command." },
+      { path: "CODEOWNERS", content: "/src/core/ @maintainers/core\n/test/ @maintainers/test" },
+      { path: "package.json", content: "{\"scripts\":{\"test\":\"node --test\",\"check\":\"node --check src/core/evaluator.mjs\"}}" }
+    ],
+    authorAssociation: ownerRouteOnly ? "MEMBER" : "CONTRIBUTOR"
+  };
+}
+
+function repoContextPr({ mode }) {
+  const base = {
+    ...readyPr(),
+    title: "webhook: include labels in dry-run response",
+    body: [
+      "Fixes #41.",
+      "",
+      "Problem: dry-run webhook responses omit the labels that would be applied.",
+      "Change: return the maintainer labels beside the comment preview.",
+      "Risk: low because this changes dry-run JSON only.",
+      "Verification: npm test passed locally. Expected labels are present; actual before omitted labels."
+    ].join("\n"),
+    files: [
+      { filename: "src/github/templates.mjs", additions: 25, deletions: 4 },
+      { filename: "test/webhook.test.mjs", additions: 20, deletions: 4 }
+    ]
+  };
+
+  if (mode === "similar-open") {
+    return {
+      ...base,
+      repositoryContext: {
+        repository: "VrtxOmega/premature-contribution-firewall",
+        issues: [
+          {
+            number: 41,
+            title: "Dry-run webhook response should include would-apply labels",
+            body: "The dry-run JSON response omits labels, so maintainers cannot preview label writes.",
+            state: "open",
+            labels: ["bug"],
+            htmlUrl: "https://github.example/issues/41"
+          }
+        ]
+      }
+    };
+  }
+
+  if (mode === "concurrent-pr") {
+    return {
+      ...base,
+      repositoryContext: {
+        repository: "VrtxOmega/premature-contribution-firewall",
+        pullRequests: [
+          {
+            number: 77,
+            title: "webhook: expose dry-run label preview",
+            body: "Adds label preview output to dry-run webhook responses.",
+            state: "open",
+            files: ["src/github/templates.mjs"],
+            htmlUrl: "https://github.example/pull/77"
+          }
+        ]
+      }
+    };
+  }
+
+  return {
+    ...base,
+    repositoryContext: {
+      repository: "VrtxOmega/premature-contribution-firewall",
+      upstream: {
+        repository: "upstream/premature-contribution-firewall",
+        pullRequests: [
+          {
+            number: 300,
+            title: "webhook: include dry-run labels in response",
+            body: "Merged fix for dry-run labels.",
+            state: "merged",
+            files: ["src/github/templates.mjs"],
+            htmlUrl: "https://github.example/upstream/pull/300"
+          }
+        ]
+      }
+    }
+  };
+}
+
+function kernelPr({
+  ready,
+  missingSignoff = false,
+  missingFixes = false,
+  stableTooLarge = false,
+  toolAssisted = false,
+  badToolProvenance = false,
+  policyRoute = false,
+  omitCc = false
+}) {
+  const signoff = missingSignoff || badToolProvenance ? "" : "Signed-off-by: Jane Maintainer <jane@example.org>";
+  const fixes = missingFixes ? "" : "Fixes: 123456789abc (\"sched: add delayed rq clock update\")";
+  const cc = omitCc ? "" : "Cc: linux-kernel@vger.kernel.org";
+  const stable = stableTooLarge ? "Cc: stable@vger.kernel.org" : "";
+  const tool = toolAssisted
+    ? "Assisted-by: Claude:claude-code [parser suggestion only]\n"
+    : badToolProvenance
+      ? "AI generated this patch.\n"
+      : "";
+  return {
+    kind: "pull_request",
+    profile: "kernel-grade",
+    title: ready ? "sched: guard rq clock update against null rq" : "fix stuff",
+    body: [
+      "Problem: sched_update_rq_clock() can be reached from the CPU hotplug teardown path after the runqueue pointer has been cleared.",
+      "Reachability: reproduce by offlining a CPU while a debug build forces delayed clock updates through the teardown path.",
+      "Effect: the current code can panic with a null pointer dereference before CPU offline completes.",
+      "Correctness: returning early when rq is NULL is safe because there is no runqueue clock to update and normal scheduler paths still pass a valid rq.",
+      tool,
+      fixes,
+      stable,
+      cc,
+      "Reported-by: Example Reporter <reporter@example.org>",
+      signoff,
+      "",
+      "Verification: make x86_64_defconfig; make -j32; scripts/checkpatch.pl --strict; sparse C=1; boot tested on x86_64; kselftest sched."
+    ].filter((line) => line !== "").join("\n"),
+    authorAssociation: "CONTRIBUTOR",
+    changedFiles: stableTooLarge ? 12 : 1,
+    additions: stableTooLarge ? 900 : 3,
+    deletions: stableTooLarge ? 200 : 0,
+    files: [{ filename: "kernel/sched/core.c", additions: stableTooLarge ? 900 : 3, deletions: stableTooLarge ? 200 : 0 }],
+    checks: READY_CHECK,
+    repositoryFiles: policyRoute
+      ? [{ path: "CODEOWNERS", content: "/kernel/sched/ @kernel/sched-maintainers" }]
+      : []
+  };
+}
+
+function readyPatch() {
+  return `From 1111111111111111111111111111111111111111 Mon Sep 17 00:00:00 2001
+From: Jane Maintainer <jane@example.org>
+Date: Fri, 29 May 2026 12:00:00 -0500
+Subject: [PATCH 1/1] sched: guard rq clock update against null rq
+
+Problem: sched_update_rq_clock() can be reached from the hotplug teardown path after the runqueue pointer has already been cleared. A reproducer is to offline a CPU while a debug build is forcing the delayed clock update path.
+
+Effect: the current code can panic with a null pointer dereference before CPU offline completes.
+
+Correctness: return early when rq is NULL because there is no runqueue clock to update and the caller already treats teardown as best-effort.
+
+Fixes: 123456789abc ("sched: add delayed rq clock update")
+Cc: stable@vger.kernel.org
+Cc: linux-kernel@vger.kernel.org
+Signed-off-by: Jane Maintainer <jane@example.org>
+
+Verification: make x86_64_defconfig; make -j32; scripts/checkpatch.pl --strict; sparse C=1; boot tested on x86_64; kselftest sched.
+
+diff --git a/kernel/sched/core.c b/kernel/sched/core.c
+index 1111111..2222222 100644
+--- a/kernel/sched/core.c
++++ b/kernel/sched/core.c
+@@ -100,6 +100,9 @@ void sched_update_rq_clock(struct rq *rq)
+ {
++	if (!rq)
++		return;
++
+ rq->clock = sched_clock_cpu(cpu_of(rq));
+ }`;
+}
+
+function unreadyPatch() {
+  return `From 2222222222222222222222222222222222222222 Mon Sep 17 00:00:00 2001
+From: Patch Bot <bot@example.org>
+Date: Fri, 29 May 2026 12:05:00 -0500
+Subject: [PATCH] fix stuff
+
+AI generated this and it should fix a crash.
+
+diff --git a/kernel/sched/core.c b/kernel/sched/core.c
+index 1111111..3333333 100644
+--- a/kernel/sched/core.c
++++ b/kernel/sched/core.c
+@@ -100,6 +100,7 @@ void sched_update_rq_clock(struct rq *rq)
+ {
++	/* maybe fixes it */
+ rq->clock = sched_clock_cpu(cpu_of(rq));
+ }`;
+}
+
+function twoPatchSeries() {
+  return `From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jane Maintainer <jane@example.org>
+Subject: [PATCH 0/2] sched: harden rq clock teardown
+
+Cover letter: this patch series fixes a CPU hotplug teardown crash and adds a targeted selftest. Reproduce by offlining a CPU on a debug build while delayed rq clock updates are enabled.
+
+Verification: make x86_64_defconfig; make -j32; scripts/checkpatch.pl --strict; sparse C=1; boot tested on x86_64; kselftest sched.
+
+From 1111111111111111111111111111111111111111 Mon Sep 17 00:00:00 2001
+From: Jane Maintainer <jane@example.org>
+Subject: [PATCH 1/2] sched: guard rq clock update against null rq
+
+Problem: sched_update_rq_clock() can be reached from the CPU hotplug teardown path after the runqueue pointer has been cleared.
+Reachability: reproduce by offlining a CPU with delayed clock updates enabled.
+Effect: the current code can panic with a null pointer dereference.
+Correctness: returning early when rq is NULL is safe because there is no runqueue clock to update.
+
+Fixes: 123456789abc ("sched: add delayed rq clock update")
+Cc: linux-kernel@vger.kernel.org
+Signed-off-by: Jane Maintainer <jane@example.org>
+
+Verification: make x86_64_defconfig; make -j32; scripts/checkpatch.pl --strict; sparse C=1; boot tested on x86_64; kselftest sched.
+
+diff --git a/kernel/sched/core.c b/kernel/sched/core.c
+index 1111111..2222222 100644
+--- a/kernel/sched/core.c
++++ b/kernel/sched/core.c
+@@ -100,6 +100,8 @@ void sched_update_rq_clock(struct rq *rq)
+ {
++	if (!rq)
++		return;
+ rq->clock = sched_clock_cpu(cpu_of(rq));
+ }
+
+From 2222222222222222222222222222222222222222 Mon Sep 17 00:00:00 2001
+From: Jane Maintainer <jane@example.org>
+Subject: [PATCH 2/2] selftests: add sched rq clock teardown coverage
+
+Problem: the rq clock hotplug crash had no regression coverage.
+Reachability: the selftest exercises CPU offline and delayed rq clock paths.
+Effect: future regressions are caught before review.
+Correctness: the test fails before the fix and passes after it.
+
+Cc: linux-kernel@vger.kernel.org
+Signed-off-by: Jane Maintainer <jane@example.org>
+
+Verification: make x86_64_defconfig; make -j32; scripts/checkpatch.pl --strict; sparse C=1; boot tested on x86_64; kselftest sched.
+
+diff --git a/tools/testing/selftests/sched/rq_clock.sh b/tools/testing/selftests/sched/rq_clock.sh
+new file mode 100755
+index 0000000..4444444
+--- /dev/null
++++ b/tools/testing/selftests/sched/rq_clock.sh
+@@ -0,0 +1,3 @@
++#!/bin/sh
++echo rq-clock-hotplug
++exit 0`;
+}
+
+function secretPatch() {
+  return `${readyPatch()}
+
+diff --git a/scripts/leak.sh b/scripts/leak.sh
+new file mode 100644
+index 0000000..9999999
+--- /dev/null
++++ b/scripts/leak.sh
+@@ -0,0 +1 @@
++TOKEN="${EXAMPLE_GITHUB_TOKEN}"`;
+}
+
+function firstTimerDriveBy() {
+  return {
+    ...readyPr(),
+    title: "ui: reorganize all maintainer panels",
+    authorAssociation: "FIRST_TIME_CONTRIBUTOR",
+    changedFiles: 11,
+    additions: 520,
+    deletions: 90,
+    files: [{ filename: "public/app.js", additions: 520, deletions: 90 }],
+    checks: READY_CHECK
+  };
+}
+
+function reviewBudgetExcessive() {
+  return {
+    ...kernelPr({ ready: true }),
+    authorAssociation: "FIRST_TIME_CONTRIBUTOR",
+    changedFiles: 35,
+    additions: 2200,
+    deletions: 1500,
+    files: [{ filename: "kernel/sched/core.c", additions: 2200, deletions: 1500 }]
+  };
+}
+
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function performanceNow() {
+  return typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+}

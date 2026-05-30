@@ -1,0 +1,56 @@
+name: False Positive
+description: PCF blocked or slowed work that should have reached a maintainer.
+title: "false-positive: "
+labels:
+  - false-positive
+  - feedback-candidate
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when PCF was too harsh. The goal is a replayable candidate that prevents reviewable work from being over-blocked again.
+  - type: input
+    id: pcf_status
+    attributes:
+      label: PCF Status
+      placeholder: low-review-value or needs-repair
+    validations:
+      required: true
+  - type: input
+    id: expected_status
+    attributes:
+      label: Expected Status
+      placeholder: ready-for-maintainer
+    validations:
+      required: true
+  - type: textarea
+    id: contribution_summary
+    attributes:
+      label: Contribution Summary
+      description: Explain why the contribution was actually reviewable.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence That Should Have Counted
+      description: Include tests, reproducer, issue link, scope, owner routing, or context that PCF undervalued.
+    validations:
+      required: true
+  - type: textarea
+    id: safe_payload
+    attributes:
+      label: Safe Original Payload Or Fixture
+      description: Paste sanitized payload or fixture data if this should become a runnable feedback candidate.
+      render: json
+    validations:
+      required: false
+  - type: checkboxes
+    id: candidate
+    attributes:
+      label: Regression Candidate
+      options:
+        - label: This should become a feedback candidate or benchmark case.
+          required: true
+        - label: I removed secrets, private repository data, and local runtime paths.
+          required: true

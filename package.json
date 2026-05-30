@@ -1,0 +1,52 @@
+{
+  "name": "premature-contribution-firewall",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A GitHub-oriented maintainer firewall that gates inbound PRs and issues by review readiness instead of AI detection.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VrtxOmega/premature-contribution-firewall.git"
+  },
+  "bugs": {
+    "url": "https://github.com/VrtxOmega/premature-contribution-firewall/issues"
+  },
+  "homepage": "https://github.com/VrtxOmega/premature-contribution-firewall#readme",
+  "keywords": [
+    "github",
+    "maintainers",
+    "triage",
+    "pull-requests",
+    "issues",
+    "review-readiness",
+    "open-source",
+    "quality-gate"
+  ],
+  "scripts": {
+    "start": "node src/server.mjs",
+    "check": "node --check src/server.mjs && node --check src/cli.mjs && node --check src/config.mjs && node --check src/core/api.mjs && node --check src/core/adversary.mjs && node --check src/core/benchmark.mjs && node --check src/core/candidates.mjs && node --check src/core/evaluator.mjs && node --check src/core/feedback.mjs && node --check src/core/history.mjs && node --check src/core/policy.mjs && node --check src/core/patch.mjs && node --check src/core/queue.mjs && node --check src/core/repository-context.mjs && node --check src/core/setup.mjs && node --check src/github/client.mjs && node --check src/github/webhook.mjs && node --check src/github/templates.mjs && node --check scripts/run-adversary.mjs && node --check scripts/run-benchmark.mjs && node --check scripts/run-maintainer-demo.mjs && node --check scripts/verify-ci-workflow.mjs && node --check scripts/verify-repo-hygiene.mjs && node --check public/app.js",
+    "test": "node --test",
+    "test:all": "npm run check && npm test && npm run benchmark && npm run redtest",
+    "repo:verify": "node scripts/verify-repo-hygiene.mjs",
+    "ci:verify": "node scripts/verify-ci-workflow.mjs",
+    "ci:gates": "npm run repo:verify && npm run ci:verify && npm run check && npm test && npm run benchmark && npm run redtest && npm run demo:maintainer -- --fail-on-regression",
+    "benchmark": "node scripts/run-benchmark.mjs --fail-on-regression",
+    "benchmark:json": "node scripts/run-benchmark.mjs --format json",
+    "benchmark:markdown": "node scripts/run-benchmark.mjs --format markdown",
+    "benchmark:write": "node scripts/run-benchmark.mjs --format markdown --write docs/benchmark-results.md --fail-on-regression",
+    "redtest": "node scripts/run-adversary.mjs --fail-on-regression",
+    "redtest:json": "node scripts/run-adversary.mjs --format json",
+    "redtest:markdown": "node scripts/run-adversary.mjs --format markdown",
+    "redtest:write": "node scripts/run-adversary.mjs --format markdown --write docs/adversarial-red-team-results.md --fail-on-regression",
+    "demo:maintainer": "node scripts/run-maintainer-demo.mjs",
+    "demo:maintainer:json": "node scripts/run-maintainer-demo.mjs --format json",
+    "demo:maintainer:markdown": "node scripts/run-maintainer-demo.mjs --format markdown",
+    "demo:maintainer:write": "node scripts/run-maintainer-demo.mjs --format markdown --write docs/maintainer-demo-output.md --fail-on-regression",
+    "demo:pr": "node src/cli.mjs evaluate fixtures/pr-unready.json",
+    "demo:issue": "node src/cli.mjs evaluate fixtures/issue-unready.json",
+    "demo:kernel": "node src/cli.mjs evaluate fixtures/pr-kernel-ready.json --profile kernel-grade"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

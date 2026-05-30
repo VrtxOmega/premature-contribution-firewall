@@ -1,0 +1,62 @@
+name: Repository Context Miss
+description: PCF missed a duplicate, solved issue, concurrent PR, or upstream fix.
+title: "context-miss: "
+labels:
+  - context-miss
+  - repository-context
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when PCF failed to surface relevant repository or upstream context before maintainer triage.
+  - type: dropdown
+    id: miss_type
+    attributes:
+      label: Miss Type
+      options:
+        - Similar open issue
+        - Similar closed or solved issue
+        - Concurrent pull request
+        - Upstream fix
+        - Linked issue already closed
+        - Other repository context
+    validations:
+      required: true
+  - type: textarea
+    id: contribution
+    attributes:
+      label: Contribution Or Issue Under Review
+      description: Summarize the item PCF evaluated.
+    validations:
+      required: true
+  - type: textarea
+    id: missed_context
+    attributes:
+      label: Missed Context
+      description: Link or describe the relevant issue, PR, upstream fix, commit, or release.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected PCF Finding
+      placeholder: possibly-duplicate, possibly-solved, concurrent-work, possibly-upstream-fixed
+    validations:
+      required: true
+  - type: textarea
+    id: safe_context_payload
+    attributes:
+      label: Safe Repository Context Fixture
+      description: Paste sanitized `repositoryContext` data if available.
+      render: json
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: I removed secrets, private repository data, and local runtime paths.
+          required: true
+        - label: This report is about review-readiness context, not AI-authorship detection.
+          required: true

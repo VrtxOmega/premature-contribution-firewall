@@ -1,0 +1,81 @@
+name: PCF Verification
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pcf-verification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PCF_DRY_RUN: "true"
+  PCF_POST_COMMENTS: "false"
+  PCF_APPLY_LABELS: "false"
+  PCF_COLLECT_REPOSITORY_CONTEXT: "true"
+
+jobs:
+  proof-gates:
+    name: Proof Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --ignore-scripts --package-lock=false
+          fi
+
+      - name: Verify Workflow Contract
+        run: npm run ci:verify
+
+      - name: Verify Repository Hygiene
+        run: npm run repo:verify
+
+      - name: Syntax Check
+        run: npm run check
+
+      - name: Unit Tests
+        run: npm test
+
+      - name: Maintainer Benchmark
+        run: npm run benchmark
+
+      - name: Adversarial Red Test
+        run: npm run redtest
+
+      - name: Maintainer Demo Gate
+        run: npm run demo:maintainer -- --fail-on-regression
+
+      - name: Generate Proof Artifacts
+        run: |
+          npm run benchmark:write
+          npm run redtest:write
+          npm run demo:maintainer:write
+
+      - name: Upload Proof Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pcf-proof-artifacts
+          path: |
+            docs/benchmark-results.md
+            docs/adversarial-red-team-results.md
+            docs/maintainer-demo-output.md
+          if-no-files-found: error

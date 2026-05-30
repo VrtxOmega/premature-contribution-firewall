@@ -1,0 +1,43 @@
+From 1111111111111111111111111111111111111111 Mon Sep 17 00:00:00 2001
+From: Jane Maintainer <jane@example.org>
+Date: Fri, 29 May 2026 12:00:00 -0500
+Subject: [PATCH 1/1] sched: guard rq clock update against null rq
+
+Problem: sched_update_rq_clock() can be reached from the hotplug teardown
+path after the runqueue pointer has already been cleared. A reproducer is to
+offline a CPU while a debug build is forcing the teardown path through the
+delayed clock update.
+
+Effect: the current code can panic with a null pointer dereference before the
+CPU offline operation completes. The user-visible impact is a hard crash
+during CPU hotplug on affected debug configurations.
+
+Correctness: return early when rq is NULL because there is no runqueue clock to
+update and the caller already treats the teardown path as best-effort. This
+keeps normal scheduling paths unchanged and only avoids the invalid access.
+
+Fixes: 123456789abc ("sched: add delayed rq clock update")
+Cc: stable@vger.kernel.org
+Cc: linux-kernel@vger.kernel.org
+Reported-by: Example Reporter <reporter@example.org>
+Signed-off-by: Jane Maintainer <jane@example.org>
+
+Verification:
+- make x86_64_defconfig
+- make -j32
+- scripts/checkpatch.pl --strict
+- sparse C=1
+- boot tested on x86_64
+- kselftest sched
+
+diff --git a/kernel/sched/core.c b/kernel/sched/core.c
+index 1111111..2222222 100644
+--- a/kernel/sched/core.c
++++ b/kernel/sched/core.c
+@@ -100,6 +100,9 @@ void sched_update_rq_clock(struct rq *rq)
+ {
++	if (!rq)
++		return;
++
+ rq->clock = sched_clock_cpu(cpu_of(rq));
+ }

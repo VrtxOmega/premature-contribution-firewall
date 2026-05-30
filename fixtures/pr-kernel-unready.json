@@ -1,0 +1,17 @@
+{
+  "kind": "pull_request",
+  "profile": "kernel-grade",
+  "title": "AI fix bug",
+  "body": "ChatGPT found a possible race and generated this patch. It should improve things. Please merge quickly.",
+  "authorAssociation": "FIRST_TIME_CONTRIBUTOR",
+  "draft": false,
+  "changedFiles": 18,
+  "additions": 980,
+  "deletions": 420,
+  "files": [
+    { "filename": "drivers/net/foo/foo_rx.c", "additions": 300, "deletions": 120 },
+    { "filename": "drivers/net/foo/foo_tx.c", "additions": 260, "deletions": 90 },
+    { "filename": "include/linux/foo.h", "additions": 120, "deletions": 60 }
+  ],
+  "checks": []
+}

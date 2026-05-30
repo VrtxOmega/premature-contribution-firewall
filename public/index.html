@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Premature Contribution Firewall</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Maintainer firewall</p>
+          <h1>Premature Contribution Firewall</h1>
+        </div>
+        <div class="status-strip" aria-live="polite">
+          <span id="healthDot" class="dot"></span>
+          <span id="healthText">Checking server</span>
+        </div>
+      </header>
+
+      <section class="pilot-grid" aria-label="Pilot readiness">
+        <section class="panel setup-panel" aria-label="GitHub App setup">
+          <div class="panel-heading">
+            <div>
+              <h2>GitHub App Setup</h2>
+              <p>Dry-run and write-safety posture.</p>
+            </div>
+            <button type="button" id="testConnection">Test Connection</button>
+          </div>
+          <div id="setupSummary" class="setup-summary"></div>
+          <ul id="setupChecklist" class="plain-list"></ul>
+          <p id="setupWarnings" class="setup-warnings"></p>
+          <p id="connectionResult" class="connection-result" aria-live="polite"></p>
+        </section>
+
+        <section class="panel history-panel" aria-label="Queue history">
+          <div class="panel-heading">
+            <div>
+              <h2>Queue History</h2>
+              <p>Recent dry-run queue evidence.</p>
+            </div>
+            <button type="button" id="refreshHistory">Refresh</button>
+          </div>
+          <div id="historySummary" class="history-summary"></div>
+          <div id="historyList" class="history-list"></div>
+        </section>
+
+        <section class="panel feedback-panel" aria-label="Maintainer feedback">
+          <div class="panel-heading">
+            <div>
+              <h2>Feedback Intelligence</h2>
+              <p>Corrections become case files.</p>
+            </div>
+            <div class="queue-actions">
+              <button type="button" id="refreshFeedback">Refresh</button>
+              <button type="button" id="exportFeedback">Export</button>
+            </div>
+          </div>
+          <div id="feedbackSummary" class="feedback-summary"></div>
+          <div id="feedbackList" class="feedback-list"></div>
+          <div class="candidate-toolbar" aria-label="Feedback candidate actions">
+            <button type="button" id="applySelectedCandidates">Apply Selected</button>
+            <button type="button" id="replayCandidates">Replay Corpus</button>
+            <button type="button" id="exportCandidateEvidence">Export Evidence</button>
+            <button type="button" id="copyCandidateEvidence">Copy Evidence</button>
+            <button type="button" id="captureReplayBaseline">Capture Baseline</button>
+            <button type="button" id="compareReplayBaseline">Compare Replay</button>
+            <button type="button" id="copyReplayComparison">Copy Comparison</button>
+          </div>
+          <div id="candidateReview" class="candidate-review"></div>
+          <div id="candidateReplay" class="candidate-replay" aria-live="polite"></div>
+          <div id="candidateComparison" class="candidate-comparison" aria-live="polite"></div>
+          <pre id="candidateArtifact" class="candidate-artifact"></pre>
+          <pre id="feedbackExport" class="feedback-export"></pre>
+        </section>
+      </section>
+
+      <section class="panel queue-panel" aria-label="Maintainer queue">
+        <form id="queueForm" class="queue-form">
+          <div class="panel-heading">
+            <div>
+              <h2>Maintainer Queue</h2>
+              <p>Dry-run triage for open GitHub work.</p>
+            </div>
+            <div class="queue-actions">
+              <button type="button" id="demoQueue">Demo Queue</button>
+              <button class="primary" type="submit">Run Queue</button>
+            </div>
+          </div>
+
+          <div class="queue-fields">
+            <label>
+              <span>Owner</span>
+              <input id="queueOwner" name="queueOwner" autocomplete="off" placeholder="owner">
+            </label>
+            <label>
+              <span>Repo</span>
+              <input id="queueRepo" name="queueRepo" autocomplete="off" placeholder="repo">
+            </label>
+            <label>
+              <span>Upstream</span>
+              <input id="queueUpstream" name="queueUpstream" autocomplete="off" placeholder="owner/repo">
+            </label>
+            <label>
+              <span>Limit</span>
+              <input id="queueLimit" name="queueLimit" type="number" min="1" max="100" value="25">
+            </label>
+          </div>
+
+          <div class="queue-options">
+            <label class="check-row">
+              <input id="queuePulls" type="checkbox" checked>
+              <span>Pull requests</span>
+            </label>
+            <label class="check-row">
+              <input id="queueIssues" type="checkbox" checked>
+              <span>Issues</span>
+            </label>
+          </div>
+          <p id="queueError" class="error" role="alert"></p>
+        </form>
+
+        <div id="queueSummary" class="queue-summary" aria-live="polite"></div>
+
+        <div class="queue-filter" role="tablist" aria-label="Queue filters">
+          <button type="button" class="active" data-queue-filter="all">All</button>
+          <button type="button" data-queue-filter="ready-for-maintainer">Ready</button>
+          <button type="button" data-queue-filter="needs-repair">Repair</button>
+          <button type="button" data-queue-filter="low-review-value">Low Value</button>
+        </div>
+
+        <div id="queueList" class="queue-list"></div>
+
+        <details class="queue-markdown-block">
+          <summary>Queue Markdown</summary>
+          <pre id="queueMarkdown"></pre>
+        </details>
+      </section>
+
+      <section class="workspace" aria-label="Premature Contribution Firewall review workspace">
+        <form id="reviewForm" class="panel input-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Submission</h2>
+              <p>Score GitHub work by review readiness, not authorship.</p>
+            </div>
+            <div class="segment" role="tablist" aria-label="Submission type">
+              <button type="button" class="active" data-kind="pull_request">PR</button>
+              <button type="button" data-kind="issue">Issue</button>
+              <button type="button" data-kind="patch">Patch</button>
+            </div>
+          </div>
+
+          <div class="example-row">
+            <button type="button" data-example="pr-ready">Ready PR</button>
+            <button type="button" data-example="pr-unready">Unready PR</button>
+            <button type="button" data-example="pr-policy-ready">Policy Ready</button>
+            <button type="button" data-example="pr-policy-unready">Policy Unready</button>
+            <button type="button" data-example="pr-context-duplicate">Context Match</button>
+            <button type="button" data-example="pr-kernel-ready">Kernel Ready</button>
+            <button type="button" data-example="pr-kernel-unready">Kernel Unready</button>
+            <button type="button" data-example="patch-kernel-ready">Patch Ready</button>
+            <button type="button" data-example="patch-kernel-unready">Patch Unready</button>
+            <button type="button" data-example="issue-ready">Ready Issue</button>
+            <button type="button" data-example="issue-unready">Unready Issue</button>
+          </div>
+
+          <label>
+            <span>Review profile</span>
+            <select id="profile" name="profile">
+              <option value="standard">Standard Maintainer</option>
+              <option value="kernel-grade">Kernel-Grade</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Title</span>
+            <input id="title" name="title" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Body</span>
+            <textarea id="body" name="body" rows="12"></textarea>
+          </label>
+
+          <div class="grid-fields">
+            <label>
+              <span>Changed files</span>
+              <input id="changedFiles" name="changedFiles" type="number" min="0" value="0">
+            </label>
+            <label>
+              <span>Additions</span>
+              <input id="additions" name="additions" type="number" min="0" value="0">
+            </label>
+            <label>
+              <span>Deletions</span>
+              <input id="deletions" name="deletions" type="number" min="0" value="0">
+            </label>
+            <label>
+              <span>Author</span>
+              <select id="authorAssociation" name="authorAssociation">
+                <option>CONTRIBUTOR</option>
+                <option>FIRST_TIME_CONTRIBUTOR</option>
+                <option>MEMBER</option>
+                <option>NONE</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="check-row">
+            <input id="draft" name="draft" type="checkbox">
+            <span>Draft pull request</span>
+          </label>
+
+          <label>
+            <span>Files JSON</span>
+            <textarea id="files" name="files" rows="6" spellcheck="false">[]</textarea>
+          </label>
+
+          <label>
+            <span>CONTRIBUTING excerpt</span>
+            <textarea id="contributingText" name="contributingText" rows="4" spellcheck="false"></textarea>
+          </label>
+
+          <label>
+            <span>Repository policy files JSON</span>
+            <textarea id="policyFiles" name="policyFiles" rows="6" spellcheck="false">[]</textarea>
+          </label>
+
+          <label>
+            <span>Repository context JSON</span>
+            <textarea id="repositoryContext" name="repositoryContext" rows="7" spellcheck="false">{"issues":[],"pullRequests":[],"upstream":{"issues":[],"pullRequests":[],"commits":[],"releases":[]}}</textarea>
+          </label>
+
+          <label>
+            <span>Patch or mbox text</span>
+            <textarea id="patchText" name="patchText" rows="8" spellcheck="false"></textarea>
+          </label>
+
+          <div class="actions">
+            <button class="primary" type="submit">Evaluate</button>
+            <button type="button" id="copyComment">Copy Comment</button>
+            <button type="button" id="resetForm">Reset</button>
+          </div>
+          <p id="formError" class="error" role="alert"></p>
+        </form>
+
+        <section class="panel result-panel" aria-label="Review result">
+          <div class="score-band">
+            <div>
+              <p class="eyebrow">Review readiness</p>
+              <h2 id="resultStatus">Waiting</h2>
+            </div>
+            <div class="score-ring" aria-label="Score">
+              <span id="scoreValue">--</span>
+              <small>/100</small>
+            </div>
+          </div>
+
+          <p id="resultSummary" class="summary">Load an example or paste a submission, then evaluate it.</p>
+
+          <div class="result-meta">
+            <span id="profilePill">Profile: --</span>
+            <span id="budgetPill">Budget: --</span>
+            <span id="provenancePill">Provenance: --</span>
+            <span id="policyPill">Policy: --</span>
+            <span id="contextPill">Context: --</span>
+            <span id="seriesPill">Series: --</span>
+          </div>
+
+          <div class="result-block">
+            <h3>Labels</h3>
+            <div id="labels" class="labels"></div>
+          </div>
+
+          <div class="result-block">
+            <h3>Blockers</h3>
+            <ul id="blockers" class="plain-list"></ul>
+          </div>
+
+          <div class="result-block">
+            <h3>Repair Checklist</h3>
+            <ul id="repairs" class="plain-list"></ul>
+          </div>
+
+          <div class="result-block">
+            <h3>Repository Context</h3>
+            <ul id="repositoryContextFindings" class="plain-list"></ul>
+          </div>
+
+          <div class="result-block">
+            <h3>Checks</h3>
+            <div id="checks" class="checks"></div>
+          </div>
+
+          <div class="result-block comment-block">
+            <h3>Maintainer Comment</h3>
+            <pre id="comment"></pre>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "kind": "issue",
+  "title": "Webhook returns 401 when signature header hex is uppercase",
+  "body": "## Version\ncommit 7ab12cd on main\n\n## Steps to reproduce\n1. Start the server with PCF_WEBHOOK_SECRET set.\n2. Send a payload signed with uppercase SHA-256 hex.\n3. Observe the webhook response.\n\n## Expected\nThe signature verifies.\n\n## Actual\nThe server returns 401.\n\n## Logs\n```text\ninvalid webhook signature\n```\n\n## Duplicate search\nI searched existing issues for uppercase signature and webhook digest.\n\n## Technical analysis\nThe likely root cause is strict digest normalization before timing-safe comparison.",
+  "labels": ["bug"]
+}

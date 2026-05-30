@@ -1,0 +1,57 @@
+name: Bug Report
+description: Report a reproducible PCF bug that is not primarily a policy disagreement.
+title: "bug: "
+labels:
+  - bug
+  - needs-reproducer
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when PCF itself behaves unexpectedly. For false positives, false negatives, or missed repository context, use the focused templates instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What went wrong?
+      placeholder: The evaluator returned an unexpected status for...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps To Reproduce
+      description: Include commands, API calls, fixture names, or a minimal payload.
+      placeholder: |
+        1. Run ...
+        2. Submit ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification Evidence
+      description: Include `npm run ci:gates`, API output, benchmark case, or red-test evidence when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: safe_sample
+    attributes:
+      label: Safe Sample Input
+      description: Paste only non-sensitive sample data. Do not include secrets, private repository payloads, or exploit details.
+      render: json
+    validations:
+      required: false

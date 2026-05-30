@@ -1,0 +1,19 @@
+{
+  "kind": "pull_request",
+  "profile": "kernel-grade",
+  "title": "[PATCH v2] net: reject foo packets before NULL skb access",
+  "body": "Problem: the foo receive path can dereference skb after foo_parse_header() returns NULL.\n\nHow reached: a malformed packet with a zero-length foo header reaches foo_rx() before the existing length check runs.\n\nImpact: a local reproducer can trigger an oops and drop the interface under load.\n\nChange: reject the packet before dereferencing skb. This is correct because no later path needs skb after foo_parse_header() fails.\n\nVerification:\n- make allmodconfig\n- scripts/checkpatch.pl --strict\n- make C=1 drivers/net/foo/\n- kselftest net/foo_rx.sh\n- runtime reproduced before the patch and no longer reproduces after the patch\n\nFixes: 123456789abc (\"net: add foo packet receive path\")\nLink: https://lore.kernel.org/r/foo-null-skb-report\nCc: stable@vger.kernel.org\nReviewed-by: Net Reviewer <reviewer@example.org>\nSigned-off-by: Human Submitter <human@example.org>",
+  "authorAssociation": "CONTRIBUTOR",
+  "draft": false,
+  "changedFiles": 2,
+  "additions": 54,
+  "deletions": 18,
+  "files": [
+    { "filename": "drivers/net/foo/foo_rx.c", "additions": 34, "deletions": 12 },
+    { "filename": "tools/testing/selftests/net/foo_rx.sh", "additions": 20, "deletions": 6 }
+  ],
+  "checks": [
+    { "name": "build", "conclusion": "success" },
+    { "name": "selftests", "conclusion": "success" }
+  ]
+}
