@@ -14,6 +14,7 @@ test("API spec exposes callable maintainer endpoints", () => {
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/queue/history"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/feedback"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/feedback/summary"));
+  assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/feedback/calibration"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/feedback/export"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/feedback/candidates"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/feedback/candidates/apply"));
@@ -24,6 +25,8 @@ test("API spec exposes callable maintainer endpoints", () => {
   assert.ok(spec.schemas.feedback.verdicts.includes("too-harsh"));
   assert.match(spec.schemas.feedback.originalPayload, /runnable fixture/);
   assert.match(spec.schemas.feedbackExport.runnableFixture, /benchmark-compatible/);
+  assert.match(spec.schemas.feedbackCalibration.behavior, /does not hide the base heuristic/);
+  assert.match(spec.schemas.githubSetup.pilot, /ten-minute/);
   assert.match(spec.schemas.feedbackCandidates.source, /separate from the permanent benchmark/);
   assert.match(spec.schemas.feedbackCandidates.evidenceExport, /README/);
   assert.match(spec.schemas.feedbackCandidates.replayCompare, /no server-side baseline/);
@@ -44,6 +47,7 @@ test("setup API helper returns sanitized write posture", () => {
   assert.equal(setup.mode, "dry-run");
   assert.equal(setup.safety.verdict, "safe-dry-run-or-read-only");
   assert.equal(JSON.stringify(setup).includes("super-secret"), false);
+  assert.ok(setup.pilot.steps.some((step) => step.command.includes("/api/feedback/calibration")));
 });
 
 test("batch API evaluates mixed PR and patch inputs", () => {

@@ -4,6 +4,7 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createApiSpec, createSetupStatus, evaluateBatch, evaluateMaintainerQueue } from "./core/api.mjs";
 import { applyFeedbackFixtureCandidates, buildCandidateEvidenceArtifact, buildCandidateReplayComparison, readCandidateCorpus, replayCandidateCorpus } from "./core/candidates.mjs";
+import { buildFeedbackCalibration } from "./core/calibration.mjs";
 import { appendFeedback, buildRegressionExport, readFeedbackLedger } from "./core/feedback.mjs";
 import { appendQueueHistory, readQueueHistory } from "./core/history.mjs";
 import { runBenchmark } from "./core/benchmark.mjs";
@@ -105,6 +106,11 @@ async function route(request, response) {
     });
   }
 
+  if (request.method === "GET" && url.pathname === "/api/feedback/calibration") {
+    const calibration = await loadLocalFeedbackCalibration(url.searchParams.get("repository") || "");
+    return sendJson(response, 200, calibration);
+  }
+
   if (request.method === "GET" && url.pathname === "/api/feedback/export") {
     const feedback = await readFeedbackLedger(config.feedbackPath, {
       repository: url.searchParams.get("repository") || ""
@@ -138,6 +144,7 @@ async function route(request, response) {
       maxEntries: config.feedbackCandidatesLimit
     });
     console.log(`[premature-contribution-firewall] feedback-candidates applied=${result.applied?.length || 0} skipped=${result.skipped?.length || 0} corpus=${result.corpus?.summary?.total || 0}`);
+    result.calibration = await loadLocalFeedbackCalibration(payload.repository || "");
     return sendJson(response, result.ok ? 200 : 400, result);
   }
 
@@ -199,7 +206,8 @@ async function route(request, response) {
   if (request.method === "POST" && url.pathname === "/api/evaluate") {
     const rawBody = await readRequestBody(request);
     const payload = JSON.parse(rawBody.toString("utf8"));
-    const evaluation = evaluateContribution(payload);
+    const calibration = payload.feedbackCalibration || await loadLocalFeedbackCalibration(payload.repository || payload.input?.repository || "");
+    const evaluation = evaluateContribution(payload, { feedbackCalibration: calibration });
     console.log(`[premature-contribution-firewall] evaluated ${evaluation.kind} status=${evaluation.status} score=${evaluation.score}`);
     return sendJson(response, 200, { ok: true, evaluation });
   }
@@ -214,8 +222,10 @@ async function route(request, response) {
       profile: payload.profile || "kernel-grade",
       repositoryFiles: payload.repositoryFiles || payload.policyFiles || []
     });
+    parsed.repository = payload.repository || "";
     parsed.repositoryContext = payload.repositoryContext || payload.repoContext || null;
-    const evaluation = evaluateContribution(parsed, { profile: payload.profile || parsed.profile });
+    const calibration = payload.feedbackCalibration || await loadLocalFeedbackCalibration(payload.repository || "");
+    const evaluation = evaluateContribution(parsed, { profile: payload.profile || parsed.profile, feedbackCalibration: calibration });
     console.log(`[premature-contribution-firewall] evaluated patch-series status=${evaluation.status} score=${evaluation.score} patches=${parsed.patchSeries.patchCount}`);
     return sendJson(response, 200, { ok: true, parsed: parsed.patchSeries, evaluation });
   }
@@ -223,7 +233,8 @@ async function route(request, response) {
   if (request.method === "POST" && url.pathname === "/api/evaluate-batch") {
     const rawBody = await readRequestBody(request);
     const payload = JSON.parse(rawBody.toString("utf8"));
-    const result = evaluateBatch(payload);
+    const calibration = payload.feedbackCalibration || await loadLocalFeedbackCalibration(payload.repository || "");
+    const result = evaluateBatch(payload, { feedbackCalibration: calibration });
     const requested = result.summary?.requested ?? (Array.isArray(payload.items) ? payload.items.length : "invalid");
     const errors = result.summary?.errors ?? (result.ok ? 0 : 1);
     const errorSuffix = result.error ? ` error=${result.error}` : "";
@@ -325,12 +336,14 @@ async function evaluateGithubQueuePayload(payload = {}) {
   const limit = Number(payload.limit || config.githubQueueLimit);
 
   if (Array.isArray(payload.items)) {
+    const calibration = payload.feedbackCalibration || await loadLocalFeedbackCalibration(payload.repository || (owner && repo ? `${owner}/${repo}` : ""));
     const queue = evaluateMaintainerQueue({
       ...payload,
       repository: payload.repository || (owner && repo ? `${owner}/${repo}` : ""),
       upstreamRepository,
       source: payload.source || "supplied",
-      dryRun: true
+      dryRun: true,
+      feedbackCalibration: calibration
     });
     const result = {
       ok: true,
@@ -371,10 +384,12 @@ async function evaluateGithubQueuePayload(payload = {}) {
     upstreamRepository,
     installationId: payload.installationId || ""
   });
+  const calibration = payload.feedbackCalibration || await loadLocalFeedbackCalibration(`${owner}/${repo}`);
   const queue = evaluateMaintainerQueue(collected, {
     source: "github-api",
     repository: `${owner}/${repo}`,
-    upstreamRepository
+    upstreamRepository,
+    feedbackCalibration: calibration
   });
   const result = {
     ok: collected.collectionErrors.length === 0 || queue.items.length > 0,
@@ -491,7 +506,8 @@ async function recordFeedback(payload = {}) {
         pathConfigured: Boolean(config.feedbackPath),
         summary: ledger.summary,
         entry
-      }
+      },
+      calibration: await loadLocalFeedbackCalibration(entry.repository || payload.repository || "")
     };
   } catch (error) {
     return {
@@ -499,6 +515,21 @@ async function recordFeedback(payload = {}) {
       error: error.message
     };
   }
+}
+
+async function loadLocalFeedbackCalibration(repository = "") {
+  if (!config.feedbackEnabled) {
+    return buildFeedbackCalibration({ repository });
+  }
+  const [feedback, corpus] = await Promise.all([
+    readFeedbackLedger(config.feedbackPath, { repository }),
+    readCandidateCorpus(config.feedbackCandidatesPath, { repository })
+  ]);
+  return buildFeedbackCalibration({
+    feedbackEntries: feedback.entries,
+    candidates: corpus.candidates,
+    repository
+  });
 }
 
 function parseRepositoryQueuePath(pathname) {

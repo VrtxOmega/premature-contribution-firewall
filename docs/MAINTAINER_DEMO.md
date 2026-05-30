@@ -43,7 +43,7 @@ Show these surfaces:
 
 - `GitHub App Setup`: dry-run/write posture, webhook posture, queue-history posture, and read-only connection testing.
 - `Maintainer Queue`: run the demo queue and show ready, repair, low-value, context findings, review budget, and markdown export.
-- `Feedback Intelligence`: record a maintainer correction from a queue item and export regression candidates.
+- `Feedback Calibration`: record a maintainer correction from a queue item, export regression candidates, and show calibration matches on later triage.
 - `Feedback Candidate Corpus`: apply selected runnable candidates, replay the corpus, export evidence, capture a baseline, and compare replay.
 - `API Spec`: show that the same workflow is callable without the browser.
 
@@ -53,6 +53,7 @@ Show these surfaces:
 curl -s http://127.0.0.1:3791/api/health
 curl -s http://127.0.0.1:3791/api/spec
 curl -s -H 'Content-Type: application/json' --data-binary @fixtures/queue-sample.json http://127.0.0.1:3791/api/github/queue
+curl -s http://127.0.0.1:3791/api/feedback/calibration
 curl -s http://127.0.0.1:3791/api/feedback/candidates/replay
 ```
 
@@ -64,6 +65,7 @@ The strongest demo line is:
 
 ```text
 Bad work is returned with repair instructions. Good work reaches a maintainer faster. Breaks become replayable tests.
+Corrections calibrate the next queue run without hiding the base score.
 ```
 
 ## What Not To Say

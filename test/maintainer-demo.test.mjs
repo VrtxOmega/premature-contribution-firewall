@@ -34,6 +34,8 @@ test("maintainer demo report covers all proof surfaces", async () => {
   assert.equal(report.proof.maintainerQueue.needsRepair, 1);
   assert.equal(report.proof.maintainerQueue.lowReviewValue, 1);
   assert.equal(report.proof.maintainerQueue.contextFindings, 3);
+  assert.equal(report.proof.feedbackCalibration.matches, 2);
+  assert.equal(report.proof.feedbackCalibration.reviewNeeded, 0);
   assert.equal(report.proof.feedbackCandidate.total, 1);
   assert.equal(report.proof.feedbackCandidate.runnableFixtures, 1);
   assert.equal(report.proof.feedbackCandidate.replayPassed, 1);
@@ -54,6 +56,7 @@ test("maintainer demo markdown is shareable and explicit about non-claims", asyn
   assert.match(markdown, /Non-Claims/);
   assert.match(markdown, /not an AI-authorship detector/);
   assert.match(markdown, /Adversarial Residue/);
+  assert.match(markdown, /Feedback calibration matches: 2/);
   assert.match(markdown, /Replay comparison: 1 unchanged/);
   assert.match(summary, /Result: PASS/);
   assert.equal(markdown.includes(localHomePrefix), false);
@@ -72,6 +75,7 @@ test("maintainer demo CLI emits JSON and honors fail-on-regression", async () =>
   assert.equal(report.ok, true);
   assert.equal(report.proof.benchmark.total, 35);
   assert.equal(report.proof.adversarialRedTest.total, 8);
+  assert.equal(report.proof.feedbackCalibration.matches, 2);
   assert.equal(report.proof.feedbackCandidate.replayFailed, 0);
 });
 

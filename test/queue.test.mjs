@@ -6,6 +6,7 @@ import {
   evaluateQueueItem,
   formatMaintainerQueueMarkdown
 } from "../src/core/queue.mjs";
+import { buildFeedbackCalibration } from "../src/core/calibration.mjs";
 
 test("maintainer queue summarizes ready, repair, and low-value work", async () => {
   const fixture = JSON.parse(await readFile(new URL("../fixtures/queue-sample.json", import.meta.url), "utf8"));
@@ -19,10 +20,51 @@ test("maintainer queue summarizes ready, repair, and low-value work", async () =
   assert.equal(queue.summary.statuses["needs-repair"], 1);
   assert.equal(queue.summary.statuses["low-review-value"], 1);
   assert.equal(queue.summary.contextFindings, 3);
+  assert.equal(queue.summary.calibrationMatches, 0);
   assert.equal(queue.items[0].status, "ready-for-maintainer");
   assert.equal(queue.items[1].action, "send-repair-request");
   assert.ok(queue.items[1].labels.includes("possibly-duplicate"));
   assert.ok(queue.markdown.includes("Maintainer Queue"));
+});
+
+test("maintainer queue carries feedback calibration matches", async () => {
+  const fixture = JSON.parse(await readFile(new URL("../fixtures/queue-sample.json", import.meta.url), "utf8"));
+  const calibration = buildFeedbackCalibration({
+    repository: fixture.repository,
+    candidates: [
+      {
+        id: "feedback-queue-12",
+        repository: fixture.repository,
+        kind: "pull_request",
+        title: "webhook: reject oversized payload bodies",
+        expectedStatus: "ready-for-maintainer",
+        fixture: {
+          input: {
+            kind: "pull_request",
+            repository: fixture.repository,
+            title: "webhook: reject oversized payload bodies",
+            files: [{ filename: "src/server.mjs" }]
+          },
+          expect: { status: "ready-for-maintainer" }
+        },
+        replay: {
+          passed: true,
+          actualStatus: "ready-for-maintainer",
+          profile: "standard",
+          labels: ["ready-for-maintainer"]
+        }
+      }
+    ]
+  });
+  const queue = buildMaintainerQueue(fixture, {
+    now: "2026-05-30T00:00:00Z",
+    feedbackCalibration: calibration
+  });
+
+  assert.equal(queue.summary.calibrationMatches, 1);
+  assert.equal(queue.summary.calibrationReviewNeeded, 0);
+  assert.equal(queue.items[0].calibration.active, true);
+  assert.match(queue.markdown, /Feedback calibration matches: 1/);
 });
 
 test("queue items preserve maintainer reasons and evaluation details", async () => {

@@ -17,6 +17,7 @@ const budgetPill = document.querySelector("#budgetPill");
 const provenancePill = document.querySelector("#provenancePill");
 const policyPill = document.querySelector("#policyPill");
 const contextPill = document.querySelector("#contextPill");
+const calibrationPill = document.querySelector("#calibrationPill");
 const seriesPill = document.querySelector("#seriesPill");
 const repositoryContextFindingsEl = document.querySelector("#repositoryContextFindings");
 const queueSummaryEl = document.querySelector("#queueSummary");
@@ -24,11 +25,13 @@ const queueListEl = document.querySelector("#queueList");
 const queueMarkdownEl = document.querySelector("#queueMarkdown");
 const setupSummaryEl = document.querySelector("#setupSummary");
 const setupChecklistEl = document.querySelector("#setupChecklist");
+const setupPilotEl = document.querySelector("#setupPilot");
 const setupWarningsEl = document.querySelector("#setupWarnings");
 const connectionResultEl = document.querySelector("#connectionResult");
 const historySummaryEl = document.querySelector("#historySummary");
 const historyListEl = document.querySelector("#historyList");
 const feedbackSummaryEl = document.querySelector("#feedbackSummary");
+const calibrationSummaryEl = document.querySelector("#calibrationSummary");
 const feedbackListEl = document.querySelector("#feedbackList");
 const feedbackExportEl = document.querySelector("#feedbackExport");
 const candidateReviewEl = document.querySelector("#candidateReview");
@@ -172,6 +175,7 @@ checkHealth();
 loadSetup();
 loadHistory();
 loadFeedback();
+loadFeedbackCalibration();
 loadCandidateCorpus();
 loadQueueDemo();
 loadExample("pr-unready");
@@ -232,6 +236,16 @@ async function loadFeedback() {
     if (response.ok && data.ok) renderFeedback(data.feedback);
   } catch {
     feedbackListEl.textContent = "Feedback unavailable.";
+  }
+}
+
+async function loadFeedbackCalibration() {
+  try {
+    const response = await fetch("/api/feedback/calibration");
+    const data = await response.json();
+    if (response.ok && data.ok) renderCalibration(data);
+  } catch {
+    calibrationSummaryEl.textContent = "Calibration unavailable.";
   }
 }
 
@@ -343,6 +357,7 @@ async function applySelectedCandidates() {
   renderCandidateApplyResult(data);
   await loadCandidateCorpus();
   await loadCandidateEvidence();
+  await loadFeedbackCalibration();
   if (readReplayBaseline()) await compareReplayBaseline();
   await loadFeedbackExport();
 }
@@ -519,6 +534,7 @@ function renderEmpty() {
   provenancePill.textContent = "Provenance: --";
   policyPill.textContent = "Policy: --";
   contextPill.textContent = "Context: --";
+  calibrationPill.textContent = "Calibration: --";
   seriesPill.textContent = "Series: --";
   labelsEl.innerHTML = "";
   blockersEl.innerHTML = "";
@@ -539,6 +555,7 @@ function renderResult(result) {
   provenancePill.textContent = result.provenance ? `Provenance: ${result.provenance.summary}` : "Provenance: --";
   policyPill.textContent = result.policyProfile?.hasPolicy ? `Policy: ${result.policyProfile.summary}` : "Policy: none";
   contextPill.textContent = result.repositoryContext?.hasContext ? `Context: ${result.repositoryContext.summary}` : "Context: none";
+  calibrationPill.textContent = result.calibration?.active ? `Calibration: ${result.calibration.status}` : "Calibration: none";
   seriesPill.textContent = result.patchSeries ? `Series: ${result.patchSeries.patchCount} patch / ${result.patchSeries.messageCount} msg` : "Series: --";
   labelsEl.innerHTML = "";
   for (const label of result.labels) {
@@ -583,6 +600,7 @@ function renderQueue(queue) {
     ["Repair", summary.statuses?.["needs-repair"] || 0],
     ["Low value", summary.statuses?.["low-review-value"] || 0],
     ["Context", summary.contextFindings || 0],
+    ["Calibration", summary.calibrationMatches || 0],
     ["Budget", `${summary.reviewBudgetMinutes || 0} min`]
   ];
   for (const [label, value] of summaryItems) {
@@ -626,7 +644,25 @@ function renderSetup(setup) {
     setupChecklistEl,
     (setup.checklist || []).map((item) => `${item.ok ? "pass" : "warn"}: ${item.label} - ${item.detail}`)
   );
+  renderList(
+    setupPilotEl,
+    (setup.pilot?.steps || []).slice(0, 6).map((item) => `${item.status}: ${item.label} - ${item.command}`)
+  );
   setupWarningsEl.textContent = setup.warnings?.length ? setup.warnings.join(" ") : "Setup posture is dry-run safe.";
+}
+
+function renderCalibration(calibration) {
+  calibrationSummaryEl.innerHTML = "";
+  const summary = calibration?.summary || {};
+  for (const [label, value] of [
+    ["Calibration", calibration?.active ? "active" : "empty"],
+    ["Corrections", summary.corrections || 0],
+    ["Candidates", summary.candidateFixtures || 0],
+    ["Replay Pass", summary.replayPassing || 0],
+    ["Context Miss", summary.contextMisses || 0]
+  ]) {
+    calibrationSummaryEl.append(summaryTile(label, value));
+  }
 }
 
 function renderHistory(history) {
@@ -972,7 +1008,8 @@ function renderQueueItem(item) {
     `budget ${item.reviewBudget?.minutes || 0} min`,
     `${item.failureCount || 0} fail`,
     `${item.warningCount || 0} warn`,
-    `${item.contextFindings || 0} context`
+    `${item.contextFindings || 0} context`,
+    `${item.calibration?.matches || 0} calibration`
   ]) {
     const span = document.createElement("span");
     span.textContent = stat;
@@ -994,6 +1031,12 @@ function renderQueueItem(item) {
       : ["No repair reasons."]
   );
   article.querySelector(".queue-context").textContent = `Context: ${item.contextSummary || "none"}`;
+  if (item.calibration?.active) {
+    const calibration = document.createElement("p");
+    calibration.className = "queue-context";
+    calibration.textContent = `Calibration: ${item.calibration.summary}`;
+    article.querySelector(".queue-context").after(calibration);
+  }
   const expectedSelect = article.querySelector(".feedback-expected");
   expectedSelect.value = suggestedExpectedStatus(item.status);
   for (const button of article.querySelectorAll("[data-feedback-verdict]")) {
@@ -1035,6 +1078,7 @@ async function submitQueueFeedback(item, { article, verdict, expectedSelect }) {
   stateEl.textContent = data.feedback?.entry?.caseFile?.summary || "Feedback recorded.";
   noteEl.value = "";
   await loadFeedback();
+  await loadFeedbackCalibration();
 }
 
 function compactQueueItemForFeedback(item) {

@@ -18,7 +18,7 @@ The output is a maintainer queue, not a vibe score: labels, repair checklists, r
 - Repository policy ingestion for templates, `CODEOWNERS`, `MAINTAINERS`, scripts, manifests, and contribution rules.
 - Upstream and concurrent-work context for duplicates, solved issues, merged upstream fixes, and competing PRs.
 - A deterministic benchmark and adversarial red-test corpus that can be rerun in CI.
-- A local feedback loop that turns maintainer corrections into candidate regression fixtures before permanent benchmark changes.
+- A local feedback calibration loop that turns maintainer corrections into candidate regression fixtures and attaches matching evidence to future triage.
 - Dry-run-first GitHub posture with HMAC webhook verification and explicit setup/readiness reporting.
 
 ## Maintainer Pain Map
@@ -58,6 +58,7 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Captures maintainer feedback as local evidence case files: agreement, false positives, false negatives, too-harsh/too-lenient calls, missed duplicates, missed upstream fixes, and missed concurrent work.
 - Exports feedback as regression-fixture candidates, including runnable benchmark fixture drafts when the original PR, issue, or patch payload is available.
 - Promotes selected runnable feedback drafts into a separate local candidate corpus and replays that corpus against the current evaluator before anything is folded into the permanent benchmark.
+- Builds an auditable feedback calibration profile from local corrections and promoted candidates, then attaches close matches to future evaluations and queue items without hiding the base heuristic status or score.
 - Evaluates plain-text patch or mbox submissions with `evaluate-patch`, defaulting to `kernel-grade` discipline for email-style review.
 - Ships a deterministic maintainer benchmark corpus with 35 reproducible cases across PRs, issues, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
 - Ships a separate adversarial red-test corpus that preserves breakage residue for negated verification, suspicious paths, secret evasion, generated artifact churn, skipped-only CI, prompt-injection text, malformed batch input, and empty patch bodies.
@@ -194,6 +195,7 @@ Local endpoints:
 - `POST /api/feedback`
 - `GET /api/feedback`
 - `GET /api/feedback/summary`
+- `GET /api/feedback/calibration`
 - `GET /api/feedback/export`
 - `GET /api/feedback/candidates`
 - `POST /api/feedback/candidates/apply`
@@ -271,7 +273,7 @@ Payloads may include `repositoryFiles` or `policyFiles`:
 
 The evaluator reports the inferred policy profile in `policyProfile`, including sources, required template sections, discovered test commands, and owner/maintainer matches for touched files.
 
-## Repository Context Intelligence
+## Repository Context
 
 Payloads may also include `repositoryContext` so the evaluator can surface already-known work before a maintainer spends time:
 
@@ -333,7 +335,7 @@ curl -s \
 curl http://127.0.0.1:3791/api/queue/history
 ```
 
-The setup endpoint reports only booleans and safe metadata. It does not return webhook secrets, private keys, tokens, or secret values. Queue history is stored locally under `data/queue-history.json` by default and is ignored by git.
+The setup endpoint reports only booleans and safe metadata. It does not return webhook secrets, private keys, tokens, or secret values. It now includes a ten-minute pilot plan: run proof gates, start the local server, check setup posture, test read-only repository access, run a dry-run queue, and inspect feedback calibration. Queue history is stored locally under `data/queue-history.json` by default and is ignored by git.
 
 History tracks:
 
@@ -342,9 +344,9 @@ History tracks:
 - improved, regressed, unchanged, new, and gone queue items between runs
 - compact per-item status, score, labels, budget, and context-finding counts
 
-## Maintainer Feedback Loop
+## Maintainer Feedback Calibration
 
-Feedback capture is the start of the maintainer intelligence layer. It does not claim to train a model or automatically know what maintainers want. It records explicit maintainer corrections as evidence.
+Feedback capture is an evidence loop, not a model-training claim. It records explicit maintainer corrections, exports replayable candidates, and builds an auditable calibration profile that future evaluations and queues can consult.
 
 ```bash
 curl -s \
@@ -367,6 +369,7 @@ curl -s \
   http://127.0.0.1:3791/api/feedback
 
 curl http://127.0.0.1:3791/api/feedback/summary
+curl http://127.0.0.1:3791/api/feedback/calibration
 curl http://127.0.0.1:3791/api/feedback/export
 curl http://127.0.0.1:3791/api/feedback/candidates
 curl http://127.0.0.1:3791/api/feedback/candidates/replay
@@ -374,6 +377,8 @@ curl http://127.0.0.1:3791/api/feedback/candidates/export
 ```
 
 Feedback entries are stored locally under `data/feedback.json` by default and are ignored by git. Each entry includes a compact case file with the PCF status, maintainer verdict, expected status, top reasons, context summary, recommended next action, and whether it should become a regression candidate.
+
+The calibration endpoint combines feedback entries with promoted local candidates. When a new evaluation resembles a correction or candidate by repository, item, title, touched files, labels, kind, and profile, PCF adds a `calibration` object to the evaluation and queue item. If the matched maintainer expectation conflicts with the current heuristic status, PCF adds `feedback-calibration-needed` and a repair note for the maintainer to compare the evidence. The original status and score remain visible.
 
 Regression export is intentionally conservative. When the original payload is available, PCF exports a benchmark-compatible fixture draft with an expected status and a current replay result. When only compact queue evidence is available, the export keeps `needsManualFixtureInput=true` until a maintainer or developer attaches the original PR, issue, or patch payload.
 

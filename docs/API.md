@@ -187,6 +187,7 @@ This returns sanitized pilot readiness:
 - `safety`: whether writes are requested, armed, and actually ready
 - `github`: GitHub App/webhook booleans and queue settings without secret values
 - `history`: local queue-history status
+- `pilot`: ten-minute dry-run pilot steps, safe defaults, and blockers without secret values
 - `checklist`: setup checks for the browser UI
 - `warnings`: actionable setup warnings
 
@@ -274,7 +275,10 @@ Read feedback:
 curl http://127.0.0.1:3791/api/feedback
 curl 'http://127.0.0.1:3791/api/feedback?repository=owner/repo&limit=10'
 curl http://127.0.0.1:3791/api/feedback/summary
+curl http://127.0.0.1:3791/api/feedback/calibration
 ```
+
+`GET /api/feedback/calibration` builds the local calibration profile from maintainer feedback and promoted candidate fixtures. It returns summary counts, correction pressure, candidate replay health, compact feedback entries, and compact candidate fingerprints. Evaluations and maintainer queues can attach this calibration profile so close matches are visible on future triage. When a matched maintainer expectation conflicts with the current heuristic result, the evaluation keeps its original status and score but adds `feedback-calibration-needed`, a calibration summary, matched evidence, and a maintainer review step.
 
 Export regression candidates:
 
@@ -351,5 +355,6 @@ Every successful evaluation returns:
 - `provenance`: sign-off/tool-use/accountability signals
 - `policyProfile`: repository policy source and routing signals
 - `repositoryContext`: similar, duplicate, concurrent, solved, and upstream-fixed findings
+- `calibration`: local feedback/candidate evidence that matched the submission when feedback calibration is active
 - `patchSeries`: patch/mbox metadata when applicable
 - `comment`: markdown maintainer comment

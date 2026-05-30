@@ -31,8 +31,9 @@ The firewall treats maintainer attention as the scarce resource. It does not rew
 2. Review the sorted queue by status, labels, context findings, and review-budget cost.
 3. Send repair checklists back to contributors for items that are not ready.
 4. Promote good feedback into candidate fixtures when PCF is too harsh, too lenient, or misses repository context.
-5. Replay the candidate corpus before changing benchmark expectations.
-6. Enable write actions only after dry-run output matches project policy and maintainer judgment.
+5. Use the feedback calibration profile to see when new queue items resemble prior maintainer corrections.
+6. Replay the candidate corpus before changing benchmark expectations.
+7. Enable write actions only after dry-run output matches project policy and maintainer judgment.
 
 ## What PCF Should Block
 
@@ -67,4 +68,4 @@ A serious maintainer should be able to clone the repo and answer four questions 
 - Can I reproduce the benchmark and adversarial gates locally?
 - Will it stay read-only until I deliberately enable writes?
 
-The README, CI workflow, benchmark corpus, adversarial corpus, feedback replay, and release checklist exist to make those answers inspectable.
+The README, CI workflow, benchmark corpus, adversarial corpus, feedback calibration, feedback replay, and release checklist exist to make those answers inspectable.

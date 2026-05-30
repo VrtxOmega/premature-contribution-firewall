@@ -1,6 +1,6 @@
 # Premature Contribution Firewall Maintainer Demo
 
-Generated: 2026-05-30T12:07:26.351Z
+Generated: 2026-05-30T13:49:08.703Z
 
 Verdict: **PASS**
 
@@ -9,6 +9,7 @@ Verdict: **PASS**
 - 35/35 deterministic benchmark cases pass.
 - 8/8 adversarial red-test cases pass.
 - Maintainer queue sorts 3 supplied GitHub items with repository and upstream context.
+- Feedback calibration attaches 2 matching local candidate signal(s) to future queue output.
 - 1/1 promoted feedback fixture candidates replay cleanly.
 - Candidate replay comparison is stable with 0 regressions.
 
@@ -37,6 +38,7 @@ npm run demo:maintainer -- --fail-on-regression
 | Benchmark | PASS | 35/35 | Deterministic fixture corpus |
 | Adversarial red test | PASS | 8/8 | Breakage residue corpus |
 | Maintainer queue | PASS | 3 items | 3 context findings |
+| Feedback calibration | PASS | 2 match(es) | 1 candidate fixture(s) |
 | Feedback candidate replay | PASS | 1/1 | Promoted fixture draft |
 | Replay comparison | PASS | stable | 0 regressions |
 
@@ -45,6 +47,8 @@ npm run demo:maintainer -- --fail-on-regression
 Repository: VrtxOmega/premature-contribution-firewall-demo
 
 Ready: 1; needs repair: 1; low review value: 1; review budget: 36 minutes.
+
+Feedback calibration matches: 2; review-needed conflicts: 0.
 
 | Status | Kind | Item | Title | Action | Context | Budget |
 | --- | --- | --- | --- | --- | ---: | ---: |

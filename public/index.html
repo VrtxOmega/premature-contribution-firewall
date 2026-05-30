@@ -30,6 +30,7 @@
           </div>
           <div id="setupSummary" class="setup-summary"></div>
           <ul id="setupChecklist" class="plain-list"></ul>
+          <ul id="setupPilot" class="plain-list"></ul>
           <p id="setupWarnings" class="setup-warnings"></p>
           <p id="connectionResult" class="connection-result" aria-live="polite"></p>
         </section>
@@ -49,8 +50,8 @@
         <section class="panel feedback-panel" aria-label="Maintainer feedback">
           <div class="panel-heading">
             <div>
-              <h2>Feedback Intelligence</h2>
-              <p>Corrections become case files.</p>
+              <h2>Feedback Calibration</h2>
+              <p>Corrections calibrate future triage.</p>
             </div>
             <div class="queue-actions">
               <button type="button" id="refreshFeedback">Refresh</button>
@@ -58,6 +59,7 @@
             </div>
           </div>
           <div id="feedbackSummary" class="feedback-summary"></div>
+          <div id="calibrationSummary" class="feedback-summary"></div>
           <div id="feedbackList" class="feedback-list"></div>
           <div class="candidate-toolbar" aria-label="Feedback candidate actions">
             <button type="button" id="applySelectedCandidates">Apply Selected</button>
@@ -266,6 +268,7 @@
             <span id="provenancePill">Provenance: --</span>
             <span id="policyPill">Policy: --</span>
             <span id="contextPill">Context: --</span>
+            <span id="calibrationPill">Calibration: --</span>
             <span id="seriesPill">Series: --</span>
           </div>
 

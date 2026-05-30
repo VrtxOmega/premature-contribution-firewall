@@ -5,6 +5,7 @@ import {
   normalizeRepositoryFiles
 } from "./policy.mjs";
 import { analyzeRepositoryContext, normalizeRepositoryContext } from "./repository-context.mjs";
+import { applyFeedbackCalibration } from "./calibration.mjs";
 
 const GENERIC_TITLES = new Set([
   "fix",
@@ -74,7 +75,11 @@ export function evaluateContribution(rawInput = {}, options = {}) {
   const input = normalizeInput(rawInput);
   const profile = resolveProfile(input, options);
   const kind = input.kind === "issue" ? "issue" : "pull_request";
-  const result = kind === "issue" ? evaluateIssue(input, { ...options, profile }) : evaluatePullRequest(input, { ...options, profile });
+  const baseResult = kind === "issue" ? evaluateIssue(input, { ...options, profile }) : evaluatePullRequest(input, { ...options, profile });
+  baseResult.profile = profile;
+  const result = options.feedbackCalibration
+    ? applyFeedbackCalibration(baseResult, input, options.feedbackCalibration)
+    : baseResult;
   result.profile = profile;
   result.comment = renderMarkdownReport(result);
   return result;
@@ -612,10 +617,14 @@ export function renderMarkdownReport(result) {
   const repositoryContextLine = result.repositoryContext?.hasContext
     ? `**Repository context:** ${result.repositoryContext.summary}`
     : "**Repository context:** none supplied";
+  const calibrationLine = result.calibration?.active
+    ? `**Feedback calibration:** ${result.calibration.summary}`
+    : "";
   const seriesLine = result.patchSeries
     ? `**Patch series:** ${result.patchSeries.patchCount} patch(es), ${result.patchSeries.messageCount} message(s), cover=${result.patchSeries.coverLetter ? "yes" : "no"}`
     : "";
   const repositoryContextDetails = renderRepositoryContext(result.repositoryContext);
+  const calibrationDetails = renderFeedbackCalibration(result.calibration);
   const labelsLine = result.labels.length ? `**Labels:** ${result.labels.map((label) => `\`${label}\``).join(", ")}` : "**Labels:** none";
   const blockers = result.blockers.length
     ? result.blockers.map((check) => `- ${check.title}: ${check.reason}`).join("\n")
@@ -627,7 +636,7 @@ export function renderMarkdownReport(result) {
     .map((check) => `- ${STATUS_COPY[check.status]}: ${check.title} - ${check.reason}`)
     .join("\n");
 
-  return [
+  const lines = [
     "## Premature Contribution Firewall Review Readiness",
     "",
     profileLine,
@@ -636,6 +645,7 @@ export function renderMarkdownReport(result) {
     provenanceLine,
     policyLine,
     repositoryContextLine,
+    calibrationLine,
     seriesLine,
     labelsLine,
     "",
@@ -649,12 +659,25 @@ export function renderMarkdownReport(result) {
     "",
     "### Repository Context",
     repositoryContextDetails,
+  ];
+
+  if (result.calibration?.active) {
+    lines.push(
+      "",
+      "### Feedback Calibration",
+      calibrationDetails
+    );
+  }
+
+  lines.push(
     "",
     "### Checks",
     checkLines,
     "",
     "<!-- premature-contribution-firewall-review -->"
-  ].join("\n");
+  );
+
+  return lines.filter((line, index, list) => line || list[index - 1] !== "").join("\n");
 }
 
 function addCheck(checks, labels, check) {
@@ -979,6 +1002,17 @@ function renderRepositoryContext(repositoryContext) {
     const url = item.url ? ` (${item.url})` : "";
     return `- ${item.relation} ${source}: ${number}${item.title || item.sha || item.tagName || "untitled"} [${item.state}]${overlap}${url}`;
   }).join("\n");
+}
+
+function renderFeedbackCalibration(calibration) {
+  if (!calibration?.active) return "- None supplied.";
+  const lines = [`- ${calibration.summary}`];
+  for (const match of calibration.matches || []) {
+    const expected = match.expectedStatus ? ` expects ${match.expectedStatus}` : "";
+    const replay = match.replayPassed === null ? "" : `; replay ${match.replayPassed ? "passing" : "failing"}`;
+    lines.push(`- ${match.source} ${match.id || "match"}${expected}${replay}: ${match.title || match.reason || "feedback evidence"}`);
+  }
+  return lines.join("\n");
 }
 
 function resolveProfile(input, options = {}) {

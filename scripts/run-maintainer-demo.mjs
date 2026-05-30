@@ -12,6 +12,7 @@ import {
   buildCandidateReplayComparison,
   replayCandidateCorpus
 } from "../src/core/candidates.mjs";
+import { buildFeedbackCalibration } from "../src/core/calibration.mjs";
 import { buildFeedbackEntry, buildRegressionExport } from "../src/core/feedback.mjs";
 
 const DEFAULT_QUEUE_FIXTURE = new URL("../fixtures/queue-sample.json", import.meta.url);
@@ -24,8 +25,17 @@ export async function buildMaintainerDemoReport({
   const benchmark = runBenchmark();
   const adversary = runAdversary();
   const queuePayload = JSON.parse(await readFile(queueFixtureUrl, "utf8"));
-  const queue = evaluateMaintainerQueue(queuePayload, { now: generatedAt });
   const candidateProof = buildDemoCandidateProof({ generatedAt: DEMO_PROOF_GENERATED_AT });
+  const feedbackCalibration = buildFeedbackCalibration({
+    repository: queuePayload.repository,
+    feedbackEntries: [candidateProof.feedback],
+    candidates: [candidateProof.candidate],
+    generatedAt: DEMO_PROOF_GENERATED_AT
+  });
+  const queue = evaluateMaintainerQueue(queuePayload, {
+    now: generatedAt,
+    feedbackCalibration
+  });
 
   const ok = Boolean(
     benchmark.ok &&
@@ -45,6 +55,7 @@ export async function buildMaintainerDemoReport({
       `${benchmark.benchmark.passed}/${benchmark.benchmark.total} deterministic benchmark cases pass.`,
       `${adversary.adversary.passed}/${adversary.adversary.total} adversarial red-test cases pass.`,
       `Maintainer queue sorts ${queue.summary.total} supplied GitHub items with repository and upstream context.`,
+      `Feedback calibration attaches ${queue.summary.calibrationMatches} matching local candidate signal(s) to future queue output.`,
       `${candidateProof.evidence.summary.replayPassed}/${candidateProof.evidence.summary.total} promoted feedback fixture candidates replay cleanly.`,
       `Candidate replay comparison is ${candidateProof.comparison.summary.risk} with ${candidateProof.comparison.summary.regressed} regressions.`
     ],
@@ -66,6 +77,7 @@ export async function buildMaintainerDemoReport({
       benchmark: compactBenchmark(benchmark),
       adversarialRedTest: compactAdversary(adversary),
       maintainerQueue: compactQueue(queue),
+      feedbackCalibration: compactFeedbackCalibration(feedbackCalibration, queue),
       feedbackCandidate: compactCandidateProof(candidateProof),
       replayComparison: compactReplayComparison(candidateProof.comparison)
     }
@@ -77,6 +89,7 @@ export function renderMaintainerDemoMarkdown(report) {
     ["Benchmark", report.proof.benchmark.ok ? "PASS" : "FAIL", `${report.proof.benchmark.passed}/${report.proof.benchmark.total}`, "Deterministic fixture corpus"],
     ["Adversarial red test", report.proof.adversarialRedTest.ok ? "PASS" : "FAIL", `${report.proof.adversarialRedTest.passed}/${report.proof.adversarialRedTest.total}`, "Breakage residue corpus"],
     ["Maintainer queue", report.proof.maintainerQueue.ok ? "PASS" : "FAIL", `${report.proof.maintainerQueue.total} items`, `${report.proof.maintainerQueue.contextFindings} context findings`],
+    ["Feedback calibration", report.proof.feedbackCalibration.matches > 0 ? "PASS" : "WARN", `${report.proof.feedbackCalibration.matches} match(es)`, `${report.proof.feedbackCalibration.candidateFixtures} candidate fixture(s)`],
     ["Feedback candidate replay", report.proof.feedbackCandidate.replayFailed === 0 ? "PASS" : "FAIL", `${report.proof.feedbackCandidate.replayPassed}/${report.proof.feedbackCandidate.total}`, "Promoted fixture draft"],
     ["Replay comparison", report.proof.replayComparison.risk === "stable" ? "PASS" : "FAIL", report.proof.replayComparison.risk, `${report.proof.replayComparison.regressed} regressions`]
   ];
@@ -129,6 +142,8 @@ export function renderMaintainerDemoMarkdown(report) {
     "",
     `Ready: ${report.proof.maintainerQueue.ready}; needs repair: ${report.proof.maintainerQueue.needsRepair}; low review value: ${report.proof.maintainerQueue.lowReviewValue}; review budget: ${report.proof.maintainerQueue.reviewBudgetMinutes} minutes.`,
     "",
+    `Feedback calibration matches: ${report.proof.feedbackCalibration.matches}; review-needed conflicts: ${report.proof.feedbackCalibration.reviewNeeded}.`,
+    "",
     "| Status | Kind | Item | Title | Action | Context | Budget |",
     "| --- | --- | --- | --- | --- | ---: | ---: |",
     ...queueRows.map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`),
@@ -161,6 +176,7 @@ export function renderMaintainerDemoSummary(report) {
     `Benchmark: ${report.proof.benchmark.passed}/${report.proof.benchmark.total}`,
     `Adversarial red test: ${report.proof.adversarialRedTest.passed}/${report.proof.adversarialRedTest.total}`,
     `Queue: ${report.proof.maintainerQueue.total} items, ${report.proof.maintainerQueue.contextFindings} context findings, ${report.proof.maintainerQueue.reviewBudgetMinutes} min budget`,
+    `Feedback calibration: ${report.proof.feedbackCalibration.matches} match(es), ${report.proof.feedbackCalibration.reviewNeeded} review-needed conflict(s)`,
     `Feedback candidate replay: ${report.proof.feedbackCandidate.replayPassed}/${report.proof.feedbackCandidate.total}`,
     `Replay comparison: ${report.proof.replayComparison.risk}, ${report.proof.replayComparison.regressed} regressions`,
     "Non-claim: not AI-authorship detection; no GitHub writes in this demo.",
@@ -321,6 +337,8 @@ function compactQueue(queue) {
     needsRepair: queue.summary.needsRepair,
     lowReviewValue: queue.summary.lowReviewValue,
     contextFindings: queue.summary.contextFindings,
+    calibrationMatches: queue.summary.calibrationMatches,
+    calibrationReviewNeeded: queue.summary.calibrationReviewNeeded,
     reviewBudgetMinutes: queue.summary.reviewBudgetMinutes,
     actions: queue.summary.actions,
     labels: queue.summary.labels,
@@ -333,9 +351,22 @@ function compactQueue(queue) {
       action: item.action,
       score: item.score,
       contextFindings: item.contextFindings,
+      calibrationMatches: item.calibration?.matches || 0,
       reviewBudgetMinutes: item.reviewBudget?.minutes || 0,
       labels: item.labels
     }))
+  };
+}
+
+function compactFeedbackCalibration(calibration, queue) {
+  return {
+    active: calibration.active,
+    feedbackEntries: calibration.summary.feedbackEntries,
+    corrections: calibration.summary.corrections,
+    candidateFixtures: calibration.summary.candidateFixtures,
+    replayPassing: calibration.summary.replayPassing,
+    matches: queue.summary.calibrationMatches,
+    reviewNeeded: queue.summary.calibrationReviewNeeded
   };
 }
 

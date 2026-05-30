@@ -25,7 +25,8 @@ export function buildMaintainerQueue(payload = {}, options = {}) {
       : [];
   const items = rawItems.slice(0, limit).map((item, index) => evaluateQueueItem(item, {
     index,
-    profile: item.profile || payload.profile || options.profile
+    profile: item.profile || payload.profile || options.profile,
+    feedbackCalibration: item.feedbackCalibration || payload.feedbackCalibration || options.feedbackCalibration
   }));
   const sortedItems = items.sort(compareQueueItems);
   const summary = summarizeQueue(sortedItems);
@@ -52,10 +53,11 @@ export function buildMaintainerQueue(payload = {}, options = {}) {
   };
 }
 
-export function evaluateQueueItem(rawItem = {}, { index = 0, profile = "" } = {}) {
+export function evaluateQueueItem(rawItem = {}, { index = 0, profile = "", feedbackCalibration = null } = {}) {
   const input = normalizeQueueInput(rawItem);
   const evaluation = evaluateContribution(input, {
-    profile: profile || input.profile
+    profile: profile || input.profile,
+    feedbackCalibration
   });
   const signals = queueSignals(evaluation);
   const id = String(rawItem.id || input.id || `${input.kind}-${input.number || index + 1}`);
@@ -77,6 +79,7 @@ export function evaluateQueueItem(rawItem = {}, { index = 0, profile = "" } = {}
     topReasons: signals.topReasons,
     contextSummary: evaluation.repositoryContext?.summary || "No repository context supplied.",
     contextFindings: evaluation.repositoryContext?.findings?.length || 0,
+    calibration: publicQueueCalibration(evaluation.calibration),
     reviewBudget: evaluation.reviewBudget,
     blockerCount: evaluation.blockers.length,
     failureCount: evaluation.checks.filter((check) => check.status === "fail").length,
@@ -120,6 +123,7 @@ export function formatMaintainerQueueMarkdown(queue = {}) {
     `Low review value: ${summary.statuses["low-review-value"] || 0}`,
     `Estimated review budget: ${summary.reviewBudgetMinutes} minutes`,
     `Repository context findings: ${summary.contextFindings}`,
+    `Feedback calibration matches: ${summary.calibrationMatches}`,
     "",
     "## Queue"
   ].filter((line) => line !== "");
@@ -137,6 +141,7 @@ export function formatMaintainerQueueMarkdown(queue = {}) {
       `- Action: ${item.action}`,
       `- Labels: ${item.labels?.length ? item.labels.map((label) => `\`${label}\``).join(", ") : "none"}`,
       `- Context: ${item.contextSummary || "none"}`,
+      `- Feedback calibration: ${item.calibration?.active ? item.calibration.summary : "none"}`,
       `- Review budget: ${item.reviewBudget?.minutes ?? "n/a"} minutes`,
       "- Reasons:",
       reasons
@@ -160,6 +165,8 @@ function summarizeQueue(items) {
     failures: 0,
     warnings: 0,
     contextFindings: 0,
+    calibrationMatches: 0,
+    calibrationReviewNeeded: 0,
     reviewBudgetMinutes: 0
   };
 
@@ -174,6 +181,8 @@ function summarizeQueue(items) {
     summary.failures += item.failureCount || 0;
     summary.warnings += item.warningCount || 0;
     summary.contextFindings += item.contextFindings || 0;
+    summary.calibrationMatches += item.calibration?.matches || 0;
+    if (item.calibration?.status === "review-needed") summary.calibrationReviewNeeded += 1;
     summary.reviewBudgetMinutes += item.reviewBudget?.minutes || 0;
     for (const label of item.labels || []) {
       summary.labels[label] = (summary.labels[label] || 0) + 1;
@@ -181,6 +190,26 @@ function summarizeQueue(items) {
   }
 
   return summary;
+}
+
+function publicQueueCalibration(calibration) {
+  if (!calibration?.active) {
+    return {
+      active: false,
+      status: "none",
+      summary: "",
+      matches: 0,
+      evidence: {}
+    };
+  }
+  return {
+    active: true,
+    status: calibration.status,
+    summary: calibration.summary,
+    matches: calibration.matches?.length || 0,
+    evidence: calibration.evidence || {},
+    pressure: calibration.pressure || {}
+  };
 }
 
 function queueSignals(evaluation) {

@@ -44,6 +44,7 @@ test("candidate corpus applies selected runnable feedback drafts and skips manua
     assert.equal(result.applied.length, 1);
     assert.equal(result.skipped.length, 2);
     assert.equal(result.corpus.summary.total, 1);
+    assert.deepEqual(result.corpus.summary.expectedStatuses, { "ready-for-maintainer": 1 });
     assert.equal(result.replay.summary.passed, 1);
     assert.equal(result.corpus.candidates[0].sourceCaseId, exported.cases[0].id);
 

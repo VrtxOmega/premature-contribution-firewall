@@ -91,6 +91,11 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
       },
       {
         method: "GET",
+        path: "/api/feedback/calibration",
+        description: "Build an auditable local calibration profile from maintainer feedback and promoted candidate fixtures."
+      },
+      {
+        method: "GET",
         path: "/api/feedback/export",
         description: "Export maintainer corrections as regression-fixture candidates; manual fixture input is still required."
       },
@@ -181,7 +186,8 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
         mode: "dry-run | read-only | write-armed",
         safety: "write posture without secret values",
         github: "sanitized GitHub App and webhook setup status",
-        history: "queue history setup status"
+        history: "queue history setup status",
+        pilot: "ten-minute dry-run pilot steps, safe defaults, and blockers without secret values"
       },
       queueHistory: {
         summary: "latest run counts and transition totals",
@@ -201,6 +207,12 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
         needsManualFixtureInput: "true when the export does not contain enough original payload to become a runnable fixture draft",
         replay: "current evaluator result against the exported expectation"
       },
+      feedbackCalibration: {
+        source: "local maintainer feedback plus promoted feedback candidate fixtures",
+        behavior: "advisory and auditable; it can add calibration labels and repair steps but does not hide the base heuristic score or status",
+        matches: "candidate or feedback evidence matched by repository, item, kind, title tokens, labels, files, and profile",
+        endpoint: "GET /api/feedback/calibration"
+      },
       feedbackCandidates: {
         source: "local candidate corpus, separate from the permanent benchmark corpus",
         apply: "requires selected caseIds unless applyAllRunnable is true",
@@ -214,17 +226,23 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
 }
 
 export function evaluateSubmission(payload = {}, options = {}) {
+  const feedbackCalibration = payload.feedbackCalibration || options.feedbackCalibration || null;
   if (payload.text || payload.patchText || payload.kind === "patch") {
     const parsed = parsePatchSubmission(payload.text || payload.patchText || "", {
       profile: payload.profile || options.profile || "kernel-grade",
       repositoryFiles: payload.repositoryFiles || payload.policyFiles || []
     });
+    parsed.repository = payload.repository || payload.input?.repository || "";
     parsed.repositoryContext = payload.repositoryContext || payload.repoContext || null;
-    return evaluateContribution(parsed, { profile: payload.profile || options.profile || parsed.profile });
+    return evaluateContribution(parsed, {
+      profile: payload.profile || options.profile || parsed.profile,
+      feedbackCalibration
+    });
   }
 
   return evaluateContribution(payload.input || payload, {
-    profile: payload.profile || options.profile || payload.input?.profile || payload.reviewProfile
+    profile: payload.profile || options.profile || payload.input?.profile || payload.reviewProfile,
+    feedbackCalibration
   });
 }
 
@@ -252,7 +270,8 @@ export function evaluateBatch(payload = {}, options = {}) {
   const results = items.map((item, index) => {
     try {
       const evaluation = evaluateSubmission(item.input ? { ...item.input, profile: item.profile || item.input.profile } : item, {
-        profile: item.profile || payload.profile
+        profile: item.profile || payload.profile,
+        feedbackCalibration: item.feedbackCalibration || payload.feedbackCalibration || options.feedbackCalibration
       });
       return {
         ok: true,

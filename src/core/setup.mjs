@@ -62,6 +62,7 @@ export function buildSetupStatus(config = {}) {
       limit: config.queueHistoryLimit || 50,
       pathConfigured: Boolean(config.queueHistoryPath)
     },
+    pilot: buildPilotPlan({ config, mode, appAuthReady, writeReady, warnings }),
     checklist: [
       checklistItem("webhook-secret", "Webhook secret configured", webhookSecretConfigured, webhookSecretConfigured ? "Webhook signatures can be verified." : "Set PCF_WEBHOOK_SECRET before accepting real webhooks."),
       checklistItem("github-app-id", "GitHub App ID configured", appIdConfigured, appIdConfigured ? "GitHub App identity is present." : "Set GITHUB_APP_ID for installation-authenticated reads or writes."),
@@ -111,6 +112,43 @@ function checklistItem(id, label, ok, detail) {
     label,
     ok: Boolean(ok),
     status: ok ? "pass" : "warn",
+    detail
+  };
+}
+
+function buildPilotPlan({ config, mode, appAuthReady, writeReady, warnings }) {
+  const dryRunSafe = config.dryRun !== false;
+  const baseUrl = `http://${config.host || "127.0.0.1"}:${config.port || 3791}`;
+  return {
+    estimatedMinutes: 10,
+    phase: writeReady ? "write-ready-after-dry-run-review" : "dry-run-first",
+    mode,
+    readyFor: writeReady
+      ? "A maintainer can review dry-run output and deliberately decide whether to allow writes."
+      : "Local dry-run evaluation, queue sorting, feedback capture, candidate replay, and read-only connection checks.",
+    blockedBy: warnings,
+    safeDefaults: [
+      "PCF_DRY_RUN stays true unless explicitly disabled.",
+      "PCF_POST_COMMENTS and PCF_APPLY_LABELS stay false by default.",
+      "Queue history and feedback evidence stay local under data/ by default."
+    ],
+    steps: [
+      pilotStep("verify", "Run local proof gates", "npm run ci:gates", "manual", "Proves repository hygiene, syntax, tests, benchmark, red-test, and maintainer demo."),
+      pilotStep("start", "Start the local server", "npm start", "manual", "Serves the browser UI and local API."),
+      pilotStep("setup", "Check sanitized setup posture", `curl ${baseUrl}/api/github/setup`, dryRunSafe ? "pass" : "warn", "Returns booleans and safe metadata only."),
+      pilotStep("connection", "Test read-only repository access", `curl -s -H 'Content-Type: application/json' --data '{\"owner\":\"octocat\",\"repo\":\"Hello-World\"}' ${baseUrl}/api/github/test-connection`, appAuthReady ? "ready" : "manual", "Requires GitHub App credentials for authenticated repository reads."),
+      pilotStep("queue", "Run a dry-run maintainer queue", `curl -s -H 'Content-Type: application/json' --data-binary @fixtures/queue-sample.json ${baseUrl}/api/github/queue`, "manual", "Sorts ready, repair-needed, and low-value work without writing to GitHub."),
+      pilotStep("feedback", "Capture and replay maintainer feedback", `curl ${baseUrl}/api/feedback/calibration`, "manual", "Shows whether local corrections and promoted candidates are calibrating future triage.")
+    ]
+  };
+}
+
+function pilotStep(id, label, command, status, detail) {
+  return {
+    id,
+    label,
+    command,
+    status,
     detail
   };
 }
