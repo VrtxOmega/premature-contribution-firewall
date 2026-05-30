@@ -100,6 +100,20 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", minScore: 80, labels: ["ready-for-maintainer"], absentLabels: ["needs-reproducer", "duplicate-search-needed"], repoContext: true }
   },
   {
+    id: "feature-request-ready",
+    category: "issue",
+    name: "Feature request with concrete use case and solution",
+    input: featureRequestIssue({ ready: true }),
+    expect: { status: "ready-for-maintainer", minScore: 90, labels: ["ready-for-maintainer"], absentLabels: ["needs-reproducer", "needs-logs", "needs-expected-actual"], repoContext: true }
+  },
+  {
+    id: "feature-request-thin",
+    category: "issue",
+    name: "Thin feature request without user problem",
+    input: featureRequestIssue({ ready: false }),
+    expect: { status: "low-review-value", labels: ["needs-use-case"], absentLabels: ["needs-reproducer"] }
+  },
+  {
     id: "unready-issue",
     category: "issue",
     name: "Vague issue with no reproducer",
@@ -647,6 +661,35 @@ function deviceSupportIssue() {
     repositoryContext: {
       source: "github-api",
       repository: "make-all/tuya-local",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function featureRequestIssue({ ready }) {
+  if (!ready) {
+    return {
+      kind: "issue",
+      title: "Dark mode",
+      labels: [{ name: "enhancement" }],
+      body: "Please add dark mode."
+    };
+  }
+  return {
+    kind: "issue",
+    title: "Add the ability to have TrackLink inserted by default",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "**Is your feature request related to a problem? Please describe.**",
+      "I am frustrated when I forget to click the TrackLink checkbox before sending a campaign.",
+      "",
+      "**Describe the solution you'd like**",
+      "I would like a setting that automatically enables TrackLink for pasted links."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "knadh/listmonk",
       issues: [],
       pullRequests: []
     }

@@ -421,13 +421,16 @@ export function evaluateIssue(input, options = {}) {
   const policyProfile = buildPolicyProfile(input);
   const repositoryTriage = analyzeRepositoryContext(input);
   const issueEvidence = analyzeIssueEvidence(input, { title, body });
+  const featureRequest = issueEvidence.featureRequestIntent && !issueEvidence.deviceSupportIntent && !securityClaim;
   const repositoryContextCleared = repositoryTriage.hasContext && repositoryTriage.checkStatus === "pass";
-  const hasReproducer = SIGNALS.repro.test(body) || issueEvidence.deviceSupportComplete;
-  const hasExpectedActual = SIGNALS.expectedActual.test(body) || issueEvidence.deviceSupportComplete;
-  const hasEnvironment = SIGNALS.version.test(body) || issueEvidence.hasDeviceIdentity;
-  const hasLogEvidence = SIGNALS.logs.test(body) || issueEvidence.hasDeviceTelemetry;
+  const hasReproducer = featureRequest ? issueEvidence.hasFeatureUseCase : SIGNALS.repro.test(body) || issueEvidence.deviceSupportComplete;
+  const hasExpectedActual = featureRequest ? issueEvidence.hasFeatureSolution : SIGNALS.expectedActual.test(body) || issueEvidence.deviceSupportComplete;
+  const hasEnvironment = featureRequest || SIGNALS.version.test(body) || issueEvidence.hasDeviceIdentity;
+  const hasLogEvidence = featureRequest || SIGNALS.logs.test(body) || issueEvidence.hasDeviceTelemetry;
   const hasDuplicateSearch = SIGNALS.duplicateSearch.test(body) || repositoryContextCleared;
-  const hasTechnicalAnalysis = SIGNALS.rootCause.test(body) || issueEvidence.deviceSupportComplete;
+  const hasTechnicalAnalysis = featureRequest
+    ? issueEvidence.featureRequestComplete || issueEvidence.hasFeatureScope
+    : SIGNALS.rootCause.test(body) || issueEvidence.deviceSupportComplete;
 
   addCheck(checks, labels, {
     id: "title",
@@ -448,13 +451,17 @@ export function evaluateIssue(input, options = {}) {
   });
 
   addCheck(checks, labels, {
-    id: "reproducer",
-    title: "Minimal reproducer",
+    id: featureRequest ? "feature-use-case" : "reproducer",
+    title: featureRequest ? "Feature use case" : "Minimal reproducer",
     status: hasReproducer ? "pass" : "fail",
-    label: "needs-reproducer",
-    penalty: 24,
+    label: featureRequest ? "needs-use-case" : "needs-reproducer",
+    penalty: featureRequest ? 18 : 24,
     blocking: !hasReproducer,
-    reason: SIGNALS.repro.test(body)
+    reason: featureRequest && issueEvidence.hasFeatureUseCase
+      ? "Feature request describes the user problem, workflow, or use case."
+      : featureRequest
+        ? "Feature request needs a concrete user problem, workflow, or use case."
+        : SIGNALS.repro.test(body)
       ? "Includes reproduction language."
       : issueEvidence.deviceSupportComplete
         ? "Device-support report includes product identity, local telemetry, and DPS mapping evidence."
@@ -462,12 +469,16 @@ export function evaluateIssue(input, options = {}) {
   });
 
   addCheck(checks, labels, {
-    id: "expected-actual",
-    title: "Expected and actual behavior",
+    id: featureRequest ? "feature-solution" : "expected-actual",
+    title: featureRequest ? "Requested behavior" : "Expected and actual behavior",
     status: hasExpectedActual ? "pass" : "warn",
-    label: "needs-expected-actual",
+    label: featureRequest ? "needs-feature-solution" : "needs-expected-actual",
     penalty: 8,
-    reason: SIGNALS.expectedActual.test(body)
+    reason: featureRequest && issueEvidence.hasFeatureSolution
+      ? "Feature request describes the requested behavior or solution."
+      : featureRequest
+        ? "Feature request should describe the requested behavior or solution."
+        : SIGNALS.expectedActual.test(body)
       ? "Expected and actual behavior are present."
       : issueEvidence.deviceSupportComplete
         ? "Device-support request uses product/DPS evidence instead of a classic expected/actual bug format."
@@ -480,7 +491,9 @@ export function evaluateIssue(input, options = {}) {
     status: hasEnvironment ? "pass" : "warn",
     label: "needs-environment",
     penalty: 8,
-    reason: SIGNALS.version.test(body)
+    reason: featureRequest
+      ? "Feature request does not need version or environment details unless it is platform-specific."
+      : SIGNALS.version.test(body)
       ? "Includes version, commit, or environment signal."
       : issueEvidence.hasDeviceIdentity
         ? "Includes device product identity that can route a support request."
@@ -493,7 +506,9 @@ export function evaluateIssue(input, options = {}) {
     status: hasLogEvidence ? "pass" : "warn",
     label: "needs-logs",
     penalty: 7,
-    reason: SIGNALS.logs.test(body)
+    reason: featureRequest
+      ? "Feature request does not need logs or stack traces."
+      : SIGNALS.logs.test(body)
       ? "Includes logs, stack trace, or concrete error output."
       : issueEvidence.hasDeviceTelemetry
         ? "Includes device telemetry or DPS output."
@@ -514,12 +529,18 @@ export function evaluateIssue(input, options = {}) {
   });
 
   addCheck(checks, labels, {
-    id: "technical-analysis",
-    title: "Technical analysis",
+    id: featureRequest ? "feature-scope" : "technical-analysis",
+    title: featureRequest ? "Alternatives or acceptance criteria" : "Technical analysis",
     status: hasTechnicalAnalysis ? "pass" : "warn",
-    label: "needs-technical-analysis",
+    label: featureRequest ? "needs-feature-scope" : "needs-technical-analysis",
     penalty: 5,
-    reason: SIGNALS.rootCause.test(body)
+    reason: featureRequest && issueEvidence.hasFeatureScope
+      ? "Feature request describes alternatives, constraints, or concrete behavior boundaries."
+      : featureRequest && issueEvidence.featureRequestComplete
+        ? "Feature request has enough use-case and requested behavior detail for maintainer triage."
+      : featureRequest
+        ? "Feature request would be easier to review with alternatives, constraints, or acceptance criteria."
+        : SIGNALS.rootCause.test(body)
       ? "Includes a root-cause hypothesis, patch, or technical analysis."
       : issueEvidence.deviceSupportComplete
         ? "Includes concrete product/DPS mapping evidence that gives maintainers review material."
@@ -597,6 +618,8 @@ export function evaluateIssue(input, options = {}) {
   if (SIGNALS.version.test(body)) strengths.push("Names version, commit, or environment.");
   if (SIGNALS.logs.test(body)) strengths.push("Includes logs or concrete error output.");
   if (issueEvidence.deviceSupportComplete) strengths.push("Includes device identity, local telemetry, and DPS mapping evidence.");
+  if (featureRequest && issueEvidence.hasFeatureUseCase) strengths.push("Describes a concrete feature use case.");
+  if (featureRequest && issueEvidence.hasFeatureSolution) strengths.push("Describes the requested feature behavior.");
   addStatusLabel(labels, status);
 
   return {
@@ -628,6 +651,7 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
   const labelText = labels.join(" ");
   const text = `${title}\n${body}\n${labelText}`;
   const deviceSupportIntent = /\b(request support|device support|new device|product id|product name|dps information|local dps|device matches)\b/i.test(text);
+  const featureRequestIntent = /\b(feature request|enhancement|describe the feature|describe the solution|solution you'd like|alternatives you've considered|related to a problem|use case|requesting|add the ability|support for)\b/i.test(text);
   const hasProductId = /###\s*product\s+id\s*\n+\s*[a-z0-9][a-z0-9_-]{5,}/i.test(body)
     || /\bproduct_?id\b[\s:=]+["']?[a-z0-9][a-z0-9_-]{5,}/i.test(body);
   const hasProductName = /###\s*product\s+name\s*\n+\s*[^\n#][^\n]{1,}/i.test(body)
@@ -635,11 +659,27 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
   const hasDeviceTelemetry = /\b(local\s+dps|dps information|device matches)\b/i.test(body)
     && (/```/.test(body) || /[\[{][\s\S]{20,}[\]}]/.test(body) || /^\s*(name|products|entities):\s+/mi.test(body));
   const hasDeviceIdentity = deviceSupportIntent && hasProductId && hasProductName;
+  const hasFeatureUseCase = featureRequestIntent && (
+    /\b(use case|workflow|problem|frustrated|current approach|current workflow|need to|want to|so that|because)\b/i.test(body)
+    || /describe the feature you'd like to request/i.test(body)
+  );
+  const hasFeatureSolution = featureRequestIntent && (
+    /\b(describe the solution|solution you'd like|requested behavior|add (?:a|an|the)?|allow(?:s|ing)?|support(?:s|ing)?|setting|should|would like)\b/i.test(body)
+  );
+  const hasFeatureScope = featureRequestIntent && (
+    /\b(alternatives?|constraints?|acceptance criteria|current approach|workaround|manual|instead|at least|configurable|rate limits?|preserv(?:e|ing|es)|detect conflicts?)\b/i.test(body)
+    || /describe alternatives you've considered/i.test(body)
+  );
   return {
     deviceSupportIntent,
     hasDeviceIdentity,
     hasDeviceTelemetry,
-    deviceSupportComplete: deviceSupportIntent && hasDeviceIdentity && hasDeviceTelemetry
+    deviceSupportComplete: deviceSupportIntent && hasDeviceIdentity && hasDeviceTelemetry,
+    featureRequestIntent,
+    hasFeatureUseCase,
+    hasFeatureSolution,
+    hasFeatureScope,
+    featureRequestComplete: featureRequestIntent && hasFeatureUseCase && hasFeatureSolution
   };
 }
 
@@ -760,6 +800,9 @@ function repairFor(check) {
     "draft-pr": "Mark the PR ready only after the repair checklist is complete.",
     "maintainer-attention-risk": "Reduce reviewer burden with tests, a smaller diff, and clear ownership of the change.",
     "needs-reproducer": "Add minimal steps to reproduce, expected behavior, and actual behavior.",
+    "needs-use-case": "Describe the user problem, workflow, or use case the feature would solve.",
+    "needs-feature-solution": "Describe the requested behavior or solution clearly enough to evaluate.",
+    "needs-feature-scope": "Add alternatives, constraints, acceptance criteria, or concrete behavior boundaries.",
     "needs-expected-actual": "Spell out expected behavior and actual behavior in separate lines.",
     "needs-environment": "Add version, commit, OS/runtime, or environment details.",
     "needs-logs": "Attach the exact error output, stack trace, or relevant logs.",

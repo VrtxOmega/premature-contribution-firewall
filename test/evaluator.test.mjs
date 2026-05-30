@@ -92,6 +92,84 @@ test("device support report with logs and repository context is reviewable", () 
   assert.ok(result.strengths.some((item) => item.includes("device identity")));
 });
 
+test("complete feature request is evaluated as a feature request, not a bug report", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Notion Integration",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "### Describe the feature you'd like to request",
+      "",
+      "I’d like floccus to support direct syncing with Notion, so bookmarks can be pushed/pulled to Notion databases without using an intermediate service.",
+      "Current workflow: I sync bookmarks from floccus to Linkwarden, then pull them into Notion. This adds complexity and an extra point of failure.",
+      "Use case: keep a central, searchable Notion database of bookmarks with tags, notes, and original metadata.",
+      "",
+      "### Describe the solution you'd like",
+      "",
+      "Add a Notion connector that authenticates with Notion, lets users choose a target database, maps bookmark fields to Notion properties, supports incremental sync, and respects rate limits.",
+      "",
+      "### Describe alternatives you've considered",
+      "",
+      "- Continue using Linkwarden as an intermediary.",
+      "- Export/import bookmarks manually into Notion.",
+      "- Use a dedicated bookmarking service with native Notion support."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "floccusaddon/floccus",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.ok(result.labels.includes("ready-for-maintainer"));
+  assert.equal(result.labels.includes("needs-reproducer"), false);
+  assert.equal(result.labels.includes("needs-logs"), false);
+  assert.equal(result.labels.includes("needs-expected-actual"), false);
+  assert.ok(result.checks.some((check) => check.id === "feature-use-case" && check.status === "pass"));
+  assert.ok(result.checks.some((check) => check.id === "feature-solution" && check.status === "pass"));
+  assert.ok(result.strengths.some((item) => item.includes("feature use case")));
+});
+
+test("thin feature request still needs repair before maintainer review", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Dark mode",
+    labels: [{ name: "enhancement" }],
+    body: "Please add dark mode."
+  });
+
+  assert.equal(result.status, "low-review-value");
+  assert.ok(result.labels.includes("needs-use-case"));
+  assert.ok(result.blockers.some((check) => check.id === "feature-use-case"));
+});
+
+test("feature request with problem and requested behavior does not require alternatives", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Add the ability to have TrackLink inserted by default",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "**Is your feature request related to a problem? Please describe.**",
+      "I am frustrated when I forget to click the TrackLink checkbox before sending the campaign.",
+      "",
+      "**Describe the solution you'd like**",
+      "I would like a setting that automatically enables TrackLink for pasted links."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "knadh/listmonk",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-feature-scope"), false);
+  assert.ok(result.checks.some((check) => check.id === "feature-scope" && check.status === "pass"));
+});
+
 test("markdown report includes status, labels, repairs, and marker", async () => {
   const result = evaluateContribution(await fixture("pr-ready"));
   const markdown = renderMarkdownReport(result);
