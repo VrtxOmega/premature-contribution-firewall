@@ -2,6 +2,7 @@ import { availableProfiles, evaluateContribution } from "./evaluator.mjs";
 import { FEEDBACK_VERDICTS } from "./feedback.mjs";
 import { parsePatchSubmission } from "./patch.mjs";
 import { DEFAULT_QUEUE_LIMIT, MAX_QUEUE_LIMIT, buildMaintainerQueue } from "./queue.mjs";
+import { buildSetupGuide } from "./setup-guide.mjs";
 import { buildSetupStatus } from "./setup.mjs";
 
 export const API_VERSION = "2026-05-30";
@@ -63,6 +64,11 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
         method: "GET",
         path: "/api/github/setup",
         description: "Read sanitized GitHub App, webhook, write-safety, and queue-history setup status."
+      },
+      {
+        method: "GET",
+        path: "/api/github/setup/guide",
+        description: "Read a zero-to-first-dry-run GitHub App pilot guide with sanitized env values and exact commands."
       },
       {
         method: "POST",
@@ -188,6 +194,13 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
         github: "sanitized GitHub App and webhook setup status",
         history: "queue history setup status",
         pilot: "ten-minute dry-run pilot steps, safe defaults, and blockers without secret values"
+      },
+      githubSetupGuide: {
+        source: "config plus optional repository/baseUrl query",
+        registration: "GitHub App fields, read-only permissions, webhook events, and install scope",
+        env: "safe .env values with secret values redacted or generated client-side by command",
+        commands: "local start, setup check, read-only connection test, fixture queue, and repository dry-run queue commands",
+        endpoint: "GET /api/github/setup/guide"
       },
       queueHistory: {
         summary: "latest run counts and transition totals",
@@ -315,4 +328,8 @@ export function evaluateMaintainerQueue(payload = {}, options = {}) {
 
 export function createSetupStatus(config = {}) {
   return buildSetupStatus(config);
+}
+
+export function createSetupGuide(config = {}, options = {}) {
+  return buildSetupGuide(config, options);
 }

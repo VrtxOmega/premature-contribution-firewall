@@ -43,3 +43,28 @@ test("CLI evaluates a plain-text patch in kernel-grade mode", async () => {
   assert.equal(data.profile.id, "kernel-grade");
   assert.equal(data.patchSeries.patchCount, 1);
 });
+
+test("CLI prints guided setup for a target repository", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["src/cli.mjs", "setup", "--repository", "owner/repo"], {
+    cwd: new URL("..", import.meta.url)
+  });
+
+  assert.match(stdout, /Premature Contribution Firewall guided pilot setup/);
+  assert.match(stdout, /GitHub App registration checklist/);
+  assert.match(stdout, /api\/repositories\/owner\/repo\/queue\?limit=25/);
+});
+
+test("CLI emits guided setup JSON without secret values", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["src/cli.mjs", "setup", "--repository", "owner/repo", "--format", "json"], {
+    cwd: new URL("..", import.meta.url),
+    env: {
+      ...process.env,
+      PCF_WEBHOOK_SECRET: "SENSITIVE_WEBHOOK_SECRET_VALUE_12345"
+    }
+  });
+  const data = JSON.parse(stdout);
+
+  assert.equal(data.ok, true);
+  assert.equal(data.target.repository, "owner/repo");
+  assert.equal(stdout.includes("SENSITIVE_WEBHOOK_SECRET_VALUE_12345"), false);
+});

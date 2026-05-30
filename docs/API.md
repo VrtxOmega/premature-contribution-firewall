@@ -193,6 +193,25 @@ This returns sanitized pilot readiness:
 
 The response intentionally does not include webhook secrets, private keys, installation tokens, or API tokens.
 
+## Guided Pilot Setup
+
+```bash
+curl 'http://127.0.0.1:3791/api/github/setup/guide?repository=owner/repo'
+curl 'http://127.0.0.1:3791/api/github/setup/guide?repository=owner/repo&format=markdown'
+```
+
+The guided setup endpoint is the API version of `npm run setup:pilot -- --repository owner/repo`. It returns:
+
+- exact GitHub App registration fields
+- read-only repository permissions for a pilot install
+- webhook events and webhook URL guidance
+- safe `.env` values with secrets redacted
+- local start commands
+- first dry-run proof commands for setup status, read-only connection testing, fixture queue, and repository queue
+- exit criteria for deciding whether the pilot is ready to show a maintainer
+
+The guide keeps writes disabled by default. It never returns configured webhook secrets, private key contents, installation tokens, or GitHub API tokens.
+
 ## Test Read-Only Connection
 
 ```bash

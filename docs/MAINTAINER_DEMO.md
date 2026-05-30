@@ -4,6 +4,14 @@ This is the short demonstration path for showing Premature Contribution Firewall
 
 ## Five-Minute Proof
 
+Show the setup path first:
+
+```bash
+npm run setup:pilot -- --repository owner/repo
+```
+
+This proves the pilot is not a README scavenger hunt. The command prints the GitHub App fields, read-only permissions, webhook events, safe `.env` values, and first dry-run queue commands.
+
 Run the deterministic demo:
 
 ```bash
@@ -52,6 +60,7 @@ Show these surfaces:
 ```bash
 curl -s http://127.0.0.1:3791/api/health
 curl -s http://127.0.0.1:3791/api/spec
+curl -s 'http://127.0.0.1:3791/api/github/setup/guide?repository=owner/repo'
 curl -s -H 'Content-Type: application/json' --data-binary @fixtures/queue-sample.json http://127.0.0.1:3791/api/github/queue
 curl -s http://127.0.0.1:3791/api/feedback/calibration
 curl -s http://127.0.0.1:3791/api/feedback/candidates/replay

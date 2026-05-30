@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import { evaluateContribution, renderMarkdownReport } from "./core/evaluator.mjs";
 import { parsePatchSubmission } from "./core/patch.mjs";
 import { normalizeRepositoryFiles } from "./core/policy.mjs";
+import { buildSetupGuide, renderSetupGuideMarkdown, renderSetupGuideText } from "./core/setup-guide.mjs";
+import { loadConfig } from "./config.mjs";
 
 const args = process.argv.slice(2);
 
@@ -12,10 +14,29 @@ if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
 }
 
 const command = args[0];
-if (!["evaluate", "evaluate-patch"].includes(command)) {
+if (!["evaluate", "evaluate-patch", "setup", "setup-pilot"].includes(command)) {
   console.error(`Unknown command: ${command}`);
   printHelp();
   process.exit(2);
+}
+
+if (command === "setup" || command === "setup-pilot") {
+  const format = readFlag(args, "--format") || "text";
+  const config = loadConfig(process.cwd());
+  const guide = buildSetupGuide(config, {
+    repository: readFlag(args, "--repository") || readFlag(args, "--repo"),
+    baseUrl: readFlag(args, "--base-url"),
+    publicBaseUrl: readFlag(args, "--public-base-url") || readFlag(args, "--webhook-base-url")
+  });
+
+  if (format === "json") {
+    console.log(JSON.stringify(guide, null, 2));
+  } else if (format === "markdown") {
+    console.log(renderSetupGuideMarkdown(guide));
+  } else {
+    console.log(renderSetupGuideText(guide));
+  }
+  process.exit(0);
 }
 
 const file = args[1];
@@ -83,6 +104,7 @@ async function readPolicyFiles(path) {
 
 function printHelp() {
   console.log(`Usage:
+  node src/cli.mjs setup [--repository owner/repo] [--base-url http://127.0.0.1:3791] [--public-base-url https://example.tunnel] [--format text|json|markdown]
   node src/cli.mjs evaluate <payload.json> [--format pretty|json|markdown] [--profile standard|kernel-grade]
   node src/cli.mjs evaluate-patch <patch-or-mbox> [--format pretty|json|markdown] [--profile kernel-grade] [--policy policy-files.json]
   cat payload.json | node src/cli.mjs evaluate - --format json`);

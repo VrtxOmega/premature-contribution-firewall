@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createApiSpec, createSetupStatus, evaluateBatch, evaluateMaintainerQueue } from "../src/core/api.mjs";
+import { createApiSpec, createSetupGuide, createSetupStatus, evaluateBatch, evaluateMaintainerQueue } from "../src/core/api.mjs";
 
 test("API spec exposes callable maintainer endpoints", () => {
   const spec = createApiSpec({ dryRun: true, postComments: false, applyLabels: false });
@@ -10,6 +10,7 @@ test("API spec exposes callable maintainer endpoints", () => {
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/benchmark"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/github/queue"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/github/setup"));
+  assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/github/setup/guide"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/github/test-connection"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/queue/history"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/feedback"));
@@ -27,11 +28,34 @@ test("API spec exposes callable maintainer endpoints", () => {
   assert.match(spec.schemas.feedbackExport.runnableFixture, /benchmark-compatible/);
   assert.match(spec.schemas.feedbackCalibration.behavior, /does not hide the base heuristic/);
   assert.match(spec.schemas.githubSetup.pilot, /ten-minute/);
+  assert.match(spec.schemas.githubSetupGuide.commands, /repository dry-run queue/);
   assert.match(spec.schemas.feedbackCandidates.source, /separate from the permanent benchmark/);
   assert.match(spec.schemas.feedbackCandidates.evidenceExport, /README/);
   assert.match(spec.schemas.feedbackCandidates.replayCompare, /no server-side baseline/);
   assert.equal(spec.limits.batchItems, 100);
   assert.equal(spec.limits.queueItems, 100);
+});
+
+test("setup guide API helper returns first dry-run commands without secrets", () => {
+  const guide = createSetupGuide({
+    host: "127.0.0.1",
+    port: 3791,
+    dryRun: true,
+    webhookSecret: "super-secret",
+    githubAppId: "123",
+    githubPrivateKeyPath: "not-present.pem",
+    githubQueueLimit: 25,
+    queueHistoryEnabled: true
+  }, {
+    repository: "VrtxOmega/premature-contribution-firewall",
+    baseUrl: "http://127.0.0.1:3791"
+  });
+
+  assert.equal(guide.ok, true);
+  assert.equal(guide.target.repository, "VrtxOmega/premature-contribution-firewall");
+  assert.match(guide.commands.repositoryQueue, /\/api\/repositories\/VrtxOmega\/premature-contribution-firewall\/queue/);
+  assert.match(guide.githubApp.permissions.map((permission) => permission.access).join(" "), /Read-only/);
+  assert.equal(JSON.stringify(guide).includes("super-secret"), false);
 });
 
 test("setup API helper returns sanitized write posture", () => {

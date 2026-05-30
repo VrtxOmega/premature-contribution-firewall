@@ -190,6 +190,7 @@ Local endpoints:
 - `POST /api/evaluate-batch`
 - `POST /api/github/queue`
 - `GET /api/github/setup`
+- `GET /api/github/setup/guide`
 - `POST /api/github/test-connection`
 - `GET /api/queue/history`
 - `POST /api/feedback`
@@ -210,6 +211,7 @@ See [`docs/API.md`](docs/API.md) for payloads, response contracts, and curl exam
 ## CLI
 
 ```bash
+node src/cli.mjs setup --repository owner/repo
 node src/cli.mjs evaluate fixtures/pr-unready.json
 node src/cli.mjs evaluate fixtures/pr-ready.json --format markdown
 node src/cli.mjs evaluate fixtures/issue-unready.json --format json
@@ -323,6 +325,30 @@ The response includes per-item top reasons, labels, repository-context summaries
 ## Pilot Mode
 
 Pilot mode is for maintainers who want to try PCF safely before letting it comment or label anything.
+
+The shortest path is the guided pilot command:
+
+```bash
+npm run setup:pilot -- --repository owner/repo
+```
+
+That prints the GitHub App registration checklist, read-only permission list, webhook event list, safe `.env` values, local server commands, and first dry-run queue commands. It redacts configured secrets and keeps `PCF_DRY_RUN=true`, `PCF_POST_COMMENTS=false`, and `PCF_APPLY_LABELS=false`.
+
+The same guide is available from the API once the local server is running:
+
+```bash
+curl 'http://127.0.0.1:3791/api/github/setup/guide?repository=owner/repo'
+curl 'http://127.0.0.1:3791/api/github/setup/guide?repository=owner/repo&format=markdown'
+```
+
+The recommended pilot App settings are:
+
+- GitHub App name: `Premature Contribution Firewall - owner/repo`
+- Webhook URL: a public HTTPS tunnel or deployment URL ending in `/webhook/github`
+- Webhook secret: the same value as `PCF_WEBHOOK_SECRET`
+- Repository permissions: Metadata read-only, Issues read-only, Pull requests read-only, Contents read-only
+- Webhook events: `issues` and `pull_request`
+- Install scope: only the pilot repository
 
 ```bash
 curl http://127.0.0.1:3791/api/github/setup

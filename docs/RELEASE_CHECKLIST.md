@@ -71,6 +71,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - Add authentication, rate limiting, request logging, and operational alerting before public hosting.
 - Treat `data/` as local runtime evidence. Do not commit feedback ledgers, candidate corpora, or queue-history files by accident.
 - Keep feedback candidate promotion separate from the permanent benchmark until a maintainer reviews the case and expectation.
+- Run `npm run setup:pilot -- --repository owner/repo` and verify the guided GitHub App pilot path is still accurate before sending the repo to a maintainer.
 - Run a secret-pattern scan before publishing artifacts.
 
 ## Claims Allowed
@@ -78,6 +79,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - PCF evaluates review readiness, scope, evidence, repository policy, repository context, and maintainer attention cost.
 - PCF includes deterministic local benchmark and adversarial red-test corpora.
 - PCF can expose a read-only/dry-run GitHub maintainer queue and a callable local API.
+- PCF can print a guided GitHub App pilot checklist and first dry-run queue commands without exposing secret values.
 - PCF can turn maintainer corrections into replayable fixture candidates when the original payload is available.
 - PCF can compare candidate replay baselines before evaluator or policy changes are accepted.
 

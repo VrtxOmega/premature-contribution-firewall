@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createApiSpec, createSetupStatus, evaluateBatch, evaluateMaintainerQueue } from "./core/api.mjs";
+import { createApiSpec, createSetupGuide, createSetupStatus, evaluateBatch, evaluateMaintainerQueue } from "./core/api.mjs";
 import { applyFeedbackFixtureCandidates, buildCandidateEvidenceArtifact, buildCandidateReplayComparison, readCandidateCorpus, replayCandidateCorpus } from "./core/candidates.mjs";
 import { buildFeedbackCalibration } from "./core/calibration.mjs";
 import { appendFeedback, buildRegressionExport, readFeedbackLedger } from "./core/feedback.mjs";
@@ -10,6 +10,7 @@ import { appendQueueHistory, readQueueHistory } from "./core/history.mjs";
 import { runBenchmark } from "./core/benchmark.mjs";
 import { availableProfiles, evaluateContribution } from "./core/evaluator.mjs";
 import { parsePatchSubmission } from "./core/patch.mjs";
+import { renderSetupGuideMarkdown } from "./core/setup-guide.mjs";
 import { loadConfig } from "./config.mjs";
 import { createGitHubClient } from "./github/client.mjs";
 import { handleGitHubWebhook } from "./github/webhook.mjs";
@@ -63,6 +64,18 @@ async function route(request, response) {
 
   if (request.method === "GET" && url.pathname === "/api/github/setup") {
     return sendJson(response, 200, createSetupStatus(config));
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/github/setup/guide") {
+    const guide = createSetupGuide(config, {
+      repository: url.searchParams.get("repository") || "",
+      baseUrl: url.searchParams.get("baseUrl") || `http://${request.headers.host || `${config.host}:${config.port}`}`,
+      publicBaseUrl: url.searchParams.get("publicBaseUrl") || url.searchParams.get("webhookBaseUrl") || ""
+    });
+    if (url.searchParams.get("format") === "markdown") {
+      return send(response, 200, renderSetupGuideMarkdown(guide), "text/markdown; charset=utf-8");
+    }
+    return sendJson(response, 200, guide);
   }
 
   if (request.method === "POST" && url.pathname === "/api/github/test-connection") {
