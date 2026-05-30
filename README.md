@@ -111,6 +111,12 @@ Current generated results live in [`docs/benchmark-results.md`](docs/benchmark-r
 
 The benchmark is deterministic. It asserts expected outcomes over a public synthetic corpus; it does not claim AI-authorship detection or universal real-world maintainer preference.
 
+## Real-World Calibration
+
+Synthetic fixtures are not enough. PCF's live-pilot rule is: when a real repository exposes a wrong assumption, preserve the evidence, fix the narrow evaluator behavior, and lock the lesson into tests, benchmark cases, red-test residue, or replayable feedback candidates.
+
+The current calibration notes cover the tuya-local device-support pilot and the floccus feature-request pilot: [docs/REAL_WORLD_CALIBRATION.md](docs/REAL_WORLD_CALIBRATION.md).
+
 ## Adversarial Red Test
 
 The red-test suite captures inputs that try to make bad work look reviewable:
