@@ -35,7 +35,7 @@ test("CI workflow stays dry-run and least-privilege", async () => {
 test("CI workflow uploads generated proof artifacts after gates pass", async () => {
   const workflow = await readFile(workflowPath, "utf8");
   const gateIndex = workflow.indexOf("npm run demo:maintainer -- --fail-on-regression");
-  const artifactIndex = workflow.indexOf("actions/upload-artifact@v4");
+  const artifactIndex = workflow.indexOf("actions/upload-artifact@v7");
 
   assert.ok(gateIndex > 0);
   assert.ok(artifactIndex > gateIndex);

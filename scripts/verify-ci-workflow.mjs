@@ -18,8 +18,8 @@ export const REQUIRED_WORKFLOW_SNIPPETS = [
   "PCF_POST_COMMENTS: \"false\"",
   "PCF_APPLY_LABELS: \"false\"",
   "PCF_COLLECT_REPOSITORY_CONTEXT: \"true\"",
-  "actions/checkout@v4",
-  "actions/setup-node@v4",
+  "actions/checkout@v6",
+  "actions/setup-node@v6",
   "node-version: \"22\"",
   "npm run ci:verify",
   "npm run repo:verify",
@@ -31,7 +31,7 @@ export const REQUIRED_WORKFLOW_SNIPPETS = [
   "npm run benchmark:write",
   "npm run redtest:write",
   "npm run demo:maintainer:write",
-  "actions/upload-artifact@v4"
+  "actions/upload-artifact@v7"
 ];
 
 export const FORBIDDEN_WORKFLOW_SNIPPETS = [
@@ -61,7 +61,7 @@ export async function verifyCiWorkflow({ workflowPath = DEFAULT_WORKFLOW_PATH } 
     "npm run benchmark:write",
     "npm run redtest:write",
     "npm run demo:maintainer:write",
-    "actions/upload-artifact@v4"
+    "actions/upload-artifact@v7"
   ]);
 
   const failures = [
