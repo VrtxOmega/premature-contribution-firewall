@@ -99,7 +99,7 @@ npm run benchmark:write
 
 Current generated results live in [`docs/benchmark-results.md`](docs/benchmark-results.md):
 
-- 35/35 benchmark cases passing
+- 36/36 benchmark cases passing
 - standard PR readiness
 - issue triage readiness
 - repository policy enforcement
@@ -333,6 +333,15 @@ npm run setup:pilot -- --repository owner/repo
 ```
 
 That prints the GitHub App registration checklist, read-only permission list, webhook event list, safe `.env` values, local server commands, and first dry-run queue commands. It redacts configured secrets and keeps `PCF_DRY_RUN=true`, `PCF_POST_COMMENTS=false`, and `PCF_APPLY_LABELS=false`.
+
+For a live read-only shadow pilot against a public repository:
+
+```bash
+npm run pilot:public -- --repository owner/repo --limit 10
+npm run pilot:public:markdown -- --repository owner/repo --limit 10 --write public-pilot.md
+```
+
+The public pilot artifact leads with `review-now` versus `send-repair-request`, preserves repository-context findings such as duplicates, concurrent work, and upstream fixes, and records collection errors. Set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token for larger pilots or repeated search-heavy runs; the guide reports only whether a token is configured and never returns the token value. Do not commit third-party pilot output without maintainer consent.
 
 The same guide is available from the API once the local server is running:
 

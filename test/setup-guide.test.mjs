@@ -10,6 +10,7 @@ test("guided setup prints the GitHub App path from zero to dry-run queue", () =>
     postComments: false,
     applyLabels: false,
     webhookSecret: "SENSITIVE_WEBHOOK_SECRET_VALUE_12345",
+    githubToken: "SENSITIVE_GITHUB_READ_TOKEN_VALUE_12345",
     githubAppId: "12345",
     githubPrivateKeyPath: "",
     collectRepositoryContext: true,
@@ -30,6 +31,8 @@ test("guided setup prints the GitHub App path from zero to dry-run queue", () =>
   assert.match(guide.commands.testConnection, /"owner":"kernel"/);
   assert.match(guide.commands.repositoryQueue, /\/api\/repositories\/kernel\/linux\/queue\?limit=25/);
   assert.equal(JSON.stringify(guide).includes("SENSITIVE_WEBHOOK_SECRET_VALUE_12345"), false);
+  assert.equal(JSON.stringify(guide).includes("SENSITIVE_GITHUB_READ_TOKEN_VALUE_12345"), false);
+  assert.equal(guide.env.values.find((entry) => entry.key === "GITHUB_TOKEN").displayValue, "[configured]");
 });
 
 test("guided setup renderers are README-ready and secret-redacted", () => {

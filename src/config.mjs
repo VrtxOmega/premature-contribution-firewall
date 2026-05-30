@@ -24,6 +24,7 @@ export function loadConfig(cwd = process.cwd(), env = process.env) {
     feedbackCandidatesLimit: clampNumber(env.PCF_FEEDBACK_CANDIDATES_LIMIT, 250, 1, 1000),
     githubAppId: env.GITHUB_APP_ID || "",
     githubPrivateKeyPath: env.GITHUB_PRIVATE_KEY_PATH || "",
+    githubToken: env.GITHUB_TOKEN || env.GH_TOKEN || "",
     githubApiBase: env.GITHUB_API_BASE || "https://api.github.com"
   };
 }

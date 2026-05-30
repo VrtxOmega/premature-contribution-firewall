@@ -420,6 +420,14 @@ export function evaluateIssue(input, options = {}) {
   const promptInjection = SIGNALS.promptInjection.test(aggregateContributionText(input));
   const policyProfile = buildPolicyProfile(input);
   const repositoryTriage = analyzeRepositoryContext(input);
+  const issueEvidence = analyzeIssueEvidence(input, { title, body });
+  const repositoryContextCleared = repositoryTriage.hasContext && repositoryTriage.checkStatus === "pass";
+  const hasReproducer = SIGNALS.repro.test(body) || issueEvidence.deviceSupportComplete;
+  const hasExpectedActual = SIGNALS.expectedActual.test(body) || issueEvidence.deviceSupportComplete;
+  const hasEnvironment = SIGNALS.version.test(body) || issueEvidence.hasDeviceIdentity;
+  const hasLogEvidence = SIGNALS.logs.test(body) || issueEvidence.hasDeviceTelemetry;
+  const hasDuplicateSearch = SIGNALS.duplicateSearch.test(body) || repositoryContextCleared;
+  const hasTechnicalAnalysis = SIGNALS.rootCause.test(body) || issueEvidence.deviceSupportComplete;
 
   addCheck(checks, labels, {
     id: "title",
@@ -442,68 +450,80 @@ export function evaluateIssue(input, options = {}) {
   addCheck(checks, labels, {
     id: "reproducer",
     title: "Minimal reproducer",
-    status: SIGNALS.repro.test(body) ? "pass" : "fail",
+    status: hasReproducer ? "pass" : "fail",
     label: "needs-reproducer",
     penalty: 24,
-    blocking: !SIGNALS.repro.test(body),
+    blocking: !hasReproducer,
     reason: SIGNALS.repro.test(body)
       ? "Includes reproduction language."
-      : "No clear steps to reproduce, expected behavior, or actual behavior found."
+      : issueEvidence.deviceSupportComplete
+        ? "Device-support report includes product identity, local telemetry, and DPS mapping evidence."
+        : "No clear steps to reproduce, expected behavior, or actual behavior found."
   });
 
   addCheck(checks, labels, {
     id: "expected-actual",
     title: "Expected and actual behavior",
-    status: SIGNALS.expectedActual.test(body) ? "pass" : "warn",
+    status: hasExpectedActual ? "pass" : "warn",
     label: "needs-expected-actual",
     penalty: 8,
     reason: SIGNALS.expectedActual.test(body)
       ? "Expected and actual behavior are present."
-      : "Expected and actual behavior should be explicit."
+      : issueEvidence.deviceSupportComplete
+        ? "Device-support request uses product/DPS evidence instead of a classic expected/actual bug format."
+        : "Expected and actual behavior should be explicit."
   });
 
   addCheck(checks, labels, {
     id: "environment",
     title: "Version or environment",
-    status: SIGNALS.version.test(body) ? "pass" : "warn",
+    status: hasEnvironment ? "pass" : "warn",
     label: "needs-environment",
     penalty: 8,
     reason: SIGNALS.version.test(body)
       ? "Includes version, commit, or environment signal."
-      : "No version, commit, release, or environment detail found."
+      : issueEvidence.hasDeviceIdentity
+        ? "Includes device product identity that can route a support request."
+        : "No version, commit, release, or environment detail found."
   });
 
   addCheck(checks, labels, {
     id: "logs",
     title: "Logs or concrete error",
-    status: SIGNALS.logs.test(body) ? "pass" : "warn",
+    status: hasLogEvidence ? "pass" : "warn",
     label: "needs-logs",
     penalty: 7,
     reason: SIGNALS.logs.test(body)
       ? "Includes logs, stack trace, or concrete error output."
-      : "No logs or concrete error output supplied."
+      : issueEvidence.hasDeviceTelemetry
+        ? "Includes device telemetry or DPS output."
+        : "No logs or concrete error output supplied."
   });
 
   addCheck(checks, labels, {
     id: "duplicate-search",
     title: "Duplicate search",
-    status: SIGNALS.duplicateSearch.test(body) ? "pass" : "warn",
+    status: hasDuplicateSearch ? "pass" : "warn",
     label: "duplicate-search-needed",
     penalty: 6,
     reason: SIGNALS.duplicateSearch.test(body)
       ? "Reporter described duplicate/current-main search."
-      : "No duplicate-search or current-main check described."
+      : repositoryContextCleared
+        ? "Repository context was checked and no duplicate, solved, concurrent, or upstream-fixed signal was found."
+        : "No duplicate-search or current-main check described."
   });
 
   addCheck(checks, labels, {
     id: "technical-analysis",
     title: "Technical analysis",
-    status: SIGNALS.rootCause.test(body) ? "pass" : "warn",
+    status: hasTechnicalAnalysis ? "pass" : "warn",
     label: "needs-technical-analysis",
     penalty: 5,
     reason: SIGNALS.rootCause.test(body)
       ? "Includes a root-cause hypothesis, patch, or technical analysis."
-      : "A root-cause hypothesis or patch would reduce maintainer load."
+      : issueEvidence.deviceSupportComplete
+        ? "Includes concrete product/DPS mapping evidence that gives maintainers review material."
+        : "A root-cause hypothesis or patch would reduce maintainer load."
   });
 
   addCheck(checks, labels, {
@@ -576,6 +596,7 @@ export function evaluateIssue(input, options = {}) {
   if (SIGNALS.repro.test(body)) strengths.push("Includes reproduction details.");
   if (SIGNALS.version.test(body)) strengths.push("Names version, commit, or environment.");
   if (SIGNALS.logs.test(body)) strengths.push("Includes logs or concrete error output.");
+  if (issueEvidence.deviceSupportComplete) strengths.push("Includes device identity, local telemetry, and DPS mapping evidence.");
   addStatusLabel(labels, status);
 
   return {
@@ -599,6 +620,26 @@ export function evaluateIssue(input, options = {}) {
     repositoryContext: publicRepositoryContext(repositoryTriage),
     patchSeries: null,
     secretFindings
+  };
+}
+
+function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
+  const labels = normalizeLabels(input.labels || []);
+  const labelText = labels.join(" ");
+  const text = `${title}\n${body}\n${labelText}`;
+  const deviceSupportIntent = /\b(request support|device support|new device|product id|product name|dps information|local dps|device matches)\b/i.test(text);
+  const hasProductId = /###\s*product\s+id\s*\n+\s*[a-z0-9][a-z0-9_-]{5,}/i.test(body)
+    || /\bproduct_?id\b[\s:=]+["']?[a-z0-9][a-z0-9_-]{5,}/i.test(body);
+  const hasProductName = /###\s*product\s+name\s*\n+\s*[^\n#][^\n]{1,}/i.test(body)
+    || /\b(manufacturer|model)\b[\s:]+[^\n]+/i.test(body);
+  const hasDeviceTelemetry = /\b(local\s+dps|dps information|device matches)\b/i.test(body)
+    && (/```/.test(body) || /[\[{][\s\S]{20,}[\]}]/.test(body) || /^\s*(name|products|entities):\s+/mi.test(body));
+  const hasDeviceIdentity = deviceSupportIntent && hasProductId && hasProductName;
+  return {
+    deviceSupportIntent,
+    hasDeviceIdentity,
+    hasDeviceTelemetry,
+    deviceSupportComplete: deviceSupportIntent && hasDeviceIdentity && hasDeviceTelemetry
   };
 }
 

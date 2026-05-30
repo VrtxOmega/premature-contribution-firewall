@@ -6,6 +6,7 @@ export function buildSetupStatus(config = {}) {
   const privateKeyConfigured = Boolean(config.githubPrivateKeyPath);
   const privateKeyReadable = privateKeyConfigured && existsSync(config.githubPrivateKeyPath);
   const webhookSecretConfigured = Boolean(config.webhookSecret);
+  const tokenConfigured = Boolean(config.githubToken);
   const writesRequested = Boolean(config.postComments || config.applyLabels);
   const writesArmed = config.dryRun === false && writesRequested;
   const appAuthReady = appIdConfigured && privateKeyConfigured && privateKeyReadable;
@@ -51,6 +52,7 @@ export function buildSetupStatus(config = {}) {
       privateKeyReadable,
       privateKeyFile: privateKeyConfigured ? basename(config.githubPrivateKeyPath) : "",
       appAuthReady,
+      tokenConfigured,
       webhookSecretConfigured,
       collectRepositoryContext: config.collectRepositoryContext !== false,
       upstreamRepository: config.upstreamRepository || "",

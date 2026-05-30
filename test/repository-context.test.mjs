@@ -29,6 +29,31 @@ test("repository context findings repair an otherwise ready pull request", () =>
   assert.ok(result.checks.some((check) => check.id === "repository-context" && check.status === "fail"));
 });
 
+test("missing repository context stays missing after evaluator normalization", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Policy files are ignored for ready PRs",
+    body: [
+      "Steps to reproduce:",
+      "1. Add a CONTRIBUTING.md requiring npm test.",
+      "2. Submit a PR body with expected and actual behavior.",
+      "3. Run the evaluator.",
+      "",
+      "Expected: missing npm test evidence creates a repair item.",
+      "Actual: the submission passes without the project command.",
+      "",
+      "Environment: commit abc1234, Node 22.",
+      "Logs:",
+      "```text",
+      "policyProfile.hasPolicy=true",
+      "```"
+    ].join("\n")
+  });
+
+  assert.equal(result.repositoryContext.hasContext, false);
+  assert.ok(result.labels.includes("duplicate-search-needed"));
+});
+
 test("closed linked issue is surfaced before maintainer triage", () => {
   const result = evaluateContribution({
     kind: "issue",

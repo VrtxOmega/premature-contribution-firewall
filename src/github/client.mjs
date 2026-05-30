@@ -6,6 +6,7 @@ export function createGitHubClient(config = {}) {
   const apiBase = config.githubApiBase || "https://api.github.com";
   const appId = config.githubAppId;
   const privateKeyPath = config.githubPrivateKeyPath;
+  const readToken = config.githubToken || "";
   const tokenCache = new Map();
   const readCache = new Map();
   const readCacheTtlMs = Number.isFinite(Number(config.githubCacheTtlMs)) ? Number(config.githubCacheTtlMs) : 60_000;
@@ -17,6 +18,7 @@ export function createGitHubClient(config = {}) {
       headers: {
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
+        ...(readToken ? { Authorization: `Bearer ${readToken}` } : {}),
         ...(options.headers || {})
       }
     });
@@ -184,11 +186,7 @@ export function createGitHubClient(config = {}) {
     if (includeIssues && items.length < safeLimit) {
       try {
         const issueLimit = safeLimit - items.length;
-        const issues = await readRequest(
-          installationId,
-          `/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=${safeLimit}`
-        );
-        const issueItems = (Array.isArray(issues) ? issues : []).filter((issue) => !issue.pull_request).slice(0, issueLimit);
+        const issueItems = await readOpenIssuesOnly({ owner, repo, limit: issueLimit, installationId });
         for (const issue of issueItems) {
           items.push(await normalizeIssueQueueItem({
             owner,
@@ -264,6 +262,27 @@ export function createGitHubClient(config = {}) {
       });
     }
     return data;
+  }
+
+  async function readOpenIssuesOnly({ owner, repo, limit, installationId }) {
+    const issueLimit = Math.max(1, Math.min(100, Number(limit) || 25));
+    const perPage = Math.min(100, Math.max(25, issueLimit * 4));
+    const issuesOnly = [];
+
+    for (let page = 1; issuesOnly.length < issueLimit && page <= 10; page += 1) {
+      const issues = await readRequest(
+        installationId,
+        `/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=${perPage}&page=${page}`
+      );
+      const pageItems = Array.isArray(issues) ? issues : [];
+      for (const issue of pageItems) {
+        if (!issue.pull_request) issuesOnly.push(issue);
+        if (issuesOnly.length >= issueLimit) break;
+      }
+      if (pageItems.length < perPage) break;
+    }
+
+    return issuesOnly.slice(0, issueLimit);
   }
 
   async function safeReadPullFiles({ owner, repo, number, installationId }) {

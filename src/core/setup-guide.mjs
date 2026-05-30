@@ -188,6 +188,7 @@ function buildEnvGuide({ config, setup }) {
       envValue("PCF_COLLECT_REPOSITORY_CONTEXT", config.collectRepositoryContext === false ? "false" : "true", config.collectRepositoryContext !== false),
       envValue("PCF_GITHUB_QUEUE_LIMIT", String(config.githubQueueLimit || 25), true),
       envValue("PCF_QUEUE_HISTORY_ENABLED", config.queueHistoryEnabled === false ? "false" : "true", config.queueHistoryEnabled !== false),
+      envValue("GITHUB_TOKEN", setup.github?.tokenConfigured ? "[configured]" : "optional public-read token for live pilots", setup.github?.tokenConfigured, true),
       envValue("GITHUB_APP_ID", setup.github?.appIdConfigured ? "[configured]" : "paste numeric GitHub App ID", setup.github?.appIdConfigured),
       envValue("GITHUB_PRIVATE_KEY_PATH", setup.github?.privateKeyConfigured ? "[configured]" : "path/to/github-app-private-key.pem", setup.github?.privateKeyConfigured, true),
       envValue("GITHUB_API_BASE", config.githubApiBase || "https://api.github.com", true)

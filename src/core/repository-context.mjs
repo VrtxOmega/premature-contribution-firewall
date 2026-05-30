@@ -45,6 +45,24 @@ export function normalizeRepositoryContext(rawContext = null) {
     };
   }
 
+  if (rawContext.hasContext === false) {
+    return {
+      hasContext: false,
+      source: String(rawContext.source || "none"),
+      repository: String(rawContext.repository || rawContext.repo || ""),
+      upstreamRepository: String(rawContext.upstreamRepository || rawContext.upstream?.repository || ""),
+      issues: [],
+      pullRequests: [],
+      upstream: {
+        issues: [],
+        pullRequests: [],
+        commits: [],
+        releases: []
+      },
+      error: String(rawContext.error || "")
+    };
+  }
+
   const upstream = rawContext.upstream || {};
   return {
     hasContext: true,

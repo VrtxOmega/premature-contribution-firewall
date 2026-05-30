@@ -45,6 +45,53 @@ test("ready issue has enough evidence for maintainer attention", async () => {
   assert.ok(result.labels.includes("ready-for-maintainer"));
 });
 
+test("device support report with logs and repository context is reviewable", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Request support for Meaco Sefte Pro Fan",
+    labels: [{ name: "new device" }, { name: "log provided" }],
+    body: [
+      "### Log message",
+      "",
+      "```text",
+      "Device matches meaco_seftepro_fan with quality of 101%.",
+      "LOCAL DPS: {\"1\": true, \"2\": \"Normal\", \"3\": 1}",
+      "```",
+      "",
+      "### Product ID",
+      "",
+      "hf57kaednmtjbynq",
+      "",
+      "### Product Name",
+      "",
+      "Meaco Sefte Pro",
+      "",
+      "### DPS information",
+      "",
+      "```text",
+      "name: Meaco Sefte Pro Fan",
+      "products:",
+      "  - id: hf57kaednmtjbynq",
+      "entities:",
+      "  - entity: fan",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "make-all/tuya-local",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.ok(result.labels.includes("ready-for-maintainer"));
+  assert.equal(result.labels.includes("needs-reproducer"), false);
+  assert.equal(result.labels.includes("needs-expected-actual"), false);
+  assert.equal(result.labels.includes("duplicate-search-needed"), false);
+  assert.ok(result.strengths.some((item) => item.includes("device identity")));
+});
+
 test("markdown report includes status, labels, repairs, and marker", async () => {
   const result = evaluateContribution(await fixture("pr-ready"));
   const markdown = renderMarkdownReport(result);

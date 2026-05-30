@@ -66,6 +66,16 @@ curl -s http://127.0.0.1:3791/api/feedback/calibration
 curl -s http://127.0.0.1:3791/api/feedback/candidates/replay
 ```
 
+## Public Shadow Pilot
+
+Run this only in dry-run/read-only mode:
+
+```bash
+npm run pilot:public:markdown -- --repository owner/repo --limit 10 --write public-pilot.md
+```
+
+This artifact is for private review before approaching a maintainer. It shows the `review-now`, `send-repair-request`, and `do-not-review-yet` split, repository-context labels, collection errors, and possible red-test leads. For larger or repeated live pilots, set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token so GitHub search rate limits do not hide duplicate/concurrent-work context.
+
 ## What To Say
 
 PCF does not judge whether a contribution was written by AI. It asks whether the work is reviewable: scoped, reproducible, tested, routed, aware of similar work, and respectful of maintainer attention.

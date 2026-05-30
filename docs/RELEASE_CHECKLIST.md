@@ -22,7 +22,7 @@ Expected result:
 - Syntax check passes.
 - Repository hygiene verification passes.
 - Unit tests pass.
-- Benchmark stays at 35/35 or the documented case count increases with reviewed expectations.
+- Benchmark stays at 36/36 or the documented case count increases with reviewed expectations.
 - Adversarial red test stays at 8/8 or grows with preserved breakage residue.
 - Maintainer demo reports `PASS`.
 - CI workflow verification reports all required gates present and forbidden write posture absent.
@@ -72,6 +72,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - Treat `data/` as local runtime evidence. Do not commit feedback ledgers, candidate corpora, or queue-history files by accident.
 - Keep feedback candidate promotion separate from the permanent benchmark until a maintainer reviews the case and expectation.
 - Run `npm run setup:pilot -- --repository owner/repo` and verify the guided GitHub App pilot path is still accurate before sending the repo to a maintainer.
+- Run `npm run pilot:public:markdown -- --repository owner/repo --limit 10 --write public-pilot.md` privately before approaching a maintainer, and do not commit third-party pilot output without consent.
 - Run a secret-pattern scan before publishing artifacts.
 
 ## Claims Allowed
@@ -80,6 +81,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - PCF includes deterministic local benchmark and adversarial red-test corpora.
 - PCF can expose a read-only/dry-run GitHub maintainer queue and a callable local API.
 - PCF can print a guided GitHub App pilot checklist and first dry-run queue commands without exposing secret values.
+- PCF can generate a private public-repo shadow pilot artifact that preserves review-priority breakdowns and repository-context findings without writing to GitHub.
 - PCF can turn maintainer corrections into replayable fixture candidates when the original payload is available.
 - PCF can compare candidate replay baselines before evaluator or policy changes are accepted.
 

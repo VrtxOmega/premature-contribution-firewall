@@ -93,6 +93,13 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", minScore: 80, labels: ["ready-for-maintainer"] }
   },
   {
+    id: "device-support-issue",
+    category: "issue",
+    name: "Device support request with product logs and DPS evidence",
+    input: deviceSupportIssue(),
+    expect: { status: "ready-for-maintainer", minScore: 80, labels: ["ready-for-maintainer"], absentLabels: ["needs-reproducer", "duplicate-search-needed"], repoContext: true }
+  },
+  {
     id: "unready-issue",
     category: "issue",
     name: "Vague issue with no reproducer",
@@ -597,6 +604,52 @@ function issueWithoutDuplicateSearch() {
       "policyProfile.hasPolicy=true",
       "```"
     ].join("\n")
+  };
+}
+
+function deviceSupportIssue() {
+  return {
+    kind: "issue",
+    title: "Request support for Meaco Sefte Pro Fan",
+    labels: [{ name: "new device" }, { name: "log provided" }],
+    body: [
+      "### Log message",
+      "",
+      "```text",
+      "Device matches meaco_seftepro_fan with quality of 101%.",
+      "LOCAL DPS: {\"updated_at\": 1780147804.936074, \"1\": true, \"2\": \"Normal\", \"3\": 1}",
+      "```",
+      "",
+      "### Product ID",
+      "",
+      "hf57kaednmtjbynq",
+      "",
+      "### Product Name",
+      "",
+      "Meaco Sefte Pro",
+      "",
+      "### DPS information",
+      "",
+      "```text",
+      "name: Meaco Sefte Pro Fan",
+      "products:",
+      "  - id: hf57kaednmtjbynq",
+      "    manufacturer: Meaco",
+      "    model: Sefte Pro",
+      "entities:",
+      "  - entity: fan",
+      "    dps:",
+      "      - id: 1",
+      "        type: boolean",
+      "        name: switch",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "make-all/tuya-local",
+      issues: [],
+      pullRequests: []
+    }
   };
 }
 
