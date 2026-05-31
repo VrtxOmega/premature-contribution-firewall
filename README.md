@@ -28,6 +28,8 @@ Each queue item includes the route reason, next actor, maintainer action, top la
 
 Each queue item also includes a dry-run response draft. Reporter-owned lanes get a copyable repair-request draft; maintainer-owned lanes get an internal note for duplicate checks, routing, decision, or parked-state handling. PCF still does not post those drafts automatically.
 
+Canonical sample: [PCF maintainer export bundle from this repo's own public queue](docs/MAINTAINER_EXPORT_SAMPLE.md).
+
 ## GitHub Action Dry-Run
 
 The lowest-friction pilot is a read-only workflow artifact. It does not require a GitHub App and does not comment, label, close, merge, or write to issues or pull requests.
