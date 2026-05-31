@@ -731,12 +731,12 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     hasExplicitExpectedActual
     || (hasExpectedSignal && hasObservedFailureSignal && (SIGNALS.repro.test(body) || SIGNALS.logs.test(body) || SIGNALS.rootCause.test(body)))
   );
-  const issueDescription = markdownSection(body, /describe (?:your|the) issue|describe the bug/i);
-  const explicitStepsToReproduce = markdownSection(body, /steps to reproduce|reproduction/i);
+  const issueDescription = markdownSection(body, /describe (?:your|the) issue|describe the bug|what is not working as documented/i);
+  const explicitStepsToReproduce = markdownSection(body, /steps to reproduce|reproduction|how can we reproduce it/i);
   const stepsToReproduce = explicitStepsToReproduce || (hasEmbeddedReproductionSteps(issueDescription) ? issueDescription : "");
-  const expectedBehavior = markdownSection(body, /expected behaviou?r/i);
+  const expectedBehavior = markdownSection(body, /expected behaviou?r|what behaviou?r do you expect/i);
   const hasStructuredIssueDescription = hasMeaningfulSection(issueDescription);
-  const hasUncertainReproduction = /\b(?:idk|i don't know|i do not know|not sure|unsure|unknown|no idea|can't reproduce|cannot reproduce|hard to reproduce)\b/i.test(stepsToReproduce);
+  const hasUncertainReproduction = hasUncertainReproductionSteps(stepsToReproduce);
   const hasStructuredSteps = hasMeaningfulSection(stepsToReproduce) && !hasUncertainReproduction;
   const hasStructuredExpectedBehavior = hasMeaningfulSection(expectedBehavior);
   const hasStructuredEnvironment = [
@@ -749,7 +749,9 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     markdownSection(body, /operating system version/i),
     markdownSection(body, /installation method/i),
     markdownSection(body, /primary api used/i),
-    markdownSection(body, /last known working/i)
+    markdownSection(body, /last known working/i),
+    markdownSection(body, /which software versions do you use/i),
+    markdownSection(body, /on what device is .+ installed/i)
   ].some((section) => hasMeaningfulSection(section, { minLength: 2 }));
   const structuredBugReportComplete = !featureRequestIntent
     && hasStructuredIssueDescription
@@ -776,9 +778,18 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
 
 function markdownSection(body = "", headingPattern) {
   const source = headingPattern instanceof RegExp ? headingPattern.source : String(headingPattern);
-  const sectionPattern = new RegExp(`^#{2,6}\\s*(?:${source})\\s*\\n([\\s\\S]*?)(?=^#{2,6}\\s+|(?![\\s\\S]))`, "im");
+  const sectionPattern = new RegExp(`^#{2,6}\\s*(?:${source})[?:]?\\s*\\n([\\s\\S]*?)(?=^#{2,6}\\s+|(?![\\s\\S]))`, "im");
   const match = sectionPattern.exec(body);
   return match ? match[1].trim() : "";
+}
+
+function hasUncertainReproductionSteps(section = "") {
+  const text = String(section || "");
+  return /\b(?:idk|i don't know|i do not know|not sure|unsure|no idea)\s+(?:how\s+)?to\s+reproduce\b/i.test(text)
+    || /\b(?:can't|cannot|can not)\s+reproduce\b/i.test(text)
+    || /\bhard to reproduce\b/i.test(text)
+    || /^\s*(?:unknown|not sure|unsure|n\/a|no idea)\s*$/im.test(text)
+    || /\bsteps?\s+(?:are|is)\s+(?:unknown|unclear)\b/i.test(text);
 }
 
 function hasMeaningfulSection(section = "", { minLength = 8 } = {}) {

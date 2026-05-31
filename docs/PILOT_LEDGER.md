@@ -24,6 +24,7 @@ It is not a list of endorsements. A target repository appearing here means PCF r
 | `keymapperorg/KeyMapper` | Private only | None | 0 review / 5 repair / 7 defer | 5 review / 3 repair / 4 defer | Maintainer-authored internal issues should not get contributor repair prompts unless context or safety conflicts exist. |
 | `jarnedemeulemeester/findroid` | Private only | None | 2 review / 6 repair / 4 defer | 7 review / 0 repair / 5 defer | Complete Android/media bug templates need first-triage credit without requiring logs/root-cause analysis, while uncertain repros stay out of review-now. |
 | `FreeTubeApp/FreeTube` | Private only | None | 1 review / 10 repair / 1 defer | 3 review / 8 repair / 1 defer | Bug-template reproduction steps may be embedded in description sections, and `U: reproduced` is maintainer validation unless repository context conflicts. |
+| `photoprism/photoprism` | Private only | None | 6 review / 3 repair / 3 defer | 9 review / 1 repair / 2 defer | Project-specific bug headings, contextual follow-up references, and GitHub search pacing matter for media-heavy queues. |
 
 ## tuya-local
 
@@ -618,13 +619,94 @@ b25d4a38d040679b9fdbde086dfc36e017e348dba4340c9e3796fda30570798c
 fd40f3e1147399fba8e08c27d9e7250a8d2fcb3188ec404efffe3660fa31a0d2
 ```
 
+## PhotoPrism
+
+Target: `photoprism/photoprism`
+
+Queue shape:
+
+- media indexing issues
+- hidden-file recovery and duplicate-management follow-ups
+- FFmpeg 8 hardware transcoding regressions
+- maintainer-authored implementation and verification tickets
+- older viewer feature requests with possible duplicate context
+
+Templates inspected:
+
+- `bug_report.yml`
+- `feature-request.yml`
+- legacy `bug_report.md`
+- legacy `feature-request.md`
+
+Initial private pilot:
+
+- 12 sampled issues
+- 6 review-now
+- 3 repair
+- 3 defer
+- repository context checked all 12
+- context findings: 9
+- items with context findings: 5
+- context unavailable: 0
+
+What PCF got wrong:
+
+- `#5630` completed PhotoPrism's project-specific bug template, included FFmpeg error output, expected behavior, version/device evidence, and a workaround, but PCF missed headings such as "What is not working as documented?" and "How can we reproduce it?"
+- `#5631` and `#5632` were maintainer-authored follow-up/tracking issues, but direct references to related issues could be mistaken for duplicate or solved blockers.
+- `#5630` also said it was "not sure if this only occurs with Intel"; PCF treated that scope uncertainty as "unknown reproduction" even though the reproducer itself was concrete.
+- A rapid rerun across the live queue triggered GitHub secondary rate-limit failures, proving repeated pilots need paced search calls rather than only a token.
+
+Fixes made:
+
+- Added PhotoPrism-style documented-bug headings to structured issue evidence.
+- Distinguished uncertainty about reproduction steps from uncertainty about affected hardware or platform scope.
+- Treated contextual follow-up/tracking references as non-blocking unless the text explicitly says duplicate, fixed by, closes, or resolves.
+- Added configurable GitHub search pacing with `PCF_GITHUB_SEARCH_DELAY_MS` and documented it in the setup path.
+
+Final private pilot:
+
+- 12 sampled issues
+- 9 review-now
+- 1 repair
+- 2 defer
+- repository context checked all 12
+- context findings: 6
+- items with context findings: 3
+- context unavailable: 0
+
+Notable final routing:
+
+- `#5630` routed to review-now after PCF recognized its project-specific bug template and hardware-scope uncertainty correctly.
+- `#5631` and `#5632` routed to review-now as maintainer-authored follow-up/tracking work instead of duplicate blockers.
+- `#5615` stayed in repair because closed/solved linked context still needs a maintainer call.
+- `#4718` and `#352` stayed do-not-review-yet because 360 media viewer requests remain duplicate-adjacent and thin on current use case.
+
+Verification:
+
+- Focused evaluator, repository-context, GitHub-client, setup-guide, and benchmark tests passed.
+- Benchmark corpus increased to 53 cases:
+  - `project-specific-bug-template-headings`
+  - `contextual-follow-up-reference`
+- Current benchmark result: 53/53 passing.
+- GitHub writes to `photoprism/photoprism`: none.
+- Public outreach: none.
+
+Private artifact hashes:
+
+```text
+b3213fb646ee935ac11af1c36345df6ac0bb2b0f0eb8c0f24362d77a75362457
+385ab6a4df81a9f9d45794e244128f764d481b3abf3125cecd32137d24eb2e42
+88d4d636e8aebed06b28ca22baf4e6296b193b9d2e09443e4f4815be3a6b43b2
+cbe38104b842e819c952b46288e7058b8d243df8746d4d4b4c53f92eff35559c
+```
+
 ## Current Gate State
 
 The pilot ledger should be updated whenever a real pilot changes PCF behavior.
 
 Current expected proof state:
 
-- benchmark: 51/51
+- benchmark: 53/53
 - adversarial red test: 8/8
 - maintainer demo: PASS
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner

@@ -83,7 +83,8 @@ test("GitHub client collects a read-only maintainer queue", async () => {
     const client = createGitHubClient({
       githubApiBase: "https://api.github.test",
       upstreamRepository: "upstream/repo",
-      githubCacheTtlMs: 60_000
+      githubCacheTtlMs: 60_000,
+      githubSearchDelayMs: 0
     });
     const queue = await client.collectRepositoryQueue({
       owner: "owner",
@@ -127,6 +128,45 @@ test("GitHub client uses optional read token for public API calls", async () => 
   }
 });
 
+test("GitHub client spaces repository-context search requests when configured", async () => {
+  const originalFetch = globalThis.fetch;
+  const searchTimes = [];
+  globalThis.fetch = async (url) => {
+    const parsed = new URL(url);
+    if (parsed.pathname === "/repos/owner/repo/issues") {
+      return jsonResponse([issuePayload(10), issuePayload(11)]);
+    }
+    if (/^\/repos\/owner\/repo\/issues\/\d+\/comments$/.test(parsed.pathname)) {
+      return jsonResponse([]);
+    }
+    if (parsed.pathname === "/search/issues") {
+      searchTimes.push(Date.now());
+      return jsonResponse({ items: [] });
+    }
+    throw new Error(`unexpected fetch ${parsed.pathname}`);
+  };
+
+  try {
+    const client = createGitHubClient({
+      githubApiBase: "https://api.github.test",
+      githubCacheTtlMs: 0,
+      githubSearchDelayMs: 25
+    });
+    await client.collectRepositoryQueue({
+      owner: "owner",
+      repo: "repo",
+      limit: 2,
+      includePullRequests: false,
+      includeIssues: true
+    });
+
+    assert.equal(searchTimes.length, 2);
+    assert.ok(searchTimes[1] - searchTimes[0] >= 15);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("GitHub client fills issue-only queues when GitHub issue pages include PRs", async () => {
   const originalFetch = globalThis.fetch;
   const calls = [];
@@ -161,7 +201,8 @@ test("GitHub client fills issue-only queues when GitHub issue pages include PRs"
   try {
     const client = createGitHubClient({
       githubApiBase: "https://api.github.test",
-      githubCacheTtlMs: 0
+      githubCacheTtlMs: 0,
+      githubSearchDelayMs: 0
     });
     const queue = await client.collectRepositoryQueue({
       owner: "owner",
@@ -227,7 +268,8 @@ test("GitHub client includes direct issue refs from issue comments in repository
   try {
     const client = createGitHubClient({
       githubApiBase: "https://api.github.test",
-      githubCacheTtlMs: 0
+      githubCacheTtlMs: 0,
+      githubSearchDelayMs: 0
     });
     const queue = await client.collectRepositoryQueue({
       owner: "owner",

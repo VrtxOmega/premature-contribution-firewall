@@ -119,6 +119,7 @@ export function analyzeRepositoryContext(input = {}) {
 
   const linkedIssues = localIssues
     .filter((item) => item.number && current.issueRefs.has(String(item.number)))
+    .filter((item) => !current.contextualIssueRefs.has(String(item.number)))
     .map((item) => enrichMatch(item, current, "linked-issue"));
   const linkedOpenIssues = linkedIssues.filter((item) => isOpen(item));
   const linkedClosedIssues = linkedIssues.filter((item) => isClosed(item) || isSolved(item));
@@ -126,8 +127,9 @@ export function analyzeRepositoryContext(input = {}) {
   const similarOpenIssues = uniqueMatches([
     ...linkedOpenIssues,
     ...rankMatches(localIssues.filter((item) => isOpen(item)), current, "similar-open-issue")
-  ]);
-  const similarClosedIssues = rankMatches(localIssues.filter((item) => isClosed(item) || isSolved(item)), current, "similar-closed-issue");
+  ]).filter((item) => !isContextualDirectReference(item, current));
+  const similarClosedIssues = rankMatches(localIssues.filter((item) => isClosed(item) || isSolved(item)), current, "similar-closed-issue")
+    .filter((item) => !isContextualDirectReference(item, current));
   const concurrentPullRequests = rankMatches(localPullRequests.filter((item) => isOpen(item)), current, "concurrent-pr", { requireOverlap: false })
     .filter((item) => item.fileOverlap.length > 0 || item.score >= 0.24);
   const upstreamSolved = rankMatches(upstreamItems.filter((item) => isSolved(item) || item.scope === "upstream"), current, "upstream-solved", { threshold: 0.16 })
@@ -207,6 +209,7 @@ function normalizeItem(item, fallbackType, scope) {
 function currentFingerprint(input, context = {}) {
   const text = [input.title, input.body, ...(input.commits || [])].filter(Boolean).join("\n");
   const issueRefs = extractIssueRefs(text, context.repository);
+  const contextualIssueRefs = extractContextualIssueRefs(text, context.repository);
   for (const ref of context.currentIssueRefs || []) issueRefs.add(String(ref));
   return {
     number: input.number === undefined || input.number === null ? "" : String(input.number),
@@ -214,7 +217,8 @@ function currentFingerprint(input, context = {}) {
     tokens: tokenize(text),
     titleTokens: tokenize(input.title || ""),
     files: normalizeFiles(input.files || []),
-    issueRefs
+    issueRefs,
+    contextualIssueRefs
   };
 }
 
@@ -268,6 +272,10 @@ function enrichMatch(item, current, relation) {
     sha: item.sha,
     tagName: item.tagName
   };
+}
+
+function isContextualDirectReference(item, current) {
+  return Boolean(item.directReference && item.number && current.contextualIssueRefs?.has(String(item.number)));
 }
 
 function summarizeFindings({ similarOpenIssues, similarClosedIssues, linkedClosedIssues, concurrentPullRequests, upstreamSolved }) {
@@ -336,6 +344,30 @@ function extractIssueRefs(text, repository = "") {
     refs.add(match[1]);
   }
   return refs;
+}
+
+function extractContextualIssueRefs(text, repository = "") {
+  const refs = extractIssueRefs(text, repository);
+  if (!refs.size) return new Set();
+  const contextual = new Set();
+  const source = String(text || "");
+  const disqualifier = /\b(?:duplicate of|duplicates|same as|fixed by|fix(?:e[sd])?\s+#|close[sd]?\s+#|resolve[sd]?\s+#)\b/i;
+  const contextualSignal = /\b(?:follow-?up|followup|reported in|discussion|tracked|broader|covers|covered by|supersedes|split from|continuation)\b/i;
+
+  for (const ref of refs) {
+    const refPattern = new RegExp(`#${escapeRegExp(ref)}\\b|(?:issues|pull)/${escapeRegExp(ref)}\\b|github\\.com/[^\\s]+/(?:issues|pull)/${escapeRegExp(ref)}\\b`, "gi");
+    for (const match of source.matchAll(refPattern)) {
+      const start = Math.max(0, (match.index || 0) - 120);
+      const end = Math.min(source.length, (match.index || 0) + match[0].length + 120);
+      const window = source.slice(start, end);
+      if (contextualSignal.test(window) && !disqualifier.test(window)) {
+        contextual.add(ref);
+        break;
+      }
+    }
+  }
+
+  return contextual;
 }
 
 function escapeRegExp(value) {

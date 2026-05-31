@@ -163,6 +163,20 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", labels: ["maintainer-approved", "ready-for-maintainer"], absentLabels: ["needs-logs"], repoContext: true }
   },
   {
+    id: "project-specific-bug-template-headings",
+    category: "issue",
+    name: "Project-specific bug template headings count as structured evidence",
+    input: projectSpecificBugTemplateIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-logs", "needs-expected-actual"], repoContext: true }
+  },
+  {
+    id: "contextual-follow-up-reference",
+    category: "repo-context",
+    name: "Contextual follow-up references do not block maintainer work",
+    input: contextualFollowUpIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["maintainer-authored", "ready-for-maintainer"], absentLabels: ["possibly-solved", "possibly-duplicate"], repoContext: true }
+  },
+  {
     id: "maintainer-approved-issue-label",
     category: "issue",
     name: "Maintainer-approved issue label preserves review-now routing",
@@ -1104,6 +1118,81 @@ function maintainerReproducedIssue() {
       source: "github-api",
       repository: "FreeTubeApp/FreeTube",
       issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function projectSpecificBugTemplateIssue() {
+  return {
+    kind: "issue",
+    title: "Videos: VAAPI transcoding not working in latest release",
+    labels: [{ name: "video" }],
+    body: [
+      "### What is not working as documented?",
+      "",
+      "After updating to the latest Docker image, VAAPI encode on Haswell no longer works.",
+      "The FFmpeg command aborts with `A hardware device reference is required to upload frames to.` and PhotoPrism falls back to software encoding.",
+      "",
+      "### How can we reproduce it?",
+      "",
+      "Use the Docker container on a host with a GPU that supports VAAPI encode (not sure if this only occurs with Intel; the error seems generic).",
+      "",
+      "### What behavior do you expect?",
+      "",
+      "VAAPI hardware accelerated transcoding should work.",
+      "",
+      "### What could be the cause?",
+      "",
+      "FFmpeg was updated to 8.x in this release.",
+      "",
+      "### Which software versions do you use?",
+      "",
+      "- PhotoPrism Edition & Version (Build): May 2026 release, Docker AMD64",
+      "",
+      "### On what device is PhotoPrism installed?",
+      "",
+      "Intel i5 4590T",
+      "",
+      "### Logs, Sample Files, or Screenshots",
+      "",
+      "[log.txt](https://example.invalid/log.txt)"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "photoprism/photoprism",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function contextualFollowUpIssue() {
+  return {
+    kind: "issue",
+    title: "Videos: Improve and verify hardware transcoding with FFmpeg 8",
+    authorAssociation: "MEMBER",
+    labels: [{ name: "please-test" }, { name: "video" }],
+    body: [
+      "#5630 tracked and fixed the VAAPI regression specifically; this issue covers the broader follow-up work to verify all hardware encoders on FFmpeg 8.",
+      "",
+      "### Acceptance Criteria",
+      "- [x] VA-API transcoding MUST initialize a filter device.",
+      "- [x] Intel Quick Sync and NVENC transcoding MUST be verified working on FFmpeg 8."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "photoprism/photoprism",
+      issues: [
+        {
+          number: 5630,
+          title: "Videos: VAAPI transcoding not working in latest release",
+          body: "VAAPI regression fixed in a targeted issue.",
+          state: "open",
+          labels: ["please-test", "video"],
+          htmlUrl: "https://github.example/issues/5630"
+        }
+      ],
       pullRequests: []
     }
   };

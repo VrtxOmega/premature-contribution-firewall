@@ -57,7 +57,8 @@ export function buildSetupStatus(config = {}) {
       collectRepositoryContext: config.collectRepositoryContext !== false,
       upstreamRepository: config.upstreamRepository || "",
       queueLimit: config.githubQueueLimit || 25,
-      cacheTtlMs: config.githubCacheTtlMs ?? 60_000
+      cacheTtlMs: config.githubCacheTtlMs ?? 60_000,
+      searchDelayMs: config.githubSearchDelayMs ?? 2_000
     },
     history: {
       enabled: config.queueHistoryEnabled !== false,

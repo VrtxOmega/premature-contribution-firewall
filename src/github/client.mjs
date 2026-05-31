@@ -10,6 +10,8 @@ export function createGitHubClient(config = {}) {
   const tokenCache = new Map();
   const readCache = new Map();
   const readCacheTtlMs = Number.isFinite(Number(config.githubCacheTtlMs)) ? Number(config.githubCacheTtlMs) : 60_000;
+  const searchDelayMs = Number.isFinite(Number(config.githubSearchDelayMs)) ? Math.max(0, Number(config.githubSearchDelayMs)) : 2_000;
+  let nextSearchAt = 0;
 
   async function request(path, options = {}) {
     const url = `${apiBase}${path}`;
@@ -93,6 +95,7 @@ export function createGitHubClient(config = {}) {
     const currentIssueRefs = extractIssueRefs(`${title}\n${body}`, repository);
     const terms = searchTerms(`${title}\n${body}`);
     const queryText = terms.length ? terms.join(" ") : title || repo;
+    await waitForSearchSlot();
     const localSearch = await readRequest(installationId, `/search/issues?q=${encodeURIComponent(`${queryText} repo:${repository} in:title,body`)}&per_page=20`);
     const pullFiles = kind === "pull_request" && number && files.length === 0
       ? await safeReadPullFiles({ owner, repo, number, installationId })
@@ -131,6 +134,7 @@ export function createGitHubClient(config = {}) {
     };
 
     if (upstreamRepository) {
+      await waitForSearchSlot();
       const upstreamSearch = await request(`/search/issues?q=${encodeURIComponent(`${queryText} repo:${upstreamRepository} in:title,body`)}&per_page=20`);
       for (const item of upstreamSearch.items || []) {
         const normalized = normalizeSearchItem(item, "upstream");
@@ -432,6 +436,7 @@ export function createGitHubClient(config = {}) {
 
   async function safeSearchCommits({ repository, queryText }) {
     try {
+      await waitForSearchSlot();
       const data = await request(`/search/commits?q=${encodeURIComponent(`${queryText} repo:${repository}`)}&per_page=10`, {
         headers: { Accept: "application/vnd.github.cloak-preview+json" }
       });
@@ -447,6 +452,18 @@ export function createGitHubClient(config = {}) {
       return [];
     }
   }
+
+  async function waitForSearchSlot() {
+    if (!searchDelayMs) return;
+    const now = Date.now();
+    const waitMs = Math.max(0, nextSearchAt - now);
+    nextSearchAt = Math.max(now, nextSearchAt) + searchDelayMs;
+    if (waitMs > 0) await delay(waitMs);
+  }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function createAppJwt(appId, privateKeyPath, nowSeconds = Math.floor(Date.now() / 1000)) {

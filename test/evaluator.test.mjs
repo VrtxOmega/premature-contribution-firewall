@@ -436,6 +436,55 @@ test("reproduced maintainer label can route a confirmed bug without soft prompts
   assert.equal(result.repairSteps.some((step) => /logs|root-cause|reproduce/i.test(step)), false);
 });
 
+test("project-specific documented bug headings count as structured evidence", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Videos: VAAPI transcoding not working in latest release",
+    labels: [{ name: "video" }],
+    body: [
+      "### What is not working as documented?",
+      "",
+      "After updating to the latest Docker image, VAAPI encode on Haswell no longer works.",
+      "The FFmpeg command aborts with `A hardware device reference is required to upload frames to.` and PhotoPrism falls back to software encoding.",
+      "",
+      "### How can we reproduce it?",
+      "",
+      "Use the Docker container on a host with a GPU that supports VAAPI encode (not sure if this only occurs with Intel; the error seems generic).",
+      "",
+      "### What behavior do you expect?",
+      "",
+      "VAAPI hardware accelerated transcoding should work.",
+      "",
+      "### What could be the cause?",
+      "",
+      "FFmpeg was updated to 8.x in this release.",
+      "",
+      "### Which software versions do you use?",
+      "",
+      "- PhotoPrism Edition & Version (Build): May 2026 release, Docker AMD64",
+      "",
+      "### On what device is PhotoPrism installed?",
+      "",
+      "Intel i5 4590T",
+      "",
+      "### Logs, Sample Files, or Screenshots",
+      "",
+      "[log.txt](https://example.invalid/log.txt)"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "photoprism/photoprism",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-expected-actual"), false);
+  assert.equal(result.labels.includes("needs-logs"), false);
+  assert.ok(result.checks.some((check) => check.id === "reproducer" && check.status === "pass"));
+});
+
 test("structured bug template with uncertain reproduction still needs repair", () => {
   const result = evaluateContribution({
     kind: "issue",

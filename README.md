@@ -60,7 +60,7 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Promotes selected runnable feedback drafts into a separate local candidate corpus and replays that corpus against the current evaluator before anything is folded into the permanent benchmark.
 - Builds an auditable feedback calibration profile from local corrections and promoted candidates, then attaches close matches to future evaluations and queue items without hiding the base heuristic status or score.
 - Evaluates plain-text patch or mbox submissions with `evaluate-patch`, defaulting to `kernel-grade` discipline for email-style review.
-- Ships a deterministic maintainer benchmark corpus with 51 reproducible cases across PRs, issues, feature requests, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
+- Ships a deterministic maintainer benchmark corpus with 53 reproducible cases across PRs, issues, feature requests, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
 - Ships a separate adversarial red-test corpus that preserves breakage residue for negated verification, suspicious paths, secret evasion, generated artifact churn, skipped-only CI, prompt-injection text, malformed batch input, and empty patch bodies.
 - Exposes callable API endpoints for single, patch, batch, spec, and benchmark evaluation.
 - Includes a stricter `kernel-grade` profile for projects that want Linux-kernel-style patch discipline: concise subsystem subjects, human DCO sign-off, Fixes/stable discipline, maintainer routing, build/test evidence, review-budget control, and transparent tool provenance.
@@ -99,7 +99,7 @@ npm run benchmark:write
 
 Current generated results live in [`docs/benchmark-results.md`](docs/benchmark-results.md):
 
-- 51/51 benchmark cases passing
+- 53/53 benchmark cases passing
 - standard PR readiness
 - issue triage readiness
 - repository policy enforcement
@@ -129,6 +129,7 @@ Current pilot progression:
 | `keymapperorg/KeyMapper` | Private only | 0 review / 5 repair / 7 defer | 5 review / 3 repair / 4 defer | Maintainer-authored internal issues should not get contributor repair prompts unless context or safety conflicts exist. |
 | `jarnedemeulemeester/findroid` | Private only | 2 review / 6 repair / 4 defer | 7 review / 0 repair / 5 defer | Complete Android/media bug templates should not need logs or root-cause analysis for first triage, but uncertain repros stay out of review-now. |
 | `FreeTubeApp/FreeTube` | Private only | 1 review / 10 repair / 1 defer | 3 review / 8 repair / 1 defer | Bug-template repro steps can live inside description sections, and `U: reproduced` is maintainer validation unless repo context conflicts. |
+| `photoprism/photoprism` | Private only | 6 review / 3 repair / 3 defer | 9 review / 1 repair / 2 defer | Project-specific bug headings, contextual follow-up references, and GitHub search pacing matter for media-heavy queues. |
 
 ## Adversarial Red Test
 
@@ -360,7 +361,7 @@ npm run pilot:public -- --repository owner/repo --limit 10
 npm run pilot:public:markdown -- --repository owner/repo --limit 10 --write public-pilot.md
 ```
 
-The public pilot artifact leads with `review-now` versus `send-repair-request`, preserves repository-context findings such as duplicates, concurrent work, and upstream fixes, and records collection errors. Set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token for larger pilots or repeated search-heavy runs; the guide reports only whether a token is configured and never returns the token value. Do not commit third-party pilot output without maintainer consent.
+The public pilot artifact leads with `review-now` versus `send-repair-request`, preserves repository-context findings such as duplicates, concurrent work, and upstream fixes, and records collection errors. Set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token for larger pilots or repeated search-heavy runs; the guide reports only whether a token is configured and never returns the token value. PCF spaces GitHub search calls with `PCF_GITHUB_SEARCH_DELAY_MS` so multi-repo pilots do not collapse into secondary rate-limit noise. Do not commit third-party pilot output without maintainer consent.
 
 The same guide is available from the API once the local server is running:
 
@@ -507,6 +508,7 @@ PCF_COLLECT_REPOSITORY_CONTEXT=true
 PCF_UPSTREAM_REPOSITORY=upstream-owner/upstream-repo
 PCF_GITHUB_QUEUE_LIMIT=25
 PCF_GITHUB_CACHE_TTL_MS=60000
+PCF_GITHUB_SEARCH_DELAY_MS=2000
 PCF_QUEUE_HISTORY_ENABLED=true
 PCF_QUEUE_HISTORY_PATH=
 PCF_QUEUE_HISTORY_LIMIT=50

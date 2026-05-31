@@ -96,6 +96,78 @@ test("closed linked issue is surfaced before maintainer triage", () => {
   assert.ok(result.repositoryContext.linkedClosedIssues.some((item) => item.number === "42"));
 });
 
+test("contextual follow-up references do not become duplicate blockers", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Index: Show un-indexable files in Hidden with a clear error",
+    authorAssociation: "MEMBER",
+    labels: [{ name: "idea" }],
+    body: [
+      "Follow-up to #5389.",
+      "",
+      "**As a user, I want files that fail to decode to still appear in Hidden, so that I can remove or re-process them.**",
+      "",
+      "### Background",
+      "The earlier issue reported broken files disappearing from the UI. This follow-up tracks the storage and visibility rules needed for a focused implementation.",
+      "",
+      "### Acceptance Criteria",
+      "- [ ] A file that fails to decode MUST be recorded with a non-empty file error.",
+      "- [ ] The corresponding photo MUST be assigned photo_quality = -1."
+    ].join("\n"),
+    repositoryContext: {
+      repository: "photoprism/photoprism",
+      issues: [
+        {
+          number: 5389,
+          title: "Broken files do not show up in Hidden",
+          body: "Closed after a first pass; follow-up work remains.",
+          state: "closed",
+          labels: ["fixed"],
+          htmlUrl: "https://github.example/issues/5389"
+        }
+      ]
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("linked-issue-closed"), false);
+  assert.equal(result.labels.includes("possibly-solved"), false);
+  assert.equal(result.repositoryContext.linkedClosedIssues.length, 0);
+});
+
+test("contextual open tracking references do not become duplicate blockers", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Videos: Improve and verify hardware transcoding with FFmpeg 8",
+    authorAssociation: "MEMBER",
+    labels: [{ name: "please-test" }, { name: "video" }],
+    body: [
+      "#5630 tracked and fixed the VAAPI regression specifically; this issue covers the broader follow-up work to verify all hardware encoders on FFmpeg 8.",
+      "",
+      "### Acceptance Criteria",
+      "- [x] VA-API transcoding MUST initialize a filter device.",
+      "- [x] Intel Quick Sync and NVENC transcoding MUST be verified working on FFmpeg 8."
+    ].join("\n"),
+    repositoryContext: {
+      repository: "photoprism/photoprism",
+      issues: [
+        {
+          number: 5630,
+          title: "Videos: VAAPI transcoding not working in latest release",
+          body: "VAAPI regression fixed in a targeted issue.",
+          state: "open",
+          labels: ["please-test", "video"],
+          htmlUrl: "https://github.example/issues/5630"
+        }
+      ]
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("possibly-duplicate"), false);
+  assert.equal(result.repositoryContext.similarOpenIssues.length, 0);
+});
+
 test("comment-supplied issue refs surface open linked duplicates", () => {
   const result = evaluateContribution({
     kind: "issue",
