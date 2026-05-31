@@ -1,11 +1,11 @@
 import { availableProfiles, evaluateContribution } from "./evaluator.mjs";
 import { FEEDBACK_VERDICTS } from "./feedback.mjs";
 import { parsePatchSubmission } from "./patch.mjs";
-import { DEFAULT_QUEUE_LIMIT, MAX_QUEUE_LIMIT, buildMaintainerQueue } from "./queue.mjs";
+import { DEFAULT_QUEUE_LIMIT, MAX_QUEUE_LIMIT, NEXT_ACTIONS, buildMaintainerQueue } from "./queue.mjs";
 import { buildSetupGuide } from "./setup-guide.mjs";
 import { buildSetupStatus } from "./setup.mjs";
 
-export const API_VERSION = "2026-05-30";
+export const API_VERSION = "2026-05-31";
 export const DEFAULT_BATCH_LIMIT = 100;
 
 export function createApiSpec({ dryRun = true, postComments = false, applyLabels = false, collectRepositoryContext = true } = {}) {
@@ -58,7 +58,7 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
       {
         method: "POST",
         path: "/api/github/queue",
-        description: "Evaluate supplied queue items or collect a read-only dry-run queue with coarse actions and refined nextAction buckets for a GitHub repository."
+        description: "Evaluate supplied queue items or collect a read-only dry-run queue with coarse actions, nextAction actor ownership, evidence, and action-lane groups for a GitHub repository."
       },
       {
         method: "GET",
@@ -133,7 +133,7 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
       {
         method: "GET",
         path: "/api/repositories/:owner/:repo/queue",
-        description: "Collect and evaluate a read-only dry-run maintainer queue for one GitHub repository, including nextAction sub-action counts."
+        description: "Collect and evaluate a read-only dry-run maintainer queue for one GitHub repository, including nextAction owner/action/evidence groups."
       },
       {
         method: "POST",
@@ -190,7 +190,19 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
       },
       queueItem: {
         action: "review-now | send-repair-request | do-not-review-yet",
-        nextAction: "review-now | ask-reporter-for-evidence | check-duplicate-or-fixed-first | route-to-subsystem-or-process | needs-maintainer-decision | not-actionable-yet"
+        nextAction: {
+          ids: Object.keys(NEXT_ACTIONS),
+          owner: "reporter | maintainer | process | external-state",
+          target: "backward-compatible target actor string",
+          maintainerAction: "concrete maintainer-facing next move",
+          reason: "why this actor owns the next move",
+          evidence: {
+            labels: "labels/check labels that caused the route",
+            checks: "failed or warning checks tied to those labels",
+            reasons: "short explanation strings used in API, CLI, and UI"
+          }
+        },
+        nextActionGroups: "queue-level lane summaries with counts, owner, maintainerAction, reviewBudgetMinutes, and itemIds"
       },
       githubSetup: {
         mode: "dry-run | read-only | write-armed",

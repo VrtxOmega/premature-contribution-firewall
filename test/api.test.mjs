@@ -32,6 +32,10 @@ test("API spec exposes callable maintainer endpoints", () => {
   assert.match(spec.schemas.feedbackCandidates.source, /separate from the permanent benchmark/);
   assert.match(spec.schemas.feedbackCandidates.evidenceExport, /README/);
   assert.match(spec.schemas.feedbackCandidates.replayCompare, /no server-side baseline/);
+  assert.ok(spec.schemas.queueItem.nextAction.ids.includes("ask-reporter-for-evidence"));
+  assert.match(spec.schemas.queueItem.nextAction.maintainerAction, /concrete maintainer-facing/);
+  assert.match(spec.schemas.queueItem.nextAction.evidence.labels, /caused the route/);
+  assert.match(spec.schemas.queueItem.nextActionGroups, /lane summaries/);
   assert.equal(spec.limits.batchItems, 100);
   assert.equal(spec.limits.queueItems, 100);
 });
@@ -136,5 +140,7 @@ test("queue API helper evaluates supplied dry-run items", () => {
   assert.equal(result.ok, true);
   assert.equal(result.summary.total, 1);
   assert.equal(result.items[0].status, "ready-for-maintainer");
+  assert.equal(result.items[0].nextAction.owner, "maintainer");
+  assert.ok(result.nextActionGroups.some((group) => group.id === "review-now" && group.count === 1));
   assert.match(result.markdown, /ready-pr|webhook: reject oversized payload bodies/);
 });

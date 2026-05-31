@@ -25,15 +25,21 @@ test("maintainer queue summarizes ready, repair, and low-value work", async () =
   assert.equal(queue.summary.nextActions["review-now"], 1);
   assert.equal(queue.summary.nextActions["check-duplicate-or-fixed-first"], 1);
   assert.equal(queue.summary.nextActions["ask-reporter-for-evidence"], 1);
+  assert.equal(queue.summary.nextActionOwners.maintainer, 2);
+  assert.equal(queue.summary.nextActionOwners.reporter, 1);
   assert.equal(queue.summary.repairSubActions["check-duplicate-or-fixed-first"], 1);
   assert.equal(queue.summary.repairSubActions["ask-reporter-for-evidence"], 1);
+  assert.ok(queue.nextActionGroups.some((group) => group.id === "check-duplicate-or-fixed-first" && group.count === 1));
   assert.equal(queue.items[0].status, "ready-for-maintainer");
   assert.equal(queue.items[0].nextAction.id, "review-now");
+  assert.equal(queue.items[0].nextAction.maintainerAction, "Start normal review now.");
   assert.equal(queue.items[1].action, "send-repair-request");
   assert.equal(queue.items[1].nextAction.id, "check-duplicate-or-fixed-first");
+  assert.ok(queue.items[1].nextAction.evidence.labels.includes("possibly-duplicate"));
   assert.ok(queue.items[1].labels.includes("possibly-duplicate"));
   assert.ok(queue.markdown.includes("Maintainer Queue"));
   assert.ok(queue.markdown.includes("Next actions:"));
+  assert.ok(queue.markdown.includes("Next action lanes:"));
 });
 
 test("maintainer queue carries feedback calibration matches", async () => {
@@ -189,6 +195,8 @@ test("queue markdown is README-ready", async () => {
   assert.match(markdown, /Low review value: 1/);
   assert.match(markdown, /check-duplicate-or-fixed-first: 1/);
   assert.match(markdown, /Next action: check-duplicate-or-fixed-first/);
+  assert.match(markdown, /Next action lanes:/);
+  assert.match(markdown, /next maintainer move: Check related/);
   assert.match(markdown, /webhook: include labels in dry-run response/);
 });
 

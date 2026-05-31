@@ -8,16 +8,25 @@ PCF answers that through `nextAction`. This is not authorship detection. It is n
 
 ## Action Lanes
 
-| `nextAction.id` | Target | Meaning |
-| --- | --- | --- |
-| `review-now` | `maintainer` | Ready for maintainer review. |
-| `ask-reporter-for-evidence` | `reporter` | Ask the submitter for missing evidence, verification, or clearer reproduction details. |
-| `check-duplicate-or-fixed-first` | `maintainer` | Check related, duplicate, solved, concurrent, or upstream-fixed work before spending fresh review time. |
-| `route-to-subsystem-or-process` | `maintainer/process` | Route through the repository's subsystem, policy, ownership, or project process before normal review. |
-| `needs-maintainer-decision` | `maintainer` | Requires maintainer judgment because the next step is not obvious from reporter evidence alone. |
-| `not-actionable-yet` | `external-state` | No useful maintainer action is available until external state changes. |
+| `nextAction.id` | Owner | Target | Meaning | Maintainer action |
+| --- | --- | --- | --- | --- |
+| `review-now` | `maintainer` | `maintainer` | Ready for maintainer review. | Start normal review now. |
+| `ask-reporter-for-evidence` | `reporter` | `reporter` | Ask the submitter for missing evidence, verification, or clearer reproduction details. | Send a focused repair request to the submitter. |
+| `check-duplicate-or-fixed-first` | `maintainer` | `maintainer` | Check related, duplicate, solved, concurrent, or upstream-fixed work before spending fresh review time. | Check related, solved, concurrent, or upstream-fixed work before fresh review. |
+| `route-to-subsystem-or-process` | `process` | `maintainer/process` | Route through the repository's subsystem, policy, ownership, or project process before normal review. | Route through the right owner, subsystem, policy, or contribution process. |
+| `needs-maintainer-decision` | `maintainer` | `maintainer` | Requires maintainer judgment because the next step is not obvious from reporter evidence alone. | Make a judgment call; PCF cannot reduce the next move further. |
+| `not-actionable-yet` | `external-state` | `external-state` | No useful maintainer action is available until external state changes. | Wait or leave parked until the external blocker changes. |
 
 The target is deliberately explicit. A maintainer should be able to scan a queue and separate work for the reporter, work for the maintainer, work for repository context lookup, work for project process, and work blocked on outside state.
+
+Each queue item carries the same public contract:
+
+- `owner`: who owns the next useful move.
+- `maintainerAction`: the concrete thing a maintainer should do with the item.
+- `reason`: why PCF chose that actor.
+- `evidence.labels`, `evidence.checks`, and `evidence.reasons`: the labels and checks that caused the route.
+
+Queue responses also include `nextActionGroups`: one lane summary per exported action, with counts, item ids, owner, target, maintainer action copy, and review-budget totals. The browser UI and CLI use the same shape as the API.
 
 ## Coarse Buckets
 
@@ -64,6 +73,7 @@ The ordering matters because it prevents actor confusion. A context conflict sho
 The current model is covered by:
 
 - `test/queue.test.mjs`: checks selected `nextAction` reason families and maintainer-owned routing.
+- `test/next-action-output-contract.test.mjs`: captures and replays fixture queue payloads to keep the API/UI/CLI-facing next-action shape stable.
 - `test/adversary.test.mjs`: keeps replay residue in the adversarial corpus.
 - `docs/adversarial-red-team-results.md`: publishes the current red-test result.
 - `docs/LARGE_MAINTAINER_BENCH.md`: records replay-captured next-action distribution without publishing raw issue bodies.

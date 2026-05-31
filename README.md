@@ -341,6 +341,8 @@ curl -s \
   http://127.0.0.1:3791/api/github/queue
 
 curl 'http://127.0.0.1:3791/api/repositories/owner/repo/queue?limit=25&upstream=upstream-owner/upstream-repo'
+
+node src/cli.mjs queue fixtures/queue-sample.json
 ```
 
 Queue items are grouped into:
@@ -359,7 +361,50 @@ Each item also includes a `nextAction` object that explains who can usefully act
 
 The rule of thumb is that higher-cost maintainer-side signals beat generic reporter evidence: context lookup, repository routing, wait-state labels, and maintainer-owned work should not be hidden behind "please add logs."
 
-The response includes per-item top reasons, labels, repository-context summaries, review-budget estimates, sub-action counts, the full underlying evaluation, and markdown suitable for a maintainer report. GitHub queue collection is dry-run/read-only; comment and label writes still require explicit webhook write configuration.
+The response includes per-item top reasons, labels, repository-context summaries, review-budget estimates, sub-action counts, the full underlying evaluation, lane groups, and markdown suitable for a maintainer report. GitHub queue collection is dry-run/read-only; comment and label writes still require explicit webhook write configuration.
+
+What a maintainer sees:
+
+```json
+{
+  "summary": {
+    "total": 3,
+    "nextActions": {
+      "review-now": 1,
+      "check-duplicate-or-fixed-first": 1,
+      "ask-reporter-for-evidence": 1
+    },
+    "nextActionOwners": {
+      "maintainer": 2,
+      "reporter": 1
+    }
+  },
+  "nextActionGroups": [
+    {
+      "id": "check-duplicate-or-fixed-first",
+      "owner": "maintainer",
+      "maintainerAction": "Check related, solved, concurrent, or upstream-fixed work before fresh review.",
+      "count": 1,
+      "itemIds": ["pr-context-duplicate"]
+    }
+  ],
+  "items": [
+    {
+      "id": "pr-context-duplicate",
+      "action": "send-repair-request",
+      "nextAction": {
+        "id": "check-duplicate-or-fixed-first",
+        "owner": "maintainer",
+        "maintainerAction": "Check related, solved, concurrent, or upstream-fixed work before fresh review.",
+        "reason": "Repository context label: possibly-duplicate.",
+        "evidence": {
+          "labels": ["possibly-duplicate", "concurrent-work", "possibly-upstream-fixed"]
+        }
+      }
+    }
+  ]
+}
+```
 
 ## Pilot Mode
 

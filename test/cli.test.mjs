@@ -54,6 +54,32 @@ test("CLI prints guided setup for a target repository", async () => {
   assert.match(stdout, /api\/repositories\/owner\/repo\/queue\?limit=25/);
 });
 
+test("CLI prints maintainer queue next-action lanes", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["src/cli.mjs", "queue", "fixtures/queue-sample.json"], {
+    cwd: new URL("..", import.meta.url)
+  });
+
+  assert.match(stdout, /Premature Contribution Firewall queue: 3 item\(s\)/);
+  assert.match(stdout, /Next action lanes:/);
+  assert.match(stdout, /Review now: 1 item\(s\), owner maintainer/);
+  assert.match(stdout, /Check duplicate or fixed first: 1 item\(s\), owner maintainer/);
+  assert.match(stdout, /Ask reporter: 1 item\(s\), owner reporter/);
+  assert.match(stdout, /next: Send a focused repair request to the submitter/);
+});
+
+test("CLI emits queue JSON with enriched nextAction contract", async () => {
+  const { stdout } = await execFileAsync(process.execPath, ["src/cli.mjs", "queue", "fixtures/queue-sample.json", "--format", "json"], {
+    cwd: new URL("..", import.meta.url)
+  });
+  const data = JSON.parse(stdout);
+
+  assert.equal(data.summary.total, 3);
+  assert.ok(data.nextActionGroups.some((group) => group.id === "ask-reporter-for-evidence" && group.owner === "reporter"));
+  assert.equal(data.items[0].nextAction.owner, "maintainer");
+  assert.ok(Array.isArray(data.items[1].nextAction.evidence.labels));
+  assert.ok(data.items[1].nextAction.maintainerAction.includes("Check related"));
+});
+
 test("CLI emits guided setup JSON without secret values", async () => {
   const { stdout } = await execFileAsync(process.execPath, ["src/cli.mjs", "setup", "--repository", "owner/repo", "--format", "json"], {
     cwd: new URL("..", import.meta.url),

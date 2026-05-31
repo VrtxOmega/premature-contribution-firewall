@@ -611,6 +611,10 @@ function renderQueue(queue) {
     tile.querySelector("strong").textContent = String(value);
     queueSummaryEl.append(tile);
   }
+  for (const group of queue.nextActionGroups || []) {
+    if (!group.count) continue;
+    queueSummaryEl.append(summaryTile(group.title || group.id, group.count));
+  }
 
   const items = (queue.items || []).filter((item) => currentQueueFilter === "all" || item.status === currentQueueFilter);
   queueListEl.innerHTML = "";
@@ -620,10 +624,68 @@ function renderQueue(queue) {
     empty.textContent = "No queue items match this filter.";
     queueListEl.append(empty);
   }
-  for (const item of items) {
-    queueListEl.append(renderQueueItem(item));
+  for (const group of groupQueueItemsByNextAction(queue, items)) {
+    queueListEl.append(renderQueueGroup(group));
   }
   queueMarkdownEl.textContent = queue.markdown || "";
+}
+
+function groupQueueItemsByNextAction(queue, items) {
+  const metadata = queue.nextActionGroups?.length
+    ? queue.nextActionGroups
+    : deriveNextActionGroups(items);
+  return metadata
+    .map((group) => ({
+      ...group,
+      items: items.filter((item) => item.nextAction?.id === group.id)
+    }))
+    .filter((group) => group.items.length)
+    .sort((left, right) => (left.order || 99) - (right.order || 99));
+}
+
+function deriveNextActionGroups(items) {
+  const groups = new Map();
+  for (const item of items) {
+    const action = item.nextAction || {};
+    const id = action.id || "unknown";
+    if (!groups.has(id)) {
+      groups.set(id, {
+        id,
+        title: action.title || id,
+        target: action.target || "",
+        owner: action.owner || action.target || "unknown",
+        summary: action.summary || "",
+        maintainerAction: action.maintainerAction || "",
+        order: action.order || 99,
+        count: 0
+      });
+    }
+    groups.get(id).count += 1;
+  }
+  return [...groups.values()];
+}
+
+function renderQueueGroup(group) {
+  const section = document.createElement("section");
+  section.className = `queue-group queue-group-${group.id || "unknown"}`;
+  section.innerHTML = `
+    <div class="queue-group-heading">
+      <div>
+        <h3></h3>
+        <p></p>
+      </div>
+      <span></span>
+    </div>
+    <div class="queue-group-items"></div>
+  `;
+  section.querySelector("h3").textContent = group.title || group.id || "Next action";
+  section.querySelector("p").textContent = `${group.maintainerAction || group.summary || ""} Owner: ${group.owner || group.target || "unknown"}.`;
+  section.querySelector(".queue-group-heading span").textContent = `${group.items.length} item${group.items.length === 1 ? "" : "s"}`;
+  const list = section.querySelector(".queue-group-items");
+  for (const item of group.items) {
+    list.append(renderQueueItem(item));
+  }
+  return section;
 }
 
 function renderSetup(setup) {
@@ -958,6 +1020,7 @@ function renderQueueItem(item) {
     <div class="queue-item-labels"></div>
     <ul class="plain-list queue-reasons"></ul>
     <p class="queue-next-action"></p>
+    <div class="queue-next-evidence"></div>
     <p class="queue-context"></p>
     <div class="queue-feedback">
       <div class="feedback-controls">
@@ -1033,8 +1096,9 @@ function renderQueueItem(item) {
   );
   const nextAction = item.nextAction || {};
   article.querySelector(".queue-next-action").textContent = nextAction.id
-    ? `Next action: ${nextAction.id}${nextAction.target ? ` (${nextAction.target})` : ""}`
+    ? `Next action: ${nextAction.title || nextAction.id} (${nextAction.owner || nextAction.target || "unknown"}) - ${nextAction.maintainerAction || nextAction.reason || nextAction.summary || ""}`
     : "Next action: unknown";
+  renderNextActionEvidence(article.querySelector(".queue-next-evidence"), nextAction);
   article.querySelector(".queue-context").textContent = `Context: ${item.contextSummary || "none"}`;
   if (item.calibration?.active) {
     const calibration = document.createElement("p");
@@ -1054,6 +1118,22 @@ function renderQueueItem(item) {
     });
   }
   return article;
+}
+
+function renderNextActionEvidence(node, nextAction = {}) {
+  node.innerHTML = "";
+  const evidence = nextAction.evidence || {};
+  const chips = [
+    ...(evidence.labels || []).map((label) => `label: ${label}`),
+    ...(evidence.checks || []).map((check) => `check: ${check.title || check.id || check.label}`),
+    ...(evidence.reasons || []).slice(0, 2)
+  ].filter(Boolean);
+  if (!chips.length) return;
+  for (const chip of chips.slice(0, 5)) {
+    const span = document.createElement("span");
+    span.textContent = chip;
+    node.append(span);
+  }
 }
 
 async function submitQueueFeedback(item, { article, verdict, expectedSelect }) {

@@ -104,7 +104,7 @@ Webhook mode can collect repository context through read-only GitHub search when
 
 ## Maintainer Queue
 
-The queue endpoint evaluates a batch of open work and returns a maintainer triage view with status counts, labels, repair sub-actions, review-budget totals, repository-context findings, queue actions, and markdown export.
+The queue endpoint evaluates a batch of open work and returns a maintainer triage view with status counts, labels, repair sub-actions, review-budget totals, repository-context findings, queue actions, next-actor ownership, and markdown export.
 
 For deterministic/local use, supply `items` directly:
 
@@ -160,12 +160,26 @@ Queue responses are shaped as:
         "check-duplicate-or-fixed-first": 1,
         "ask-reporter-for-evidence": 1
       },
+      "nextActionOwners": {
+        "maintainer": 2,
+        "reporter": 1
+      },
       "repairSubActions": {
         "check-duplicate-or-fixed-first": 1,
         "ask-reporter-for-evidence": 1
       },
       "reviewBudgetMinutes": 55
     },
+    "nextActionGroups": [
+      {
+        "id": "check-duplicate-or-fixed-first",
+        "title": "Check duplicate or fixed first",
+        "owner": "maintainer",
+        "maintainerAction": "Check related, solved, concurrent, or upstream-fixed work before fresh review.",
+        "count": 1,
+        "itemIds": ["pr-context-duplicate"]
+      }
+    ],
     "items": [
       {
         "kind": "pull_request",
@@ -174,8 +188,17 @@ Queue responses are shaped as:
         "action": "review-now",
         "nextAction": {
           "id": "review-now",
+          "title": "Review now",
           "target": "maintainer",
-          "summary": "Ready for maintainer review."
+          "owner": "maintainer",
+          "summary": "Ready for maintainer review.",
+          "maintainerAction": "Start normal review now.",
+          "reason": "Ready for maintainer review.",
+          "evidence": {
+            "labels": ["ready-for-maintainer"],
+            "checks": [],
+            "reasons": ["Coarse queue action is review-now.", "Ready for maintainer review."]
+          }
         },
         "score": 100,
         "labels": ["ready-for-maintainer"],
@@ -187,7 +210,7 @@ Queue responses are shaped as:
 }
 ```
 
-Queue actions remain the coarse compatibility values `review-now`, `send-repair-request`, and `do-not-review-yet`. `nextAction.id` refines the queue by next actor: `review-now`, `ask-reporter-for-evidence`, `check-duplicate-or-fixed-first`, `route-to-subsystem-or-process`, `needs-maintainer-decision`, or `not-actionable-yet`. The precedence model is documented in [NEXT_ACTOR_MODEL.md](NEXT_ACTOR_MODEL.md): repository context, repository routing, wait-state labels, and maintainer-owned work are not hidden behind generic reporter-evidence requests. Live GitHub collection uses read-only API calls and a short in-memory cache; comments and labels are still controlled only by the explicit webhook write settings.
+Queue actions remain the coarse compatibility values `review-now`, `send-repair-request`, and `do-not-review-yet`. `nextAction.id` refines the queue by next actor: `review-now`, `ask-reporter-for-evidence`, `check-duplicate-or-fixed-first`, `route-to-subsystem-or-process`, `needs-maintainer-decision`, or `not-actionable-yet`. Each `nextAction` also includes `owner`, `maintainerAction`, `reason`, and evidence arrays so API and CLI consumers can show who owns the next move, why PCF chose that actor, and what label/check evidence caused the route. `nextActionGroups` gives the same contract at queue-lane level for UI grouping and dashboards. The precedence model is documented in [NEXT_ACTOR_MODEL.md](NEXT_ACTOR_MODEL.md): repository context, repository routing, wait-state labels, and maintainer-owned work are not hidden behind generic reporter-evidence requests. Live GitHub collection uses read-only API calls and a short in-memory cache; comments and labels are still controlled only by the explicit webhook write settings.
 
 ## GitHub App Setup
 

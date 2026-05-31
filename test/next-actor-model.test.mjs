@@ -7,8 +7,9 @@ test("next actor model documents every exported nextAction", async () => {
   const doc = await readFile(new URL("../docs/NEXT_ACTOR_MODEL.md", import.meta.url), "utf8");
 
   for (const action of Object.values(NEXT_ACTIONS)) {
-    assert.ok(doc.includes(`| \`${action.id}\` | \`${action.target}\` |`), `missing row for ${action.id}`);
+    assert.ok(doc.includes(`| \`${action.id}\` | \`${action.owner}\` | \`${action.target}\` |`), `missing row for ${action.id}`);
     assert.ok(doc.includes(action.summary), `missing summary for ${action.id}`);
+    assert.ok(doc.includes(action.maintainerAction), `missing maintainer action for ${action.id}`);
   }
 });
 
