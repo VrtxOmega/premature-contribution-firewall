@@ -90,7 +90,8 @@ const ISSUE_SOFT_REPAIR_LABELS = new Set([
 const ISSUE_HARD_RISK_LABELS = new Set([
   "secrets-risk",
   "prompt-injection-risk",
-  "security-claim-needs-reproducer"
+  "security-claim-needs-reproducer",
+  "wrong-repository"
 ]);
 
 export function evaluateContribution(rawInput = {}, options = {}) {
@@ -438,6 +439,7 @@ export function evaluateIssue(input, options = {}) {
   const title = input.title.trim();
   const securityClaim = SIGNALS.securityClaim.test(`${title}\n${body}`);
   const aiWithoutEvidence = SIGNALS.aiReportClaim.test(body) && !SIGNALS.logs.test(body) && !SIGNALS.repro.test(body);
+  const wrongRepository = detectWrongRepositoryIssue(input, { title, body });
   const secretFindings = findSecrets(input);
   const promptInjection = SIGNALS.promptInjection.test(aggregateContributionText(input));
   const policyProfile = buildPolicyProfile(input);
@@ -588,6 +590,18 @@ export function evaluateIssue(input, options = {}) {
   });
 
   addCheck(checks, labels, {
+    id: "repository-scope",
+    title: "Repository scope",
+    status: wrongRepository ? "fail" : "pass",
+    label: "wrong-repository",
+    penalty: 35,
+    blocking: wrongRepository,
+    reason: wrongRepository
+      ? "This looks like a package or dependency issue that the target repository explicitly routes elsewhere."
+      : "The issue appears to belong to this repository's scope."
+  });
+
+  addCheck(checks, labels, {
     id: "security-claim",
     title: "Security claim discipline",
     status: securityClaim && !SIGNALS.repro.test(body) ? "fail" : "pass",
@@ -705,7 +719,7 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
   const labelText = labels.join(" ");
   const text = `${title}\n${body}\n${labelText}`;
   const deviceSupportIntent = /\b(request support|device support|new device|product id|product name|dps information|local dps|device matches)\b/i.test(text);
-  const featureRequestIntent = /\b(feature request|enhancement|describe the feature|describe the solution|solution you'd like|alternatives you've considered|related to a problem|use case|requesting|add the ability|support for)\b/i.test(text);
+  const featureRequestIntent = /\[feature\]|\b(feature request|feature description|enhancement|describe the feature|describe the solution|solution you'd like|alternatives you've considered|related to a problem|use case|requesting|add the ability|support for)\b/i.test(text);
   const hasProductId = /###\s*product\s+id\s*\n+\s*[a-z0-9][a-z0-9_-]{5,}/i.test(body)
     || /\bproduct_?id\b[\s:=]+["']?[a-z0-9][a-z0-9_-]{5,}/i.test(body);
   const hasProductName = /###\s*product\s+name\s*\n+\s*[^\n#][^\n]{1,}/i.test(body)
@@ -713,9 +727,9 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
   const hasDeviceTelemetry = /\b(local\s+dps|dps information|device matches)\b/i.test(body)
     && (/```/.test(body) || /[\[{][\s\S]{20,}[\]}]/.test(body) || /^\s*(name|products|entities):\s+/mi.test(body));
   const hasDeviceIdentity = deviceSupportIntent && hasProductId && hasProductName;
-  const featureDescription = markdownSection(body, /describe (?:the )?(?:feature(?:\/enhancement)?|enhancement)|describe the solution|solution you'd like/i);
-  const featureWhy = markdownSection(body, /why would this be helpful|why is this helpful|use case|related to a problem/i);
-  const featureFuture = markdownSection(body, /future implementation|current implementation|acceptance criteria|alternatives/i);
+  const featureDescription = markdownSection(body, /feature description|describe (?:the )?(?:feature(?:\/enhancement)?|enhancement)|describe the solution|solution you'd like/i);
+  const featureWhy = markdownSection(body, /why would this be helpful|why is this helpful|use case|related to a problem|additional information/i);
+  const featureFuture = markdownSection(body, /future implementation|current implementation|acceptance criteria|alternatives|additional information/i);
   const hasFeatureUseCase = featureRequestIntent && (
     hasMeaningfulSection(featureWhy) ||
     /\b(use case|workflow|problem|frustrated|current approach|current workflow|currently|need to|want to|so that|because|when i|i expect)\b/i.test(body)
@@ -737,15 +751,15 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     hasExplicitExpectedActual
     || (hasExpectedSignal && hasObservedFailureSignal && (SIGNALS.repro.test(body) || SIGNALS.logs.test(body) || SIGNALS.rootCause.test(body)))
   );
-  const issueDescription = markdownSection(body, /describe (?:your|the) issue|describe the bug|what is not working as documented|what happened/i);
-  const explicitStepsToReproduce = markdownSection(body, /steps to reproduce(?: the issue)?|reproduction|how can we reproduce it/i);
+  const issueDescription = markdownSection(body, /problem description|describe (?:your|the) issue|describe the bug|what is not working as documented|what happened/i);
+  const explicitStepsToReproduce = markdownSection(body, /steps to reproduce(?: (?:the )?(?:issue|behavior)\.?)?|reproduction|how can we reproduce it/i);
   const stepsToReproduce = explicitStepsToReproduce || (hasEmbeddedReproductionSteps(issueDescription) ? issueDescription : "");
-  const expectedBehavior = markdownSection(body, /expected behaviou?r|what behaviou?r do you expect|what did you expect to happen/i);
+  const expectedBehavior = markdownSection(body, /expected behaviou?r|what behaviou?r do you expect|what did you expect to happen|what is the expected behaviou?r/i);
   const hasStructuredIssueDescription = hasMeaningfulSection(issueDescription);
   const hasUncertainReproduction = hasUncertainReproductionSteps(stepsToReproduce);
   const hasStructuredSteps = hasMeaningfulSection(stepsToReproduce) && !hasUncertainReproduction;
   const hasStructuredExpectedBehavior = hasMeaningfulSection(expectedBehavior);
-  const hasStructuredEnvironment = [
+  const structuredEnvironmentSections = [
     markdownSection(body, /device/i),
     markdownSection(body, /android version/i),
     markdownSection(body, /app version/i),
@@ -761,8 +775,12 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     markdownSection(body, /audiobookshelf version/i),
     markdownSection(body, /how are you running audiobookshelf/i),
     markdownSection(body, /what os is your audiobookshelf server hosted from/i),
-    markdownSection(body, /what browsers are you seeing/i)
-  ].some((section) => hasMeaningfulSection(section, { minLength: 2 }));
+    markdownSection(body, /what browsers are you seeing/i),
+    markdownSection(body, /system information/i)
+  ];
+  const structuredCrashEnvironmentKeys = body.match(/\b(?:APP_NAME|PACKAGE_NAME|VERSION_NAME|VERSION_CODE|SDK_INT|OS_VERSION|RELEASE|MODEL|MANUFACTURER|BRAND|DEVICE)\b/g) || [];
+  const hasStructuredEnvironment = structuredEnvironmentSections.some((section) => hasMeaningfulSection(section, { minLength: 2 }))
+    || new Set(structuredCrashEnvironmentKeys).size >= 2;
   const structuredBugReportComplete = !featureRequestIntent
     && hasStructuredIssueDescription
     && hasStructuredSteps
@@ -800,6 +818,17 @@ function hasUncertainReproductionSteps(section = "") {
     || /\bhard to reproduce\b/i.test(text)
     || /^\s*(?:unknown|not sure|unsure|n\/a|no idea)\s*$/im.test(text)
     || /\bsteps?\s+(?:are|is)\s+(?:unknown|unclear)\b/i.test(text);
+}
+
+function detectWrongRepositoryIssue(input = {}, { title = "", body = "" } = {}) {
+  const repository = String(input.repository || input.repositoryContext?.repository || "").toLowerCase();
+  if (repository !== "termux/termux-app") return false;
+  const text = `${title}\n${body}`;
+  const packageInstallSignal = /\b(?:pip|pkg|apt|npm|gem|cargo)\s+install\b/i.test(text)
+    || /\b(?:install(?:ing|ation)?|build(?:ing)?)\s+(?:fails?|failed|error|crash(?:es)?|cannot|can't)\b/i.test(text)
+    || /\b(?:package|dependency|wheel|cryptography|maturin|rust crate|repository errors?)\b/i.test(text);
+  const appScopeSignal = /\b(?:terminal session|extra-keys|keyboard|paste|termux crashes?|crash(?:es|ing)? termux|termuxactivity|bytequeue|terminalemulator)\b/i.test(text);
+  return packageInstallSignal && !appScopeSignal;
 }
 
 function hasMeaningfulSection(section = "", { minLength = 8 } = {}) {
@@ -1059,6 +1088,7 @@ function repairFor(check) {
     "needs-logs": "Attach the exact error output, stack trace, or relevant logs.",
     "duplicate-search-needed": "Search existing issues and current main, then state what you found.",
     "needs-technical-analysis": "Add a root-cause hypothesis, narrowed file/function, or proposed patch.",
+    "wrong-repository": "Move this to the repository named by the target project's issue template or explain why it belongs here.",
     "security-claim-needs-reproducer": "Provide a verified reproducer and technical evidence for the security claim.",
     "needs-real-evidence": "Replace tool-only claims with reproducible evidence from a real run.",
     "needs-project-test-command": "Run the discovered project test command or explain why that exact command is not applicable.",

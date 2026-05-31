@@ -27,6 +27,10 @@ export const DEFAULT_LABEL_DEFINITIONS = {
     color: "cf222e",
     description: "Premature Contribution Firewall: repository contribution policy was not met"
   },
+  "wrong-repository": {
+    color: "cf222e",
+    description: "Premature Contribution Firewall: issue appears to belong in another repository"
+  },
   "needs-human-verification": {
     color: "bf8700",
     description: "Premature Contribution Firewall: human-run verification evidence is needed"

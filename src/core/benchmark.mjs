@@ -191,6 +191,27 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-expected-actual", "needs-technical-analysis"], repoContext: true }
   },
   {
+    id: "package-install-wrong-repository",
+    category: "issue",
+    name: "Package install reports are routed out of app-only repositories",
+    input: packageInstallWrongRepositoryIssue(),
+    expect: { status: "low-review-value", labels: ["wrong-repository"], absentLabels: ["ready-for-maintainer"], repoContext: true }
+  },
+  {
+    id: "project-specific-crash-report-headings",
+    category: "issue",
+    name: "Project-specific crash report headings count as bug evidence",
+    input: projectSpecificCrashReportIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-technical-analysis", "needs-logs"], repoContext: true }
+  },
+  {
+    id: "project-specific-feature-title-sections",
+    category: "issue",
+    name: "Project-specific feature titles and sections count as feature evidence",
+    input: projectSpecificFeatureTitleIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-logs", "needs-technical-analysis", "needs-feature-solution"], repoContext: true }
+  },
+  {
     id: "maintainer-approved-issue-label",
     category: "issue",
     name: "Maintainer-approved issue label preserves review-now routing",
@@ -1302,6 +1323,118 @@ function projectSpecificWhatHappenedBugIssue() {
     repositoryContext: {
       source: "github-api",
       repository: "advplyr/audiobookshelf",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function packageInstallWrongRepositoryIssue() {
+  return {
+    kind: "issue",
+    title: "[Bug]: google-genai installation fails on Termux",
+    labels: [{ name: "bug report" }],
+    body: [
+      "### Problem description",
+      "",
+      "Trying to install `google-genai` with `pip install google-genai` fails because the cryptography package tries to build from source using maturin and Rust crates are not found.",
+      "",
+      "```",
+      "error: crate `std` required to be available in rlib format, but was not found in this form",
+      "error: could not compile `proc-macro2` due to 19 previous errors",
+      "```",
+      "",
+      "### Steps to reproduce the behavior.",
+      "",
+      "pip install google-genai",
+      "",
+      "### What is the expected behavior?",
+      "",
+      "The package should install successfully.",
+      "",
+      "### System information",
+      "",
+      "* Termux application version: 0.118.3",
+      "* Android OS version: 15",
+      "* Device model: Redmi"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "termux/termux-app",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function projectSpecificCrashReportIssue() {
+  return {
+    kind: "issue",
+    title: "[Bug]: ESC control character crashes Termux when pasted",
+    labels: [{ name: "bug report" }],
+    body: [
+      "### Problem description",
+      "",
+      "Pasting the ASCII control character ESC alone into the Termux terminal session causes an IllegalArgumentException in ByteQueue.write, immediately crashing the application.",
+      "",
+      "### Steps to reproduce the behavior.",
+      "",
+      "1. Copy the single ESC character to the clipboard.",
+      "2. Open Termux on Android.",
+      "3. Long-press in the terminal area.",
+      "4. Tap Paste.",
+      "5. Termux crashes immediately with IllegalArgumentException.",
+      "",
+      "### What is the expected behavior?",
+      "",
+      "Pasting ESC should not crash Termux. The app should remain stable and responsive.",
+      "",
+      "### System information",
+      "",
+      "## Termux App Info",
+      "",
+      "**APP_NAME**: `Termux`",
+      "**PACKAGE_NAME**: `com.termux`",
+      "**VERSION_NAME**: `0.118.3`",
+      "",
+      "## Device Info",
+      "",
+      "**RELEASE**: `15`",
+      "**MODEL**: `23073RPBFG`",
+      "",
+      "```",
+      "java.lang.IllegalArgumentException: length <= 0",
+      "at com.termux.terminal.ByteQueue.write(ByteQueue.java:63)",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "termux/termux-app",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function projectSpecificFeatureTitleIssue() {
+  return {
+    kind: "issue",
+    title: "[Feature]: Add parameter --display to am start",
+    labels: [],
+    body: [
+      "### Feature description",
+      "",
+      "Add parameter `--display` to `am`, for example `am start --display 9 no.nrk.yr/.MainActivity`.",
+      "",
+      "### Additional information",
+      "",
+      "Since version 4.0, scrcpy allows opening a new display. Starting Termux on the new display works, but apps launched from the Termux `am start` command appear on display 0 instead of the display Termux is running on.",
+      "",
+      "`/system/bin/am start ... --display 3` can target the display in adb, but Termux's bundled `am` reports `Unknown option: --display`."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "termux/termux-app",
       issues: [],
       pullRequests: []
     }

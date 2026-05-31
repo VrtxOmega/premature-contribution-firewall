@@ -26,6 +26,7 @@ It is not a list of endorsements. A target repository appearing here means PCF r
 | `FreeTubeApp/FreeTube` | Private only | None | 1 review / 10 repair / 1 defer | 3 review / 8 repair / 1 defer | Bug-template reproduction steps may be embedded in description sections, and `U: reproduced` is maintainer validation unless repository context conflicts. |
 | `photoprism/photoprism` | Private only | None | 6 review / 3 repair / 3 defer | 9 review / 1 repair / 2 defer | Project-specific bug headings, contextual follow-up references, and GitHub search pacing matter for media-heavy queues. |
 | `advplyr/audiobookshelf` | Private only | None | 3 review / 7 repair / 2 defer | 6 review / 6 repair / 0 defer | Enhancement templates and "What happened?" bug templates need project-specific section recognition while duplicate context stays active. |
+| `termux/termux-app` | Private only | None | 2 review / 7 repair / 3 defer | 4 review / 3 repair / 5 defer | App-only repositories need wrong-repository routing for package/dependency reports, while nested crash environment and feature sections still count as reviewable evidence. |
 
 ## tuya-local
 
@@ -779,13 +780,94 @@ b3b272f005b970460780d3dd2f66dcbf3968bd1297449a1e734d8f7127cd5e8f
 96aed30043e188baa0b1f6ec7cebe9b641bd1f84926c0a551500e46019dcb950
 ```
 
+## Termux App
+
+Target: `termux/termux-app`
+
+Queue shape:
+
+- Android terminal emulator bug reports
+- terminal UI and keyboard/extra-keys feature requests
+- crash reports with generated Termux app/device diagnostics
+- package install or dependency build failures that the project template routes to `termux/termux-packages`
+- old feature requests mixed with very recent app-specific issues
+
+Templates inspected:
+
+- `01-bug-report.yml`
+- `02-feature-request.yml`
+- `config.yml`
+
+Initial private pilot:
+
+- 12 sampled issues
+- 2 review-now
+- 7 repair
+- 3 defer
+- repository context checked all 12
+- context findings: 2
+- items with context findings: 1
+- context unavailable: 0
+
+What PCF got wrong:
+
+- `#5130` was a package install/dependency build failure in an app-only repository whose issue template explicitly routes package issues elsewhere, but PCF treated the complete bug-template fields as enough for review-now.
+- `#5119` was a complete crash report with reproduction steps, expected behavior, stack trace, app version, and device diagnostics, but PCF missed nested generated environment sections under Termux's crash-report output.
+- `#5133` used a `[Feature]` title plus `Feature description` and `Additional information` sections, but PCF treated it like an underspecified bug report.
+
+Fixes made:
+
+- Added `wrong-repository` routing for Termux app package/dependency install reports without app-scope signals.
+- Added Termux feature-title and feature-section recognition for `Feature description` and `Additional information`.
+- Added crash-environment key recognition for generated app/device diagnostics such as `APP_NAME`, `PACKAGE_NAME`, `VERSION_NAME`, `SDK_INT`, `OS_VERSION`, and `MODEL`.
+- Added a GitHub label template for `wrong-repository`.
+
+Final private pilot:
+
+- 12 sampled issues
+- 4 review-now
+- 3 repair
+- 5 defer
+- repository context checked all 12
+- context findings: 2
+- items with context findings: 1
+- context unavailable: 0
+
+Notable final routing:
+
+- `#5130` moved from review-now to do-not-review-yet as `wrong-repository`.
+- `#5126` stayed do-not-review-yet with both wrong-repository and closed/solved linked context.
+- `#5119` moved to review-now after generated nested crash diagnostics counted as environment evidence.
+- `#5133` moved to review-now after Termux-style feature evidence was recognized.
+- `#5137`, `#107`, and `#5139` stayed in repair because title clarity, requested behavior, or expected/actual evidence still needs contributor repair.
+
+Verification:
+
+- Focused evaluator and benchmark tests passed.
+- Benchmark corpus increased to 58 cases:
+  - `package-install-wrong-repository`
+  - `project-specific-crash-report-headings`
+  - `project-specific-feature-title-sections`
+- Current benchmark result: 58/58 passing.
+- GitHub writes to `termux/termux-app`: none.
+- Public outreach: none.
+
+Private artifact hashes:
+
+```text
+50fcc93971d56ca2e99472a00d2801c6035b0c4f697c927f58d3dc65f8366452
+2f086a1a8c8c61d7ab187ef79e51a386b30419b82ec55ead4e0671bed7a4cc3c
+09e1c929262d3065c3b84ee5c994f7d58426c6cadb0ac186c469807a48216e84
+0072402874f53b287276b36769658d356746e2d1d103ee80c6aceb6601f118eb
+```
+
 ## Current Gate State
 
 The pilot ledger should be updated whenever a real pilot changes PCF behavior.
 
 Current expected proof state:
 
-- benchmark: 55/55
+- benchmark: 58/58
 - adversarial red test: 8/8
 - maintainer demo: PASS
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner

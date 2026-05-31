@@ -60,7 +60,7 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Promotes selected runnable feedback drafts into a separate local candidate corpus and replays that corpus against the current evaluator before anything is folded into the permanent benchmark.
 - Builds an auditable feedback calibration profile from local corrections and promoted candidates, then attaches close matches to future evaluations and queue items without hiding the base heuristic status or score.
 - Evaluates plain-text patch or mbox submissions with `evaluate-patch`, defaulting to `kernel-grade` discipline for email-style review.
-- Ships a deterministic maintainer benchmark corpus with 55 reproducible cases across PRs, issues, feature requests, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
+- Ships a deterministic maintainer benchmark corpus with 58 reproducible cases across PRs, issues, feature requests, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
 - Ships a separate adversarial red-test corpus that preserves breakage residue for negated verification, suspicious paths, secret evasion, generated artifact churn, skipped-only CI, prompt-injection text, malformed batch input, and empty patch bodies.
 - Exposes callable API endpoints for single, patch, batch, spec, and benchmark evaluation.
 - Includes a stricter `kernel-grade` profile for projects that want Linux-kernel-style patch discipline: concise subsystem subjects, human DCO sign-off, Fixes/stable discipline, maintainer routing, build/test evidence, review-budget control, and transparent tool provenance.
@@ -99,7 +99,7 @@ npm run benchmark:write
 
 Current generated results live in [`docs/benchmark-results.md`](docs/benchmark-results.md):
 
-- 55/55 benchmark cases passing
+- 58/58 benchmark cases passing
 - standard PR readiness
 - issue triage readiness
 - repository policy enforcement
@@ -131,6 +131,7 @@ Current pilot progression:
 | `FreeTubeApp/FreeTube` | Private only | 1 review / 10 repair / 1 defer | 3 review / 8 repair / 1 defer | Bug-template repro steps can live inside description sections, and `U: reproduced` is maintainer validation unless repo context conflicts. |
 | `photoprism/photoprism` | Private only | 6 review / 3 repair / 3 defer | 9 review / 1 repair / 2 defer | Project-specific bug headings, contextual follow-up references, and GitHub search pacing matter for media-heavy queues. |
 | `advplyr/audiobookshelf` | Private only | 3 review / 7 repair / 2 defer | 6 review / 6 repair / 0 defer | Enhancement templates and "What happened?" bug templates need project-specific section recognition while duplicate context stays active. |
+| `termux/termux-app` | Private only | 2 review / 7 repair / 3 defer | 4 review / 3 repair / 5 defer | App-only repos need wrong-repository routing for package/dependency reports, while nested crash environment and Termux feature sections still count as reviewable evidence. |
 
 ## Adversarial Red Test
 
