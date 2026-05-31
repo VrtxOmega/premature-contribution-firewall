@@ -46,6 +46,19 @@ Aggregate split:
 
 Because these are live queues, exact item order can change between runs. Item-level movement below is reported only for issue numbers present in both the initial and final sample for a repository.
 
+Future large benches should use replay capture before evaluator changes:
+
+```bash
+GH_TOKEN="<public-read token>" \
+PCF_COLLECT_REPOSITORY_CONTEXT=true \
+PCF_GITHUB_SEARCH_DELAY_MS=2500 \
+npm run pilot:public -- --repository rust-lang/rust --limit 12 --no-pulls --capture /tmp/pcf-rust-large-capture.json
+
+npm run pilot:public:markdown -- --fixture /tmp/pcf-rust-large-capture.json --write /tmp/pcf-rust-large-replay.md
+```
+
+The capture file is the private normalized input set. It should not be committed or shared without maintainer consent.
+
 ## Pilot Table
 
 | Repository | Initial split | Final split | Context findings | Context checked | Final errors | Final JSON hash |

@@ -32,7 +32,7 @@ The useful signal is not that every final queue is "right." The useful signal is
 
 | Surface | Current result | What it proves |
 | --- | ---: | --- |
-| Unit and integration tests | 130/130 | Core evaluator, GitHub queue, API, feedback, setup, and context behavior stay green together. |
+| Unit and integration tests | 131/131 | Core evaluator, GitHub queue, API, feedback, setup, and context behavior stay green together. |
 | Maintainer benchmark | 69/69 | The permanent corpus captures the real breakage classes discovered so far. |
 | Adversarial red test | 8/8 | Known bad inputs still fail closed. |
 | Maintainer demo | PASS | The repo can produce the public proof bundle in one repeatable command. |
@@ -91,7 +91,11 @@ Run a dry-run public queue pilot against a repository:
 ```bash
 npm run setup:pilot -- --repository owner/repo
 GH_TOKEN="<public-read token>" PCF_COLLECT_REPOSITORY_CONTEXT=true npm run pilot:public -- --repository owner/repo --limit 12 --no-pulls
+GH_TOKEN="<public-read token>" PCF_COLLECT_REPOSITORY_CONTEXT=true npm run pilot:public -- --repository owner/repo --limit 12 --no-pulls --capture /tmp/pcf-owner-repo-capture.json
+npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --write /tmp/pcf-owner-repo-replay.md
 ```
+
+Use the capture/replay pair before evaluator changes when a pilot exposes a suspected miss. The capture is the normalized queue payload PCF evaluated; replaying it with `--fixture` keeps before/after comparisons stable even if the live GitHub queue changes. Captures contain third-party issue/PR bodies and repository-context results, so they are private artifacts.
 
 Generate the public proof artifacts:
 

@@ -139,3 +139,44 @@ test("public pilot CLI writes markdown artifact", async () => {
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("public pilot CLI captures normalized payloads for offline replay", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "pcf-public-pilot-replay-"));
+  const capturePath = join(dir, "capture.json");
+  try {
+    const { stdout } = await execFileAsync(process.execPath, [
+      scriptPath,
+      "--fixture",
+      fixturePath,
+      "--format",
+      "json",
+      "--capture",
+      capturePath
+    ], { cwd: repoRoot });
+    const proof = JSON.parse(stdout);
+    const capture = JSON.parse(await readFile(capturePath, "utf8"));
+
+    assert.equal(capture.artifact, "public-repo-pilot-replay-capture");
+    assert.equal(capture.repository, "VrtxOmega/premature-contribution-firewall-demo");
+    assert.equal(capture.items.length, 3);
+    assert.equal(capture.collectionErrors.length, 0);
+    assert.equal(capture.dryRun, true);
+
+    const { stdout: replayStdout } = await execFileAsync(process.execPath, [
+      scriptPath,
+      "--fixture",
+      capturePath,
+      "--format",
+      "json"
+    ], { cwd: repoRoot });
+    const replay = JSON.parse(replayStdout);
+
+    assert.deepEqual(replay.breakdown, proof.breakdown);
+    assert.deepEqual(
+      replay.queue.items.map((item) => [item.id, item.action, item.status, item.contextFindings]),
+      proof.queue.items.map((item) => [item.id, item.action, item.status, item.contextFindings])
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

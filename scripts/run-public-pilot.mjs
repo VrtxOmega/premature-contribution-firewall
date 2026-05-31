@@ -7,9 +7,12 @@ import { buildMaintainerQueue } from "../src/core/queue.mjs";
 import { loadConfig } from "../src/config.mjs";
 import { createGitHubClient } from "../src/github/client.mjs";
 
+export const REPLAY_CAPTURE_VERSION = "2026.05.31";
+
 export async function buildPublicPilotReport({
   repository,
   fixturePath = "",
+  capturePath = "",
   limit = 10,
   includePullRequests = true,
   includeIssues = true,
@@ -19,16 +22,29 @@ export async function buildPublicPilotReport({
 } = {}) {
   if (fixturePath) {
     const payload = JSON.parse(await readFile(fixturePath, "utf8"));
-    const queue = buildMaintainerQueue(payload, {
+    const queuePayload = payload.queuePayload && typeof payload.queuePayload === "object" ? payload.queuePayload : payload;
+    const queue = buildMaintainerQueue(queuePayload, {
       now: generatedAt,
-      repository: repository || payload.repository || "",
-      source: payload.source || "fixture"
+      repository: repository || queuePayload.repository || "",
+      source: queuePayload.source || "fixture"
     });
-    const targetRepository = repository || queue.repository || payload.repository || "owner/repo";
+    const targetRepository = repository || queue.repository || queuePayload.repository || "owner/repo";
+    if (capturePath) {
+      await writeReplayCapture(capturePath, buildReplayCapture({
+        repository: targetRepository,
+        collected: queuePayload,
+        target: payload.target || {},
+        generatedAt,
+        limit: queuePayload.limit || limit,
+        includePullRequests: typeof queuePayload.includePullRequests === "boolean" ? queuePayload.includePullRequests : includePullRequests,
+        includeIssues: typeof queuePayload.includeIssues === "boolean" ? queuePayload.includeIssues : includeIssues,
+        upstreamRepository: queuePayload.upstreamRepository || upstreamRepository
+      }));
+    }
     return buildPublicPilotProof({
       repository: targetRepository,
       queue,
-      collectionErrors: payload.collectionErrors || [],
+      collectionErrors: queuePayload.collectionErrors || [],
       setupGuide: buildSetupGuide(config, { repository: targetRepository }),
       config,
       generatedAt,
@@ -57,6 +73,18 @@ export async function buildPublicPilotReport({
     upstreamRepository
   });
   const target = await safeReadRepositoryMetadata(githubClient, owner, repo);
+  if (capturePath) {
+    await writeReplayCapture(capturePath, buildReplayCapture({
+      repository: targetRepository,
+      collected,
+      target,
+      generatedAt,
+      limit,
+      includePullRequests,
+      includeIssues,
+      upstreamRepository
+    }));
+  }
 
   return buildPublicPilotProof({
     repository: targetRepository,
@@ -73,6 +101,7 @@ export async function buildPublicPilotReport({
 export async function runPublicPilotCli(args = process.argv.slice(2)) {
   const repository = readOption(args, "--repository", "");
   const fixturePath = readOption(args, "--fixture", "");
+  const capturePath = readOption(args, "--capture", "");
   const limit = clampNumber(readOption(args, "--limit", "10"), 10, 1, 100);
   const format = readOption(args, "--format", "summary");
   const writePath = readOption(args, "--write", "");
@@ -88,6 +117,7 @@ export async function runPublicPilotCli(args = process.argv.slice(2)) {
   const report = await buildPublicPilotReport({
     repository,
     fixturePath,
+    capturePath,
     limit,
     includePullRequests,
     includeIssues,
@@ -111,6 +141,44 @@ export async function runPublicPilotCli(args = process.argv.slice(2)) {
     process.exitCode = 1;
   }
   return report;
+}
+
+export function buildReplayCapture({
+  repository = "",
+  collected = {},
+  target = {},
+  generatedAt = new Date().toISOString(),
+  limit = 10,
+  includePullRequests = true,
+  includeIssues = true,
+  upstreamRepository = ""
+} = {}) {
+  return {
+    artifact: "public-repo-pilot-replay-capture",
+    captureVersion: REPLAY_CAPTURE_VERSION,
+    generatedAt,
+    repository: repository || collected.repository || "",
+    upstreamRepository: upstreamRepository || collected.upstreamRepository || "",
+    source: collected.source || "github-api",
+    dryRun: collected.dryRun !== false,
+    limit: Number(collected.limit || limit) || 10,
+    includePullRequests: typeof collected.includePullRequests === "boolean" ? collected.includePullRequests : Boolean(includePullRequests),
+    includeIssues: typeof collected.includeIssues === "boolean" ? collected.includeIssues : Boolean(includeIssues),
+    target: {
+      repository: repository || collected.repository || "",
+      stars: target.stars || target.stargazers_count || 0,
+      openIssuesAndPullRequests: target.openIssuesAndPullRequests || target.open_issues_count || 0,
+      defaultBranch: target.defaultBranch || target.default_branch || "",
+      htmlUrl: target.htmlUrl || target.html_url || ""
+    },
+    collectionErrors: Array.isArray(collected.collectionErrors) ? collected.collectionErrors : [],
+    items: Array.isArray(collected.items) ? collected.items : []
+  };
+}
+
+async function writeReplayCapture(capturePath, capture) {
+  await mkdir(dirname(capturePath), { recursive: true });
+  await writeFile(capturePath, `${JSON.stringify(capture, null, 2)}\n`, "utf8");
 }
 
 async function safeReadRepositoryMetadata(githubClient, owner, repo) {

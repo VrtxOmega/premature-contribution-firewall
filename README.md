@@ -365,9 +365,11 @@ For a live read-only shadow pilot against a public repository:
 ```bash
 npm run pilot:public -- --repository owner/repo --limit 10
 npm run pilot:public:markdown -- --repository owner/repo --limit 10 --write public-pilot.md
+npm run pilot:public -- --repository owner/repo --limit 10 --capture /tmp/pcf-owner-repo-capture.json
+npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --write /tmp/pcf-owner-repo-replay.md
 ```
 
-The public pilot artifact leads with `review-now` versus `send-repair-request`, preserves repository-context findings such as duplicates, concurrent work, and upstream fixes, and records collection errors. Set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token for larger pilots or repeated search-heavy runs; the guide reports only whether a token is configured and never returns the token value. PCF spaces GitHub search calls with `PCF_GITHUB_SEARCH_DELAY_MS` so multi-repo pilots do not collapse into secondary rate-limit noise. Do not commit third-party pilot output without maintainer consent.
+The public pilot artifact leads with `review-now` versus `send-repair-request`, preserves repository-context findings such as duplicates, concurrent work, and upstream fixes, and records collection errors. `--capture` writes the normalized queue payload that PCF actually evaluated so future before/after comparisons can replay the same input with `--fixture` instead of depending on a live queue that may have changed. Captures include third-party issue/PR bodies and repository-context results; keep them private and do not commit them without maintainer consent. Set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token for larger pilots or repeated search-heavy runs; the guide reports only whether a token is configured and never returns the token value. PCF spaces GitHub search calls with `PCF_GITHUB_SEARCH_DELAY_MS` so multi-repo pilots do not collapse into secondary rate-limit noise.
 
 The same guide is available from the API once the local server is running:
 

@@ -72,7 +72,9 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - Treat `data/` as local runtime evidence. Do not commit feedback ledgers, candidate corpora, or queue-history files by accident.
 - Keep feedback candidate promotion separate from the permanent benchmark until a maintainer reviews the case and expectation.
 - Run `npm run setup:pilot -- --repository owner/repo` and verify the guided GitHub App pilot path is still accurate before sending the repo to a maintainer.
-- Run `npm run pilot:public:markdown -- --repository owner/repo --limit 10 --write public-pilot.md` privately before approaching a maintainer, and do not commit third-party pilot output without consent.
+- Run `npm run pilot:public:markdown -- --repository owner/repo --limit 10 --write public-pilot.md` privately before approaching a maintainer.
+- For evaluator changes from a live pilot, first run `npm run pilot:public -- --repository owner/repo --limit 10 --capture /tmp/pcf-owner-repo-capture.json`, then replay the captured payload with `--fixture` for before/after comparison.
+- Do not commit third-party pilot output or replay captures without maintainer consent.
 - Run a secret-pattern scan before publishing artifacts.
 
 ## Claims Allowed
@@ -82,6 +84,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - PCF can expose a read-only/dry-run GitHub maintainer queue and a callable local API.
 - PCF can print a guided GitHub App pilot checklist and first dry-run queue commands without exposing secret values.
 - PCF can generate a private public-repo shadow pilot artifact that preserves review-priority breakdowns and repository-context findings without writing to GitHub.
+- PCF can capture normalized private pilot payloads and replay them offline so before/after evaluator comparisons do not depend on live queue churn.
 - PCF can turn maintainer corrections into replayable fixture candidates when the original payload is available.
 - PCF can compare candidate replay baselines before evaluator or policy changes are accepted.
 
