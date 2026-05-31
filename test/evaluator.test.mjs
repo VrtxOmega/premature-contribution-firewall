@@ -194,6 +194,120 @@ test("feature request with current workflow and expected behavior counts as use-
   assert.equal(result.labels.includes("needs-use-case"), false);
 });
 
+test("language proposal issue is not asked for bug reproducer evidence", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "proposal: spec: sum types based on general interfaces",
+    labels: [{ name: "Proposal" }, { name: "LanguageChange" }],
+    body: [
+      "This is a discussion of a possible future language change.",
+      "We currently permit type parameter constraints to embed a union of types.",
+      "We propose that an ordinary interface type may embed a union of terms.",
+      "",
+      "For example:",
+      "```go",
+      "type I interface {",
+      "    int | float64",
+      "}",
+      "```",
+      "",
+      "In discussion here, please focus on the benefits and costs of this specific proposal.",
+      "Implementation note: some cases could use a compact representation, but that would not affect the language level."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "golang/go",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-reproducer"), false);
+  assert.equal(result.labels.includes("needs-logs"), false);
+  assert.ok(result.checks.some((check) => check.id === "feature-use-case" && check.status === "pass"));
+  assert.ok(result.checks.some((check) => check.id === "feature-solution" && check.status === "pass"));
+});
+
+test("tracking issue with API and stabilization history is reviewable process work", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Tracking Issue for `uint_carryless_mul`",
+    labels: [{ name: "T-libs-api" }, { name: "C-tracking-issue" }],
+    body: [
+      "Feature gate: `#![feature(uint_carryless_mul)]`",
+      "",
+      "This is a tracking issue for functions that return the carryless product of unsigned integers.",
+      "",
+      "### Public API",
+      "```rust",
+      "impl uN {",
+      "    pub const fn carryless_mul(self, rhs: Self) -> Self;",
+      "}",
+      "```",
+      "",
+      "### Steps / History",
+      "- [x] ACP accepted by the libs team.",
+      "- [x] Implementation PR landed.",
+      "- [ ] Final comment period.",
+      "- [ ] Stabilization PR.",
+      "",
+      "### Unresolved Questions",
+      "- Evaluate the quality of codegen before stabilization."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "rust-lang/rust",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-reproducer"), false);
+  assert.equal(result.labels.includes("needs-environment"), false);
+  assert.equal(result.labels.includes("needs-technical-analysis"), false);
+});
+
+test("RFE wording that asks to provide an option counts as requested behavior", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "sysinstall: Add option to keep home partition",
+    labels: [{ name: "RFE" }],
+    body: [
+      "### Component",
+      "systemd-sysinstall",
+      "",
+      "### Is your feature request related to a problem? Please describe",
+      "When reinstalling on a disk that already contains a home partition, the current prompt only exposes keep or erase. It would be great if sysinstall recognised that a home partition exists and provided an option to install the OS without touching the home partition.",
+      "",
+      "### The systemd version you checked that didn't have the feature you are asking for",
+      "261"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "systemd/systemd",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-feature-solution"), false);
+});
+
+test("thin proposal label still needs a real use case", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "proposal: dark mode",
+    labels: [{ name: "Proposal" }],
+    body: "Proposal: add dark mode."
+  });
+
+  assert.equal(result.status, "low-review-value");
+  assert.ok(result.labels.includes("needs-use-case"));
+});
+
 test("concise protocol support title can be clear enough for triage", () => {
   const result = evaluateContribution({
     kind: "issue",

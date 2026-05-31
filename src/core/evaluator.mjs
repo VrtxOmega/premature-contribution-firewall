@@ -742,7 +742,8 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     || /\bi'?m asking a question\b/i.test(body)
     || /\bnot reporting a bug or requesting a feature\b/i.test(body);
   const deviceSupportIntent = /\b(request support|device support|new device|product id|product name|dps information|local dps|device matches)\b/i.test(text);
-  const featureRequestIntent = !questionIntent && /\[feature\]|\b(feature request|feature description|enhancement|describe the feature|describe the solution|solution you'd like|alternatives you've considered|related to a problem|use case|requesting|add the ability|support for)\b/i.test(text);
+  const proposalTrackingIntent = /\b(proposal|rfe|request for enhancement|languagechange|language change|tracking issue|c-tracking-issue|feature gate|stabilization|final comment period|rfcs?)\b/i.test(text);
+  const featureRequestIntent = !questionIntent && (proposalTrackingIntent || /\[feature\]|\b(feature request|feature description|enhancement|describe the feature|describe the solution|solution you'd like|alternatives you've considered|related to a problem|use case|requesting|add the ability|support for)\b/i.test(text));
   const hasProductId = /###\s*product\s+id\s*\n+\s*[a-z0-9][a-z0-9_-]{5,}/i.test(body)
     || /\bproduct_?id\b[\s:=]+["']?[a-z0-9][a-z0-9_-]{5,}/i.test(body);
   const hasProductName = /###\s*product\s+name\s*\n+\s*[^\n#][^\n]{1,}/i.test(body)
@@ -754,17 +755,20 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
   const featureWhy = markdownSection(body, /why would this be helpful|why is this helpful|use case|related to a problem|additional information/i);
   const featureFuture = markdownSection(body, /future implementation|current implementation|acceptance criteria|alternatives|additional information/i);
   const hasFeatureUseCase = featureRequestIntent && (
+    hasProposalTrackingUseCase({ body, proposalTrackingIntent }) ||
     hasMeaningfulSection(featureWhy) ||
     /\b(use case|workflow|problem|frustrated|current approach|current workflow|currently|need to|want to|so that|because|when i|i expect|compatible with|frontends?|demand)\b/i.test(body)
     || /describe the feature you'd like to request/i.test(body)
   );
   const hasFeatureSolution = featureRequestIntent && (
+    hasProposalTrackingSolution({ body, proposalTrackingIntent }) ||
     hasMeaningfulSection(featureDescription) ||
-    /\b(describe the solution|solution you'd like|requested behavior|add (?:a|an|the)?|allow(?:s|ing)?|support(?:s|ing)?|output(?:ting)?|convert(?:ing)?|generate|export|setting|should|would like)\b/i.test(body)
+    /\b(describe the solution|solution you'd like|requested behavior|we propose|proposed solution|proposal|add (?:a|an|the)?|allow(?:s|ing)?|permit(?:s|ting)?|support(?:s|ing)?|provide(?:s|d|ing)?(?: an?)? option|option to|would be (?:great|helpful) if|output(?:ting)?|convert(?:ing)?|generate|export|setting|should|would like)\b/i.test(body)
   );
   const hasFeatureScope = featureRequestIntent && (
+    hasProposalTrackingScope({ body, proposalTrackingIntent }) ||
     hasMeaningfulSection(featureFuture, { minLength: 2 }) ||
-    /\b(alternatives?|constraints?|acceptance criteria|current approach|workaround|manual|instead|at least|configurable|rate limits?|preserv(?:e|ing|es)|detect conflicts?)\b/i.test(body)
+    /\b(alternatives?|constraints?|acceptance criteria|current approach|workaround|manual|instead|at least|configurable|rate limits?|preserv(?:e|ing|es)|detect conflicts?|unresolved questions?|implementation note|benefits? and costs?|final comment period|stabilization)\b/i.test(body)
     || /describe alternatives you've considered/i.test(body)
   );
   const configSection = markdownSection(body, /yaml config|configuration|config/i);
@@ -897,6 +901,18 @@ function hasMeaningfulSection(section = "", { minLength = 8 } = {}) {
     .replace(/\b(?:_?no response_?|n\/a|none|null|not applicable)\b/gi, "")
     .trim();
   return cleaned.length >= minLength && /[a-z0-9]/i.test(cleaned);
+}
+
+function hasProposalTrackingUseCase({ body = "", proposalTrackingIntent = false } = {}) {
+  return Boolean(proposalTrackingIntent) && /\b(?:this is a (?:tracking issue|discussion)|we currently|currently|possible future|obvious extension|benefits?|costs?|motivation|rationale|missing|remaining functions?|public api|feature gate|tracking issue for)\b/i.test(body);
+}
+
+function hasProposalTrackingSolution({ body = "", proposalTrackingIntent = false } = {}) {
+  return Boolean(proposalTrackingIntent) && /\b(?:we propose|proposal|permit|allow|support|public api|feature gate|returns?|add(?:ing)?|provide(?:s|d|ing)?(?: an?)? option|option to|stabilization pr)\b/i.test(body);
+}
+
+function hasProposalTrackingScope({ body = "", proposalTrackingIntent = false } = {}) {
+  return Boolean(proposalTrackingIntent) && /\b(?:unresolved questions?|steps\s*\/\s*history|history|implementation note|benefits? and costs?|final comment period|fcp|stabilization|references?|focus on|alternatives?)\b/i.test(body);
 }
 
 function hasEmbeddedReproductionSteps(section = "") {

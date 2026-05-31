@@ -5,14 +5,14 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 ## Summary
 
 - Version: 2026.05.30
-- Cases: 66/66 passing
+- Cases: 69/69 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
 - standard-pr: 9/9 passing
 - tool-use: 2/2 passing
-- issue: 34/34 passing
+- issue: 37/37 passing
 - repo-context: 5/5 passing
 - repo-policy: 3/3 passing
 - kernel-grade: 7/7 passing
@@ -59,6 +59,9 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 | PASS | issue | verbose-cli-bug-template | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | question-template-signed-url-token | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | output-format-feature-solution | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | large-maintainer-language-proposal | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | large-maintainer-tracking-issue | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | large-maintainer-rfe-option | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | contextual-known-issues-refs | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | maintainer-approved-issue-label | ready-for-maintainer | ready-for-maintainer | 94 | `maintainer-approved`, `ready-for-maintainer` |
 | PASS | issue | maintainer-authored-internal-issue | ready-for-maintainer | ready-for-maintainer | 48 | `maintainer-authored`, `ready-for-maintainer` |

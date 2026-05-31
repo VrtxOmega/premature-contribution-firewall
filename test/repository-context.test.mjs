@@ -243,6 +243,47 @@ test("diagnostic for-more-details issue references do not become duplicate block
   assert.equal(result.repositoryContext.similarOpenIssues.length, 0);
 });
 
+test("proposal ancestry references do not become duplicate blockers", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    number: 57644,
+    title: "proposal: spec: sum types based on general interfaces",
+    labels: [{ name: "Proposal" }],
+    body: [
+      "This is a version of #41716 updated for the final implementation of generics in Go.",
+      "We propose that ordinary interface types may embed a union of terms.",
+      "Discussion of sum types in general should remain on #19412 or newer variants such as #54685.",
+      "Please focus on the benefits and costs of this specific proposal."
+    ].join("\n"),
+    repositoryContext: {
+      repository: "golang/go",
+      issues: [
+        {
+          number: 41716,
+          title: "proposal: spec: generalized sum types",
+          body: "Prior version of the proposal.",
+          state: "closed",
+          labels: ["Proposal"],
+          htmlUrl: "https://github.com/golang/go/issues/41716"
+        },
+        {
+          number: 54685,
+          title: "proposal: spec: another sum types variant",
+          body: "Newer variant for broader sum type discussion.",
+          state: "open",
+          labels: ["Proposal"],
+          htmlUrl: "https://github.com/golang/go/issues/54685"
+        }
+      ],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.labels.includes("possibly-duplicate"), false);
+  assert.equal(result.labels.includes("possibly-solved"), false);
+  assert.equal(result.repositoryContext.findings.length, 0);
+});
+
 test("comment-supplied issue refs surface open linked duplicates", () => {
   const result = evaluateContribution({
     kind: "issue",

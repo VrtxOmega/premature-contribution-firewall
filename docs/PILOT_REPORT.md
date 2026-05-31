@@ -6,11 +6,11 @@ This report summarizes the evidence PCF earned from read-only pilots against pub
 
 ## Executive Result
 
-PCF has been tested against 13 public repository queues:
+PCF has been tested against 23 public repository queues:
 
 - 2 public outreach briefs posted from the PCF repository.
-- 11 private read-only shadow pilots.
-- 152 sampled public issues total.
+- 21 private read-only shadow pilots.
+- 272 sampled public issues total.
 - 0 writes to target repositories.
 - 0 claims of target maintainer endorsement.
 
@@ -24,14 +24,16 @@ Across the 12 pilots with comparable before/after baselines, PCF changed the sam
 
 The after-only `make-all/tuya-local` pilot added another 8 sampled issues with a final split of 5 review / 2 repair / 1 defer.
 
+The large-maintainer bench added 10 private read-only pilots and 120 final sampled issues. Its initial-to-final aggregate moved from 17 review / 61 repair / 42 defer to 22 review / 60 repair / 38 defer, with repository context checked on all 120 final items and 0 collection errors.
+
 The useful signal is not that every final queue is "right." The useful signal is that live queues exposed wrong assumptions, the assumptions were fixed narrowly, and the fixes were locked into reproducible tests and benchmark cases.
 
 ## Current Proof State
 
 | Surface | Current result | What it proves |
 | --- | ---: | --- |
-| Unit and integration tests | 125/125 | Core evaluator, GitHub queue, API, feedback, setup, and context behavior stay green together. |
-| Maintainer benchmark | 66/66 | The permanent corpus captures the real breakage classes discovered so far. |
+| Unit and integration tests | 130/130 | Core evaluator, GitHub queue, API, feedback, setup, and context behavior stay green together. |
+| Maintainer benchmark | 69/69 | The permanent corpus captures the real breakage classes discovered so far. |
 | Adversarial red test | 8/8 | Known bad inputs still fail closed. |
 | Maintainer demo | PASS | The repo can produce the public proof bundle in one repeatable command. |
 | GitHub Actions | PASS | The same gates run remotely on pushes and pull requests. |
@@ -55,6 +57,7 @@ npm run ci:gates
 | App-only repos received package/dependency reports. | `termux/termux-app` | Added wrong-repository routing for package/dependency reports. |
 | Firmware reports used YAML/log evidence instead of classic expected/actual fields. | `esphome/esphome` | Added config/log bug evidence, numeric version recognition, root-cause crash evidence, placeholder-secret tolerance, and stale-label handling. |
 | High-volume CLI reports used strict verbose-output templates and known-issues links. | `yt-dlp/yt-dlp` | Added checked known-issues search recognition, complete verbose CLI evidence, question-template routing, contextual issue-link handling, output-format feature recognition, and signed media URL token tolerance. |
+| Large maintainer process issues were treated like ordinary bug reports. | `rust-lang/rust`, `golang/go`, `systemd/systemd`, `python/cpython` | Added proposal, tracking issue, RFE, feature-gate, FCP, stabilization, and proposal-ancestry reference handling. |
 
 ## Pilot Table
 
@@ -73,6 +76,7 @@ npm run ci:gates
 | `termux/termux-app` | Private | 2 review / 7 repair / 3 defer | 4 review / 3 repair / 5 defer | Wrong-repository routing must coexist with valid crash and feature evidence. |
 | `esphome/esphome` | Private | 1 review / 4 repair / 7 defer | 4 review / 6 repair / 2 defer | YAML/log firmware reports need template-aware evidence. |
 | `yt-dlp/yt-dlp` | Private | 0 review / 6 repair / 6 defer | 4 review / 7 repair / 1 defer | Verbose CLI output, question templates, known-issues links, and signed URL tokens need special handling. |
+| Large maintainer bench | Private | 17 review / 61 repair / 42 defer | 22 review / 60 repair / 38 defer | Proposal, tracking issue, RFE, and process artifacts need non-bug evidence rules. See `docs/LARGE_MAINTAINER_BENCH.md`. |
 
 ## Reproducible Commands
 

@@ -6,6 +6,8 @@ It is not an outreach list, endorsement list, or claim that these projects need 
 
 GitHub API snapshot: `2026-05-31T00:21:27+00:00`
 
+Large-maintainer stress work is tracked separately in [LARGE_MAINTAINER_BENCH.md](LARGE_MAINTAINER_BENCH.md). That bench covered `python/cpython`, `rust-lang/rust`, `golang/go`, `nodejs/node`, `kubernetes/kubernetes`, `microsoft/vscode`, `pytorch/pytorch`, `tensorflow/tensorflow`, `home-assistant/core`, and `systemd/systemd` without target-repository writes.
+
 ## Selection Rules
 
 - Prefer active public repositories with visible recent intake.

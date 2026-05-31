@@ -60,7 +60,7 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Promotes selected runnable feedback drafts into a separate local candidate corpus and replays that corpus against the current evaluator before anything is folded into the permanent benchmark.
 - Builds an auditable feedback calibration profile from local corrections and promoted candidates, then attaches close matches to future evaluations and queue items without hiding the base heuristic status or score.
 - Evaluates plain-text patch or mbox submissions with `evaluate-patch`, defaulting to `kernel-grade` discipline for email-style review.
-- Ships a deterministic maintainer benchmark corpus with 66 reproducible cases across PRs, issues, feature requests, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
+- Ships a deterministic maintainer benchmark corpus with 69 reproducible cases across PRs, issues, feature requests, large-maintainer process issues, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
 - Ships a separate adversarial red-test corpus that preserves breakage residue for negated verification, suspicious paths, secret evasion, generated artifact churn, skipped-only CI, prompt-injection text, malformed batch input, and empty patch bodies.
 - Exposes callable API endpoints for single, patch, batch, spec, and benchmark evaluation.
 - Includes a stricter `kernel-grade` profile for projects that want Linux-kernel-style patch discipline: concise subsystem subjects, human DCO sign-off, Fixes/stable discipline, maintainer routing, build/test evidence, review-budget control, and transparent tool provenance.
@@ -99,7 +99,7 @@ npm run benchmark:write
 
 Current generated results live in [`docs/benchmark-results.md`](docs/benchmark-results.md):
 
-- 66/66 benchmark cases passing
+- 69/69 benchmark cases passing
 - standard PR readiness
 - issue triage readiness
 - repository policy enforcement
@@ -118,6 +118,8 @@ Synthetic fixtures are not enough. PCF's live-pilot rule is: when a real reposit
 The maintainer proof report is in [docs/PILOT_REPORT.md](docs/PILOT_REPORT.md). The calibration method is documented in [docs/REAL_WORLD_CALIBRATION.md](docs/REAL_WORLD_CALIBRATION.md). The running ledger of pilot repositories, findings, fixes, artifact hashes, and public/private status lives in [docs/PILOT_LEDGER.md](docs/PILOT_LEDGER.md). Future read-only pilot candidates are tracked in [docs/PILOT_TARGETS.md](docs/PILOT_TARGETS.md).
 
 Current pilot progression:
+
+The large-maintainer stress bench is summarized in [docs/LARGE_MAINTAINER_BENCH.md](docs/LARGE_MAINTAINER_BENCH.md). That bench adds 10 read-only large public queues, 120 final sampled issues, full repository-context collection on all 120 final samples, and a narrow fix for proposal, tracking issue, and RFE process items.
 
 | Repository | Public status | Before | After | Lesson locked into PCF |
 | --- | --- | ---: | ---: | --- |

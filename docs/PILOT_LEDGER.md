@@ -1030,7 +1030,7 @@ Verification:
   - `question-template-signed-url-token`
   - `output-format-feature-solution`
   - `contextual-known-issues-refs`
-- Current benchmark result: 66/66 passing.
+- Benchmark result at this point in the ledger: 66/66 passing.
 - GitHub writes to `yt-dlp/yt-dlp`: none.
 - Public outreach: none.
 
@@ -1043,13 +1043,110 @@ f326c005ca3f1bad927164a0a500546bbec4629dce7925ee1238ea193a34dc6e
 9ce0b80e63c809ffeb1227da82882a36768dd0629b640c8b01f872fcd7e9d043
 ```
 
+## Large Maintainer Bench
+
+Targets:
+
+- `python/cpython`
+- `rust-lang/rust`
+- `golang/go`
+- `nodejs/node`
+- `kubernetes/kubernetes`
+- `microsoft/vscode`
+- `pytorch/pytorch`
+- `tensorflow/tensorflow`
+- `home-assistant/core`
+- `systemd/systemd`
+
+Queue shape:
+
+- large language, runtime, editor, ML, platform, automation, and system-service projects
+- open issue queues ranging from hundreds to tens of thousands
+- formal proposal, tracking, RFE, enhancement, bug, regression, CI, and template-specific intake
+- high duplicate/concurrent-work pressure
+- `torvalds/linux` inspected as a GitHub surface and excluded because it has 0 GitHub issues and 0 GitHub PRs
+
+Initial private pilots:
+
+- 10 sampled repositories
+- 120 sampled issues
+- 17 review-now
+- 61 repair
+- 42 defer
+- repository context checked all 120
+- context findings: 129
+- context unavailable: 0
+- collection errors: 0
+
+What PCF got wrong:
+
+- Formal proposals were sometimes treated like incomplete bug reports that needed minimal reproduction.
+- Rust-style tracking issues with public API, feature gate, steps/history, FCP, stabilization, and unresolved questions were not recognized as reviewable process artifacts.
+- RFE wording such as "would be great if" and "provided an option" did not count as requested behavior.
+- Proposal ancestry references such as "version of", "updated for", and "variants such as" could be mistaken for duplicate blockers.
+
+Fixes made:
+
+- Added proposal, RFE, language-change, tracking-issue, feature-gate, FCP, and stabilization intent recognition.
+- Added proposal/tracking evidence for use case, proposed behavior, public API, implementation notes, history, unresolved questions, and stabilization process.
+- Added requested-behavior recognition for "would be great if", "provided an option", and "option to".
+- Added proposal-ancestry contextual issue-reference handling.
+
+Final private pilots:
+
+- 10 sampled repositories
+- 120 sampled issues
+- 22 review-now
+- 60 repair
+- 38 defer
+- repository context checked all 120
+- context findings: 133
+- context unavailable: 0
+- collection errors: 0
+
+Notable final routing:
+
+- `rust-lang/rust#152080` moved from repair to review-now.
+- `golang/go#57644` moved from repair to review-now.
+- `systemd/systemd#42395` moved from repair to review-now.
+- `python/cpython#150646` moved from defer to repair, not review-now, because related repository context still needs checking.
+- `golang/go#47487` and `rust-lang/rust#157180` moved from defer to repair because proposal/tracking shape was recognized while context still prevented review-now.
+
+Verification:
+
+- Focused evaluator tests passed.
+- Focused repository-context tests passed.
+- Benchmark corpus increased to 69 cases:
+  - `large-maintainer-language-proposal`
+  - `large-maintainer-tracking-issue`
+  - `large-maintainer-rfe-option`
+- Current benchmark result: 69/69 passing.
+- GitHub writes to target repositories: none.
+- Public outreach: none.
+- Full bench report: `docs/LARGE_MAINTAINER_BENCH.md`.
+
+Private final artifact hashes:
+
+```text
+dfee5cfb7d3d97f74ad129f5a3c3771107069d1c1854db9397d664344ce37a5a
+380f46a41f2995f64a16b0a4409286f3aaffbb79606029e5ba98c61ed95aa17a
+3751568a64a49294ef089b6f035f6751f66fbb7b6494a247929b3dee947a03a5
+f55c5091cdeccfcd52d37af77e9467d80ab011b0a1bfe010ff43ab9d0c8e88a6
+f63095397db898b9d36795c77fc97ecf4fce7a85fcca1b024b4e4fd6bdf77906
+23283f277f25d7f7c6ca903edcc0c0f1a7fa2ba78a9428dbae146db20fdc43ba
+6f4dfc3f5e16e9e29e2bb96ed2da771ce06895cda0e4cfafbfb47bef897bf889
+bc4e3b9f8b8e64dc41a00b1213258c7e3f8844aadc36a3cd52585b9483cc2c86
+02b35a0227d39fa961255682be29c778888a731edd4d909b134e1333e29df9b1
+e80f78f1a4e19004b8cd14d092b26a522ec16ed4dfac2f2fa0674f898d083599
+```
+
 ## Current Gate State
 
 The pilot ledger should be updated whenever a real pilot changes PCF behavior.
 
 Current expected proof state:
 
-- benchmark: 66/66
+- benchmark: 69/69
 - adversarial red test: 8/8
 - maintainer demo: PASS
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner

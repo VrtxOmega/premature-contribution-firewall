@@ -261,6 +261,27 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-feature-solution", "duplicate-search-needed"], repoContext: true }
   },
   {
+    id: "large-maintainer-language-proposal",
+    category: "issue",
+    name: "Large-maintainer language proposal is process work, not a bug report",
+    input: largeMaintainerLanguageProposalIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-reproducer", "needs-logs"], repoContext: true }
+  },
+  {
+    id: "large-maintainer-tracking-issue",
+    category: "issue",
+    name: "Large-maintainer tracking issue uses API/history evidence instead of bug evidence",
+    input: largeMaintainerTrackingIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-reproducer", "needs-environment", "needs-technical-analysis"], repoContext: true }
+  },
+  {
+    id: "large-maintainer-rfe-option",
+    category: "issue",
+    name: "RFE option wording counts as requested behavior",
+    input: largeMaintainerRfeOptionIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-feature-solution"], repoContext: true }
+  },
+  {
     id: "contextual-known-issues-refs",
     category: "issue",
     name: "Known-issues and diagnostic issue links are context, not duplicate blockers",
@@ -1919,6 +1940,94 @@ function maintainerIceboxFeatureRequest() {
     repositoryContext: {
       source: "github-api",
       repository: "karakeep-app/karakeep",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function largeMaintainerLanguageProposalIssue() {
+  return {
+    kind: "issue",
+    title: "proposal: spec: sum types based on general interfaces",
+    labels: [{ name: "Proposal" }, { name: "LanguageChange" }],
+    body: [
+      "This is a discussion of a possible future language change.",
+      "We currently permit type parameter constraints to embed a union of types.",
+      "We propose that an ordinary interface type may embed a union of terms.",
+      "",
+      "For example:",
+      "```go",
+      "type I interface {",
+      "    int | float64",
+      "}",
+      "```",
+      "",
+      "Implementation note: some cases could use a compact representation, but that would not affect the language level.",
+      "Please focus on the benefits and costs of this specific proposal."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "golang/go",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function largeMaintainerTrackingIssue() {
+  return {
+    kind: "issue",
+    title: "Tracking Issue for `uint_carryless_mul`",
+    labels: [{ name: "T-libs-api" }, { name: "C-tracking-issue" }],
+    body: [
+      "Feature gate: `#![feature(uint_carryless_mul)]`",
+      "",
+      "This is a tracking issue for functions that return the carryless product of unsigned integers.",
+      "",
+      "### Public API",
+      "```rust",
+      "impl uN {",
+      "    pub const fn carryless_mul(self, rhs: Self) -> Self;",
+      "}",
+      "```",
+      "",
+      "### Steps / History",
+      "- [x] ACP accepted by the libs team.",
+      "- [x] Implementation PR landed.",
+      "- [ ] Final comment period.",
+      "- [ ] Stabilization PR.",
+      "",
+      "### Unresolved Questions",
+      "- Evaluate the quality of codegen before stabilization."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "rust-lang/rust",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function largeMaintainerRfeOptionIssue() {
+  return {
+    kind: "issue",
+    title: "sysinstall: Add option to keep home partition",
+    labels: [{ name: "RFE" }],
+    body: [
+      "### Component",
+      "systemd-sysinstall",
+      "",
+      "### Is your feature request related to a problem? Please describe",
+      "When reinstalling on a disk that already contains a home partition, the current prompt only exposes keep or erase. It would be great if sysinstall recognised that a home partition exists and provided an option to install the OS without touching the home partition.",
+      "",
+      "### The systemd version you checked that didn't have the feature you are asking for",
+      "261"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "systemd/systemd",
       issues: [],
       pullRequests: []
     }
