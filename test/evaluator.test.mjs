@@ -194,6 +194,37 @@ test("feature request with current workflow and expected behavior counts as use-
   assert.equal(result.labels.includes("needs-use-case"), false);
 });
 
+test("concise protocol support title can be clear enough for triage", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Support SSO",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "**Is your feature request related to a problem? Please describe.**",
+      "I am trying to implement SSO on my homelab, but the Android app does not support the Jellyfin SSO plugin.",
+      "",
+      "**Describe the solution you'd like**",
+      "Support the SSO login flow used by the Jellyfin plugin so users can authenticate without falling back to password-only app login.",
+      "",
+      "**Describe alternatives you've considered**",
+      "Quick Connect works as a workaround, but it does not provide the same SSO policy coverage.",
+      "",
+      "**Additional context**",
+      "The browser flow works today with the same server."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "jarnedemeulemeester/findroid",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-clear-summary"), false);
+  assert.ok(result.checks.some((check) => check.id === "title" && check.status === "pass"));
+});
+
 test("security monitoring feature request is not treated as a vulnerability report", () => {
   const result = evaluateContribution({
     kind: "issue",
@@ -234,6 +265,120 @@ test("security monitoring feature request is not treated as a vulnerability repo
   assert.equal(result.labels.includes("needs-logs"), false);
   assert.ok(result.checks.some((check) => check.id === "feature-use-case" && check.status === "pass"));
   assert.ok(result.checks.some((check) => check.id === "feature-solution" && check.status === "pass"));
+});
+
+test("complete structured Android media bug template is reviewable without pasted logs", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Trickplay doesn't load from where the content started playing",
+    labels: [{ name: "bug" }],
+    body: [
+      "### Describe your issue",
+      "",
+      "If you start a movie or episode in the middle, it will not load trickplay. It only loads if playback starts at the beginning.",
+      "",
+      "### Steps to reproduce",
+      "",
+      "1. Play an episode from the middle.",
+      "2. Try to initiate swipe to trickplay or seek to trickplay.",
+      "3. Observe that trickplay does not work.",
+      "",
+      "### Expected behavior",
+      "",
+      "Trickplay is loaded from where playback starts, and seeking should not start trickplay until it is loaded.",
+      "",
+      "### Screenshots",
+      "",
+      "_No response_",
+      "",
+      "### Player",
+      "",
+      "mpv",
+      "",
+      "### Additional context",
+      "",
+      "_No response_",
+      "",
+      "### Device",
+      "",
+      "Galaxy S25",
+      "",
+      "### Android version",
+      "",
+      "16",
+      "",
+      "### App version",
+      "",
+      "1.0.2",
+      "",
+      "### Jellyfin version",
+      "",
+      "10.11.8"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "jarnedemeulemeester/findroid",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-logs"), false);
+  assert.equal(result.labels.includes("needs-technical-analysis"), false);
+  assert.equal(result.labels.includes("needs-expected-actual"), false);
+  assert.ok(result.strengths.some((item) => item.includes("bug template")));
+});
+
+test("structured bug template with uncertain reproduction still needs repair", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Skipping EP",
+    labels: [{ name: "bug" }],
+    body: [
+      "### Describe your issue",
+      "",
+      "The app sometimes skips episodes and reports that details do not match the play item.",
+      "",
+      "### Steps to reproduce",
+      "",
+      "I don't know how to reproduce this. It may happen after switching apps and coming back.",
+      "",
+      "### Expected behavior",
+      "",
+      "The app should not skip from one episode to another unexpectedly.",
+      "",
+      "### Player",
+      "",
+      "mpv",
+      "",
+      "### Device",
+      "",
+      "A71",
+      "",
+      "### Android version",
+      "",
+      "13",
+      "",
+      "### App version",
+      "",
+      "1.0.2",
+      "",
+      "### Jellyfin version",
+      "",
+      "10.10.7"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "jarnedemeulemeester/findroid",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.notEqual(result.status, "ready-for-maintainer");
+  assert.ok(result.labels.includes("needs-reproducer"));
+  assert.ok(result.blockers.some((check) => check.id === "reproducer"));
 });
 
 test("bug template with expected behavior and concrete failure output satisfies behavior evidence", () => {

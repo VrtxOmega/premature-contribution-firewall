@@ -446,14 +446,19 @@ export function evaluateIssue(input, options = {}) {
   const maintainerTriage = analyzeMaintainerTriage(input.labels, input.authorAssociation);
   const featureRequest = issueEvidence.featureRequestIntent && !issueEvidence.deviceSupportIntent && !securityClaim;
   const repositoryContextCleared = repositoryTriage.hasContext && repositoryTriage.checkStatus === "pass";
-  const hasReproducer = featureRequest ? issueEvidence.hasFeatureUseCase : SIGNALS.repro.test(body) || issueEvidence.deviceSupportComplete;
-  const hasExpectedActual = featureRequest ? issueEvidence.hasFeatureSolution : issueEvidence.hasBugBehaviorEvidence || issueEvidence.deviceSupportComplete;
-  const hasEnvironment = featureRequest || SIGNALS.version.test(body) || issueEvidence.hasDeviceIdentity;
-  const hasLogEvidence = featureRequest || SIGNALS.logs.test(body) || issueEvidence.hasDeviceTelemetry;
+  const hasReproductionSignal = SIGNALS.repro.test(body) && !issueEvidence.hasUncertainReproduction;
+  const hasReproducer = featureRequest
+    ? issueEvidence.hasFeatureUseCase
+    : hasReproductionSignal || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete;
+  const hasExpectedActual = featureRequest
+    ? issueEvidence.hasFeatureSolution
+    : issueEvidence.hasBugBehaviorEvidence || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete;
+  const hasEnvironment = featureRequest || SIGNALS.version.test(body) || issueEvidence.hasDeviceIdentity || issueEvidence.hasStructuredEnvironment;
+  const hasLogEvidence = featureRequest || SIGNALS.logs.test(body) || issueEvidence.hasDeviceTelemetry || issueEvidence.structuredBugReportComplete;
   const hasDuplicateSearch = SIGNALS.duplicateSearch.test(body) || repositoryContextCleared;
   const hasTechnicalAnalysis = featureRequest
     ? issueEvidence.featureRequestComplete || issueEvidence.hasFeatureScope
-    : SIGNALS.rootCause.test(body) || issueEvidence.deviceSupportComplete;
+    : SIGNALS.rootCause.test(body) || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete;
 
   addCheck(checks, labels, {
     id: "title",
@@ -484,10 +489,12 @@ export function evaluateIssue(input, options = {}) {
       ? "Feature request describes the user problem, workflow, or use case."
       : featureRequest
         ? "Feature request needs a concrete user problem, workflow, or use case."
-        : SIGNALS.repro.test(body)
+        : hasReproductionSignal
       ? "Includes reproduction language."
       : issueEvidence.deviceSupportComplete
         ? "Device-support report includes product identity, local telemetry, and DPS mapping evidence."
+        : issueEvidence.structuredBugReportComplete
+          ? "Structured bug report includes concrete steps, expected behavior, and environment."
         : "No clear steps to reproduce, expected behavior, or actual behavior found."
   });
 
@@ -507,6 +514,8 @@ export function evaluateIssue(input, options = {}) {
         ? "Expected behavior and concrete observed failure output are present."
       : issueEvidence.deviceSupportComplete
         ? "Device-support request uses product/DPS evidence instead of a classic expected/actual bug format."
+      : issueEvidence.structuredBugReportComplete
+        ? "Structured bug template includes observed issue and expected behavior."
         : "Expected and actual behavior should be explicit."
   });
 
@@ -522,6 +531,8 @@ export function evaluateIssue(input, options = {}) {
       ? "Includes version, commit, or environment signal."
       : issueEvidence.hasDeviceIdentity
         ? "Includes device product identity that can route a support request."
+        : issueEvidence.hasStructuredEnvironment
+          ? "Includes environment fields from the issue template."
         : "No version, commit, release, or environment detail found."
   });
 
@@ -537,6 +548,8 @@ export function evaluateIssue(input, options = {}) {
       ? "Includes logs, stack trace, or concrete error output."
       : issueEvidence.hasDeviceTelemetry
         ? "Includes device telemetry or DPS output."
+        : issueEvidence.structuredBugReportComplete
+          ? "Structured bug report gives concrete reproduction and environment; extra logs are not required for initial triage."
         : "No logs or concrete error output supplied."
   });
 
@@ -569,6 +582,8 @@ export function evaluateIssue(input, options = {}) {
       ? "Includes a root-cause hypothesis, patch, or technical analysis."
       : issueEvidence.deviceSupportComplete
         ? "Includes concrete product/DPS mapping evidence that gives maintainers review material."
+      : issueEvidence.structuredBugReportComplete
+        ? "Structured report narrows the problem enough for initial maintainer triage."
         : "A root-cause hypothesis or patch would reduce maintainer load."
   });
 
@@ -652,6 +667,7 @@ export function evaluateIssue(input, options = {}) {
   if (SIGNALS.version.test(body)) strengths.push("Names version, commit, or environment.");
   if (SIGNALS.logs.test(body)) strengths.push("Includes logs or concrete error output.");
   if (issueEvidence.deviceSupportComplete) strengths.push("Includes device identity, local telemetry, and DPS mapping evidence.");
+  if (issueEvidence.structuredBugReportComplete) strengths.push("Completes the bug template with steps, expected behavior, and environment details.");
   if (featureRequest && issueEvidence.hasFeatureUseCase) strengths.push("Describes a concrete feature use case.");
   if (featureRequest && issueEvidence.hasFeatureSolution) strengths.push("Describes the requested feature behavior.");
   if (maintainerTriage.state === "approved") strengths.push("Repository labels indicate this has already been accepted for maintainer attention.");
@@ -715,6 +731,25 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     hasExplicitExpectedActual
     || (hasExpectedSignal && hasObservedFailureSignal && (SIGNALS.repro.test(body) || SIGNALS.logs.test(body) || SIGNALS.rootCause.test(body)))
   );
+  const issueDescription = markdownSection(body, /describe (?:your|the) issue|describe the bug/i);
+  const stepsToReproduce = markdownSection(body, /steps to reproduce|reproduction/i);
+  const expectedBehavior = markdownSection(body, /expected behaviou?r/i);
+  const hasStructuredIssueDescription = hasMeaningfulSection(issueDescription);
+  const hasUncertainReproduction = /\b(?:idk|i don't know|i do not know|not sure|unsure|unknown|no idea|can't reproduce|cannot reproduce|hard to reproduce)\b/i.test(stepsToReproduce);
+  const hasStructuredSteps = hasMeaningfulSection(stepsToReproduce) && !hasUncertainReproduction;
+  const hasStructuredExpectedBehavior = hasMeaningfulSection(expectedBehavior);
+  const hasStructuredEnvironment = [
+    markdownSection(body, /device/i),
+    markdownSection(body, /android version/i),
+    markdownSection(body, /app version/i),
+    markdownSection(body, /jellyfin version/i),
+    markdownSection(body, /player/i)
+  ].some((section) => hasMeaningfulSection(section, { minLength: 2 }));
+  const structuredBugReportComplete = !featureRequestIntent
+    && hasStructuredIssueDescription
+    && hasStructuredSteps
+    && hasStructuredExpectedBehavior
+    && hasStructuredEnvironment;
   return {
     deviceSupportIntent,
     hasDeviceIdentity,
@@ -726,8 +761,26 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     hasFeatureScope,
     featureRequestComplete: featureRequestIntent && hasFeatureUseCase && hasFeatureSolution,
     hasExplicitExpectedActual,
-    hasBugBehaviorEvidence
+    hasBugBehaviorEvidence,
+    hasUncertainReproduction,
+    hasStructuredEnvironment,
+    structuredBugReportComplete
   };
+}
+
+function markdownSection(body = "", headingPattern) {
+  const source = headingPattern instanceof RegExp ? headingPattern.source : String(headingPattern);
+  const sectionPattern = new RegExp(`^#{2,6}\\s*(?:${source})\\s*\\n([\\s\\S]*?)(?=^#{2,6}\\s+|\\s*$)`, "im");
+  const match = sectionPattern.exec(body);
+  return match ? match[1].trim() : "";
+}
+
+function hasMeaningfulSection(section = "", { minLength = 8 } = {}) {
+  const cleaned = String(section)
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/\b(?:_?no response_?|n\/a|none|null|not applicable)\b/gi, "")
+    .trim();
+  return cleaned.length >= minLength && /[a-z0-9]/i.test(cleaned);
 }
 
 function analyzeMaintainerTriage(labels = [], authorAssociation = "") {
@@ -1353,8 +1406,11 @@ function normalizeLabels(labels) {
 }
 
 function titleIsClear(title) {
-  const normalized = title.trim().toLowerCase();
-  return title.trim().length >= 12 && !GENERIC_TITLES.has(normalized);
+  const trimmed = title.trim();
+  const normalized = trimmed.toLowerCase();
+  if (GENERIC_TITLES.has(normalized)) return false;
+  if (trimmed.length >= 12) return true;
+  return /\b(?:add|allow|enable|support)\s+(?:2fa|mfa|sso|oidc|saml|ldap|oauth|webauthn|passkeys?)\b/i.test(trimmed);
 }
 
 function isDocFile(filename = "") {

@@ -22,6 +22,7 @@ It is not a list of endorsements. A target repository appearing here means PCF r
 | `henrygd/beszel` | Private only | None | 5 review / 6 repair / 1 defer | 6 review / 6 repair / 0 defer | Security/SSL monitoring feature requests must not be mistaken for vulnerability reports requiring a reproducer. |
 | `karakeep-app/karakeep` | Private only | None | 2 review / 8 repair / 2 defer | 6 review / 3 repair / 3 defer | Maintainer triage labels, bug-template failure output, and AI/LLM product language need separate handling. |
 | `keymapperorg/KeyMapper` | Private only | None | 0 review / 5 repair / 7 defer | 5 review / 3 repair / 4 defer | Maintainer-authored internal issues should not get contributor repair prompts unless context or safety conflicts exist. |
+| `jarnedemeulemeester/findroid` | Private only | None | 2 review / 6 repair / 4 defer | 7 review / 0 repair / 5 defer | Complete Android/media bug templates need first-triage credit without requiring logs/root-cause analysis, while uncertain repros stay out of review-now. |
 
 ## tuya-local
 
@@ -438,13 +439,102 @@ a5ce2402e52044a5abf2e642498b8a1d0e331eb73a03ef39949ceddccd4c2bf4
 3b98fe412ff64b67f0cd9d1bb6abd31b4d67484bfa14c28cdfedf73e2834bad8
 ```
 
+## Findroid
+
+Target: `jarnedemeulemeester/findroid`
+
+Live metadata at pilot start:
+
+- stars: 4,050
+- forks: 273
+- open issues: 251
+- open pull requests: 32
+- default branch: `main`
+- last pushed: 2026-05-29T09:04:22Z
+
+Queue shape:
+
+- Android/Jellyfin client bug reports
+- media playback and player-specific reproduction
+- server-session and API behavior reports
+- background download/playback requests
+- duplicate feature requests and dependency automation noise
+
+Templates inspected:
+
+- `bug-report.yml`
+- `feature_request.md`
+
+Initial private pilot:
+
+- 12 sampled issues
+- 2 review-now
+- 6 repair
+- 4 defer
+- repository context checked all 12
+- context findings: 4
+- items with context findings: 2
+- context unavailable: 0
+
+What PCF got wrong:
+
+- `#1122` was a complete SSO feature request, but the concise title `Support SSO` was treated as too vague even though the protocol target was clear.
+- `#1208`, `#1199`, and `#1200` completed Findroid's bug template with concrete steps, expected behavior, and environment/player details, but PCF held them in repair because they did not include pasted logs or a root-cause hypothesis.
+- `#1215` was a performance/API behavior bug with steps and expected client behavior, but PCF treated it like it lacked enough first-triage evidence.
+- `#1205` looked superficially structured but admitted the reproducer was unknown; this needed to stay out of review-now.
+
+Fixes made:
+
+- Added meaningful structured bug-template evidence detection for issue description, concrete reproduction steps, expected behavior, and environment fields.
+- Structured bug reports can clear soft log and technical-analysis prompts for initial maintainer triage when the reproducer is concrete.
+- Uncertain reproduction language such as `I don't know how to reproduce`, `not sure`, or `unknown` no longer counts as reproduction evidence merely because a `Steps to reproduce` heading exists.
+- Concise protocol/auth feature titles such as `Support SSO` can pass title clarity without opening the door to generic short titles.
+
+Final private pilot:
+
+- 12 sampled issues
+- 7 review-now
+- 0 repair
+- 5 defer
+- repository context checked all 12
+- context findings: 4
+- items with context findings: 2
+- context unavailable: 0
+
+Notable final routing:
+
+- `#1122`, `#1215`, `#1208`, `#1199`, and `#1200` moved into review-now.
+- `#425` and `#197` stayed do-not-review-yet because repository context found duplicate/solved/closed or concurrent-work signals.
+- `#1214` and `#1211` stayed do-not-review-yet as thin or under-scoped feature requests.
+- `#1205` stayed do-not-review-yet because its reproduction steps were explicitly uncertain.
+
+Verification:
+
+- Focused evaluator tests passed.
+- Benchmark corpus increased to 49 cases:
+  - `concise-protocol-feature-request`
+  - `structured-media-bug-template`
+  - `structured-bug-uncertain-repro`
+- Current benchmark result: 49/49 passing.
+- GitHub writes to `jarnedemeulemeester/findroid`: none.
+- Public outreach: none.
+
+Private artifact hashes:
+
+```text
+c7dadd6171aaae5ee33bd8469b1131a22966a3a84e851ee4ed465e770f8bc94c
+7bb464cd8a1b4888866e1b67687f11fa830208250919935d1c54ef5499119a54
+7486a04314d3692a63096a85ac3ac240efca8e6c493df499234021dc020c9d51
+5a979ba1343931d7023b34f64f4e3998ea93b080fe3f60aef5f20e7246b95692
+```
+
 ## Current Gate State
 
 The pilot ledger should be updated whenever a real pilot changes PCF behavior.
 
 Current expected proof state:
 
-- benchmark: 46/46
+- benchmark: 49/49
 - adversarial red test: 8/8
 - maintainer demo: PASS
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner

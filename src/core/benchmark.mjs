@@ -128,6 +128,27 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", minScore: 80, labels: ["ready-for-maintainer"], absentLabels: ["needs-expected-actual"], repoContext: true }
   },
   {
+    id: "concise-protocol-feature-request",
+    category: "issue",
+    name: "Concise protocol support title is clear enough for feature triage",
+    input: conciseProtocolFeatureRequest(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-clear-summary"], repoContext: true }
+  },
+  {
+    id: "structured-media-bug-template",
+    category: "issue",
+    name: "Structured Android media bug report does not need logs for first triage",
+    input: structuredMediaBugIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-logs", "needs-technical-analysis", "needs-expected-actual"], repoContext: true }
+  },
+  {
+    id: "structured-bug-uncertain-repro",
+    category: "issue",
+    name: "Structured bug report with uncertain repro still needs repair",
+    input: structuredBugUncertainReproIssue(),
+    expect: { status: "low-review-value", labels: ["needs-reproducer"], absentLabels: ["ready-for-maintainer"], repoContext: true }
+  },
+  {
     id: "maintainer-approved-issue-label",
     category: "issue",
     name: "Maintainer-approved issue label preserves review-now routing",
@@ -841,6 +862,137 @@ function bugTemplateExpectedFailureIssue() {
     repositoryContext: {
       source: "github-api",
       repository: "karakeep-app/karakeep",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function conciseProtocolFeatureRequest() {
+  return {
+    kind: "issue",
+    title: "Support SSO",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "**Is your feature request related to a problem? Please describe.**",
+      "I am trying to implement SSO on my homelab, but the Android app does not support the Jellyfin SSO plugin.",
+      "",
+      "**Describe the solution you'd like**",
+      "Support the SSO login flow used by the Jellyfin plugin so users can authenticate without falling back to password-only app login.",
+      "",
+      "**Describe alternatives you've considered**",
+      "Quick Connect works as a workaround, but it does not provide the same SSO policy coverage.",
+      "",
+      "**Additional context**",
+      "The browser flow works today with the same server."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "jarnedemeulemeester/findroid",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function structuredMediaBugIssue() {
+  return {
+    kind: "issue",
+    title: "Trickplay doesn't load from where the content started playing",
+    labels: [{ name: "bug" }],
+    body: [
+      "### Describe your issue",
+      "",
+      "If you start a movie or episode in the middle, it will not load trickplay. It only loads if playback starts at the beginning.",
+      "",
+      "### Steps to reproduce",
+      "",
+      "1. Play an episode from the middle.",
+      "2. Try to initiate swipe to trickplay or seek to trickplay.",
+      "3. Observe that trickplay does not work.",
+      "",
+      "### Expected behavior",
+      "",
+      "Trickplay is loaded from where playback starts, and seeking should not start trickplay until it is loaded.",
+      "",
+      "### Screenshots",
+      "",
+      "_No response_",
+      "",
+      "### Player",
+      "",
+      "mpv",
+      "",
+      "### Additional context",
+      "",
+      "_No response_",
+      "",
+      "### Device",
+      "",
+      "Galaxy S25",
+      "",
+      "### Android version",
+      "",
+      "16",
+      "",
+      "### App version",
+      "",
+      "1.0.2",
+      "",
+      "### Jellyfin version",
+      "",
+      "10.11.8"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "jarnedemeulemeester/findroid",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function structuredBugUncertainReproIssue() {
+  return {
+    kind: "issue",
+    title: "Skipping EP",
+    labels: [{ name: "bug" }],
+    body: [
+      "### Describe your issue",
+      "",
+      "The app sometimes skips episodes and reports that details do not match the play item.",
+      "",
+      "### Steps to reproduce",
+      "",
+      "I don't know how to reproduce this. It may happen after switching apps and coming back.",
+      "",
+      "### Expected behavior",
+      "",
+      "The app should not skip from one episode to another unexpectedly.",
+      "",
+      "### Player",
+      "",
+      "mpv",
+      "",
+      "### Device",
+      "",
+      "A71",
+      "",
+      "### Android version",
+      "",
+      "13",
+      "",
+      "### App version",
+      "",
+      "1.0.2",
+      "",
+      "### Jellyfin version",
+      "",
+      "10.10.7"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "jarnedemeulemeester/findroid",
       issues: [],
       pullRequests: []
     }

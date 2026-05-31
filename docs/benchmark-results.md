@@ -5,14 +5,14 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 ## Summary
 
 - Version: 2026.05.30
-- Cases: 46/46 passing
+- Cases: 49/49 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
 - standard-pr: 9/9 passing
 - tool-use: 2/2 passing
-- issue: 15/15 passing
+- issue: 18/18 passing
 - repo-policy: 3/3 passing
 - repo-context: 4/4 passing
 - kernel-grade: 7/7 passing
@@ -40,6 +40,9 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 | PASS | issue | feature-request-current-workflow | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | feature-request-security-monitoring | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | bug-template-expected-failure-output | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | concise-protocol-feature-request | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | structured-media-bug-template | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | structured-bug-uncertain-repro | low-review-value | low-review-value | 54 | `needs-clear-summary`, `needs-reproducer`, `needs-logs`, `needs-technical-analysis` |
 | PASS | issue | maintainer-approved-issue-label | ready-for-maintainer | ready-for-maintainer | 94 | `maintainer-approved`, `ready-for-maintainer` |
 | PASS | issue | maintainer-authored-internal-issue | ready-for-maintainer | ready-for-maintainer | 48 | `maintainer-authored`, `ready-for-maintainer` |
 | PASS | issue | maintainer-icebox-feature-request | low-review-value | low-review-value | 77 | `maintainer-backlog`, `low-review-value` |
