@@ -73,3 +73,18 @@ test("replay capture preserves the public nextAction output contract", async () 
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("browser queue surface exposes why-label explanations", async () => {
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+
+  assert.match(app, /queue-explainer/);
+  assert.match(app, /Why PCF routed this here/);
+  assert.match(app, /function renderQueueExplainer/);
+  assert.match(app, /Next actor:/);
+  assert.match(app, /Route reason:/);
+  assert.match(app, /Labels driving route:/);
+  assert.match(app, /Repository context:/);
+  assert.match(styles, /\.queue-explainer/);
+  assert.match(styles, /\.queue-explainer-list/);
+});

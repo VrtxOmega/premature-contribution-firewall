@@ -1,0 +1,114 @@
+name: Premature Contribution Firewall dry-run
+description: Build a read-only PCF maintainer queue markdown artifact for a GitHub repository.
+author: VrtxOmega
+
+branding:
+  icon: filter
+  color: blue
+
+inputs:
+  repository:
+    description: Repository to inspect as owner/repo. Defaults to the workflow repository.
+    required: false
+    default: ""
+  github-token:
+    description: GitHub token for read-only API calls. Defaults to the workflow token when available.
+    required: false
+    default: ""
+  limit:
+    description: Maximum number of open issues and pull requests to sample.
+    required: false
+    default: "25"
+  include-pull-requests:
+    description: Include open pull requests in the dry-run queue.
+    required: false
+    default: "true"
+  include-issues:
+    description: Include open issues in the dry-run queue.
+    required: false
+    default: "true"
+  upstream-repository:
+    description: Optional upstream repository as owner/repo for solved/upstream-fixed context.
+    required: false
+    default: ""
+  output:
+    description: Markdown artifact path relative to the workflow workspace, or an absolute path.
+    required: false
+    default: pcf-queue.md
+
+outputs:
+  artifact-path:
+    description: Absolute path to the generated PCF markdown queue artifact.
+    value: ${{ steps.run-pcf.outputs.artifact-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v6
+      with:
+        node-version: "22"
+
+    - name: Install PCF dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install --ignore-scripts --package-lock=false
+        fi
+
+    - name: Run PCF dry-run queue
+      id: run-pcf
+      shell: bash
+      env:
+        INPUT_REPOSITORY: ${{ inputs.repository }}
+        INPUT_LIMIT: ${{ inputs.limit }}
+        INPUT_INCLUDE_PULL_REQUESTS: ${{ inputs.include-pull-requests }}
+        INPUT_INCLUDE_ISSUES: ${{ inputs.include-issues }}
+        INPUT_UPSTREAM_REPOSITORY: ${{ inputs.upstream-repository }}
+        INPUT_OUTPUT: ${{ inputs.output }}
+        GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
+        PCF_DRY_RUN: "true"
+        PCF_POST_COMMENTS: "false"
+        PCF_APPLY_LABELS: "false"
+        PCF_COLLECT_REPOSITORY_CONTEXT: "true"
+      run: |
+        set -euo pipefail
+
+        repository="${INPUT_REPOSITORY:-${GITHUB_REPOSITORY:-}}"
+        if [ -z "$repository" ]; then
+          echo "PCF requires a repository input or GITHUB_REPOSITORY." >&2
+          exit 2
+        fi
+
+        output="${INPUT_OUTPUT:-pcf-queue.md}"
+        if [[ "$output" = /* ]]; then
+          output_path="$output"
+        else
+          output_path="$GITHUB_WORKSPACE/$output"
+        fi
+
+        args=(
+          --repository "$repository"
+          --limit "${INPUT_LIMIT:-25}"
+          --format markdown
+          --write "$output_path"
+        )
+
+        if [ -n "${INPUT_UPSTREAM_REPOSITORY:-}" ]; then
+          args+=(--upstream "$INPUT_UPSTREAM_REPOSITORY")
+        fi
+
+        if [ "${INPUT_INCLUDE_PULL_REQUESTS:-true}" != "true" ]; then
+          args+=(--no-pulls)
+        fi
+
+        if [ "${INPUT_INCLUDE_ISSUES:-true}" != "true" ]; then
+          args+=(--no-issues)
+        fi
+
+        node "$GITHUB_ACTION_PATH/scripts/run-public-pilot.mjs" "${args[@]}"
+        echo "artifact-path=$output_path" >> "$GITHUB_OUTPUT"

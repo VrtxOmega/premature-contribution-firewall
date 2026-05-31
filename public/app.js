@@ -1021,6 +1021,10 @@ function renderQueueItem(item) {
     <ul class="plain-list queue-reasons"></ul>
     <p class="queue-next-action"></p>
     <div class="queue-next-evidence"></div>
+    <details class="queue-explainer" open>
+      <summary>Why PCF routed this here</summary>
+      <ul class="plain-list queue-explainer-list"></ul>
+    </details>
     <p class="queue-context"></p>
     <div class="queue-feedback">
       <div class="feedback-controls">
@@ -1099,6 +1103,7 @@ function renderQueueItem(item) {
     ? `Next action: ${nextAction.title || nextAction.id} (${nextAction.owner || nextAction.target || "unknown"}) - ${nextAction.maintainerAction || nextAction.reason || nextAction.summary || ""}`
     : "Next action: unknown";
   renderNextActionEvidence(article.querySelector(".queue-next-evidence"), nextAction);
+  renderQueueExplainer(article.querySelector(".queue-explainer-list"), item, nextAction);
   article.querySelector(".queue-context").textContent = `Context: ${item.contextSummary || "none"}`;
   if (item.calibration?.active) {
     const calibration = document.createElement("p");
@@ -1134,6 +1139,24 @@ function renderNextActionEvidence(node, nextAction = {}) {
     span.textContent = chip;
     node.append(span);
   }
+}
+
+function renderQueueExplainer(node, item = {}, nextAction = {}) {
+  const evidence = nextAction.evidence || {};
+  const checks = evidence.checks || [];
+  const labels = evidence.labels || [];
+  const topReason = item.topReasons?.[0];
+  const explanation = [
+    nextAction.owner ? `Next actor: ${nextAction.owner}.` : "",
+    nextAction.maintainerAction ? `Maintainer move: ${nextAction.maintainerAction}` : "",
+    nextAction.reason ? `Route reason: ${nextAction.reason}` : "",
+    labels.length ? `Labels driving route: ${labels.slice(0, 4).join(", ")}.` : "",
+    checks.length ? `Checks driving route: ${checks.slice(0, 3).map((check) => check.title || check.id || check.label).filter(Boolean).join(", ")}.` : "",
+    topReason ? `Top review signal: ${topReason.title} - ${topReason.reason}` : "",
+    item.contextSummary ? `Repository context: ${item.contextSummary}` : ""
+  ].filter(Boolean);
+
+  renderList(node, explanation.length ? explanation : ["No route explanation available."]);
 }
 
 async function submitQueueFeedback(item, { article, verdict, expectedSelect }) {

@@ -7,6 +7,7 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(scriptDir, "..");
 
 export const REQUIRED_FILES = [
+  "action.yml",
   "LICENSE",
   "CONTRIBUTING.md",
   "SECURITY.md",
@@ -22,6 +23,17 @@ export const REQUIRED_FILES = [
 ];
 
 export const REQUIRED_SNIPPETS = {
+  "action.yml": [
+    "using: composite",
+    "actions/setup-node@v6",
+    "node-version: \"22\"",
+    "scripts/run-public-pilot.mjs",
+    "PCF_DRY_RUN: \"true\"",
+    "PCF_POST_COMMENTS: \"false\"",
+    "PCF_APPLY_LABELS: \"false\"",
+    "PCF_COLLECT_REPOSITORY_CONTEXT: \"true\"",
+    "artifact-path"
+  ],
   "CONTRIBUTING.md": [
     "One issue per pull request.",
     "npm run repo:verify",

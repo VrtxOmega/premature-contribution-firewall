@@ -4,6 +4,21 @@ This is the short demonstration path for showing Premature Contribution Firewall
 
 ## Five-Minute Proof
 
+For the lowest-friction path, show the GitHub Action dry-run first. It creates a workflow artifact without requiring a GitHub App or write permissions:
+
+```yaml
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+steps:
+  - uses: VrtxOmega/premature-contribution-firewall@v0.1.0
+    with:
+      github-token: ${{ github.token }}
+      limit: 25
+```
+
 Show the setup path first:
 
 ```bash

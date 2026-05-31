@@ -488,6 +488,31 @@ textarea {
   padding: 5px 7px;
 }
 
+.queue-explainer {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  margin-top: 10px;
+  padding: 10px 12px;
+}
+
+.queue-explainer summary {
+  color: var(--steel);
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.queue-explainer-list {
+  margin-top: 8px;
+}
+
+.queue-explainer-list li {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.42;
+}
+
 .setup-warnings {
   font-weight: 700;
 }

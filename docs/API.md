@@ -4,6 +4,25 @@ Premature Contribution Firewall exposes a small local HTTP API for maintainers, 
 
 The API is deterministic and dry-run safe by default. It judges contribution readiness, not authorship.
 
+## GitHub Action Wrapper
+
+For maintainers who do not want to run a local server first, the root `action.yml` wraps the public pilot runner as a read-only GitHub Action:
+
+```yaml
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+steps:
+  - uses: VrtxOmega/premature-contribution-firewall@v0.1.0
+    with:
+      github-token: ${{ github.token }}
+      limit: 25
+```
+
+The action writes `pcf-queue.md` by default and forces `PCF_DRY_RUN=true`, `PCF_POST_COMMENTS=false`, and `PCF_APPLY_LABELS=false`. Full usage is documented in [GITHUB_ACTION.md](GITHUB_ACTION.md).
+
 ## Health
 
 ```bash

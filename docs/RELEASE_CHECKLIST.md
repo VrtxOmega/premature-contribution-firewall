@@ -26,6 +26,7 @@ Expected result:
 - Adversarial red test stays at 11/11 or grows with preserved breakage residue.
 - Maintainer demo reports `PASS`.
 - CI workflow verification reports all required gates present and forbidden write posture absent.
+- The root `action.yml` stays a read-only composite action that runs the public pilot and writes a markdown artifact.
 - `docs/maintainer-demo-output.md` is regenerated from the demo command, not hand-edited.
 
 ## Required CI Gates
@@ -55,6 +56,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - `docs/adversarial-red-team-results.md`
 - `docs/maintainer-demo-output.md`
 - `docs/API.md`
+- `docs/GITHUB_ACTION.md`
 - `docs/NEXT_ACTOR_MODEL.md`
 - `docs/MAINTAINER_DEMO.md`
 - `CONTRIBUTING.md`
@@ -63,6 +65,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - `CODE_OF_CONDUCT.md`
 - `.github/pull_request_template.md`
 - `.github/ISSUE_TEMPLATE/`
+- `action.yml`
 - A screenshot or screen recording of the local queue, feedback, candidate export, and replay compare UI when presenting the browser experience.
 
 ## Safety Gates
@@ -74,6 +77,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - Keep feedback candidate promotion separate from the permanent benchmark until a maintainer reviews the case and expectation.
 - Run `npm run setup:pilot -- --repository owner/repo` and verify the guided GitHub App pilot path is still accurate before sending the repo to a maintainer.
 - Run `npm run pilot:public:markdown -- --repository owner/repo --limit 10 --write public-pilot.md` privately before approaching a maintainer.
+- For the GitHub Action pilot, use only `contents: read`, `issues: read`, and `pull-requests: read`, then upload `pcf-queue.md` as an artifact.
 - For evaluator changes from a live pilot, first run `npm run pilot:public -- --repository owner/repo --limit 10 --capture /tmp/pcf-owner-repo-capture.json`, then replay the captured payload with `--fixture` for before/after comparison.
 - Do not commit third-party pilot output or replay captures without maintainer consent.
 - Run a secret-pattern scan before publishing artifacts.
@@ -83,6 +87,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - PCF evaluates review readiness, scope, evidence, repository policy, repository context, and maintainer attention cost.
 - PCF includes deterministic local benchmark and adversarial red-test corpora.
 - PCF can expose a read-only/dry-run GitHub maintainer queue and a callable local API.
+- PCF can run as a read-only GitHub Action that writes a markdown maintainer queue artifact.
 - PCF can preserve coarse queue actions while adding `nextAction` buckets that separate reporter evidence requests, duplicate/fixed checks, routing/process work, maintainer decisions, and blocked/not-actionable items.
 - PCF can print a guided GitHub App pilot checklist and first dry-run queue commands without exposing secret values.
 - PCF can generate a private public-repo shadow pilot artifact that preserves review-priority breakdowns and repository-context findings without writing to GitHub.
@@ -105,6 +110,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - Any public mode with GitHub writes enabled by default.
 - Any CI workflow that drops `ci:verify`, benchmark, red-test, or maintainer-demo gates.
 - Any release missing contribution, security, support, conduct, PR, or issue-template guardrails.
+- Any release missing a dry-run `action.yml` contract or documenting a write-enabled Action default.
 - Any CI workflow requesting issue, pull-request, or contents write permissions.
 - Any API or UI copy implying AI detection instead of review-readiness gating.
 - Any hidden mutation of GitHub issues, PRs, labels, or comments during dry-run demonstrations.

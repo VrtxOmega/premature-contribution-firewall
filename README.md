@@ -11,10 +11,61 @@ Is this contribution reviewable, reproducible, scoped, tested, and worth human a
 
 The output is a maintainer queue, not a vibe score: labels, repair checklists, repository-context findings, benchmark proof, adversarial residue, and dry-run guardrails before any write action touches GitHub.
 
+## 30-Second Maintainer View
+
+A messy queue turns into a short action list:
+
+| PCF lane | Who acts next | Maintainer move |
+| --- | --- | --- |
+| `review-now` | maintainer | Start normal review now. |
+| `ask-reporter-for-evidence` | reporter | Send a focused repair request. |
+| `check-duplicate-or-fixed-first` | maintainer | Check solved, duplicate, concurrent, or upstream-fixed work before fresh review. |
+| `route-to-subsystem-or-process` | maintainer/process | Send it to the right owner, template, repo, or process. |
+| `needs-maintainer-decision` | maintainer | Make the judgment call without pretending the reporter can fix it. |
+| `not-actionable-yet` | external state | Wait for release, stale-state cleanup, upstream answer, or missing external event. |
+
+Each queue item includes the route reason, next actor, maintainer action, top labels/checks, repository-context summary, and feedback controls for turning wrong calls into replayable evidence.
+
+## GitHub Action Dry-Run
+
+The lowest-friction pilot is a read-only workflow artifact. It does not require a GitHub App and does not comment, label, close, merge, or write to issues or pull requests.
+
+```yaml
+name: PCF dry-run
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  queue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run PCF
+        uses: VrtxOmega/premature-contribution-firewall@v0.1.0
+        with:
+          github-token: ${{ github.token }}
+          limit: 25
+
+      - name: Upload queue artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: pcf-queue
+          path: pcf-queue.md
+          if-no-files-found: error
+```
+
+See [docs/GITHUB_ACTION.md](docs/GITHUB_ACTION.md) for inputs, upstream-repo context, and the safety contract.
+
 ## What Maintainers Get
 
 - A sorted queue that separates ready work from low-evidence, too-broad, duplicate, already-solved, or context-missing work.
 - A next-actor model that shows whether the next useful move belongs to the reporter, maintainer, repository context lookup, process routing, or external state.
+- A GitHub Action dry-run path that emits a markdown queue artifact with read-only permissions.
 - Repair checklists contributors can act on before maintainers spend review time.
 - Repository policy ingestion for templates, `CODEOWNERS`, `MAINTAINERS`, scripts, manifests, and contribution rules.
 - Upstream and concurrent-work context for duplicates, solved issues, merged upstream fixes, and competing PRs.
