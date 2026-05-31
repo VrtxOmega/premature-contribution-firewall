@@ -177,6 +177,20 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", labels: ["maintainer-authored", "ready-for-maintainer"], absentLabels: ["possibly-solved", "possibly-duplicate"], repoContext: true }
   },
   {
+    id: "project-specific-feature-template-sections",
+    category: "issue",
+    name: "Project-specific feature template sections count as feature evidence",
+    input: projectSpecificFeatureTemplateIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-use-case", "needs-feature-solution", "needs-feature-scope"], repoContext: true }
+  },
+  {
+    id: "project-specific-bug-what-happened-headings",
+    category: "issue",
+    name: "Project-specific what happened bug headings count as bug evidence",
+    input: projectSpecificWhatHappenedBugIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-expected-actual", "needs-technical-analysis"], repoContext: true }
+  },
+  {
     id: "maintainer-approved-issue-label",
     category: "issue",
     name: "Maintainer-approved issue label preserves review-now routing",
@@ -1193,6 +1207,102 @@ function contextualFollowUpIssue() {
           htmlUrl: "https://github.example/issues/5630"
         }
       ],
+      pullRequests: []
+    }
+  };
+}
+
+function projectSpecificFeatureTemplateIssue() {
+  return {
+    kind: "issue",
+    title: "[Enhancement]: Embed ASIN when writing m4b",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "### Type of Enhancement",
+      "",
+      "Server Backend",
+      "",
+      "### Describe the Feature/Enhancement",
+      "",
+      "If an audiobook has ASIN metadata and it is written via Merge or Quick Embed, that ASIN should be written to the m4b metadata alongside the other embedded metadata.",
+      "",
+      "### Why would this be helpful?",
+      "",
+      "This would make it easier to recover a library from files, because ASIN matching can be fast and definitive when present.",
+      "",
+      "### Future Implementation (Screenshot)",
+      "",
+      "This is entirely metadata, so nothing specific to show.",
+      "",
+      "### Audiobookshelf Server Version",
+      "",
+      "v2.35.1",
+      "",
+      "### Current Implementation (Screenshot)",
+      "",
+      "This is not a visual change, no screenshot appropriate.",
+      "",
+      "### Implementation",
+      "",
+      "This may be a small ffmetadata change in the M4B writer."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "advplyr/audiobookshelf",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function projectSpecificWhatHappenedBugIssue() {
+  return {
+    kind: "issue",
+    title: "[Bug]: 429 Too Many Requests responses when matching books using Open Library",
+    labels: [{ name: "bug" }],
+    body: [
+      "### What happened?",
+      "",
+      "When matching books with titles consisting of a single word, the number of returned books is too high, resulting in 429 Too Many Requests responses from Open Library.",
+      "",
+      "### What did you expect to happen?",
+      "",
+      "When matching a book on Open Library, the server returns a list of likely matches.",
+      "",
+      "### Steps to reproduce the issue",
+      "",
+      "1. Add the book Focus: The ASML Way.",
+      "2. Match it using Open Library.",
+      "3. The server searches only for the word Focus and then fetches details for thousands of results.",
+      "4. Open Library responds with 429s and no matches are found.",
+      "",
+      "### Audiobookshelf version",
+      "",
+      "v2.32.1",
+      "",
+      "### How are you running audiobookshelf?",
+      "",
+      "Docker",
+      "",
+      "### What OS is your Audiobookshelf server hosted from?",
+      "",
+      "Linux",
+      "",
+      "### If the issue is being seen in the UI, what browsers are you seeing the problem on?",
+      "",
+      "None",
+      "",
+      "### Logs",
+      "",
+      "```shell",
+      "Failed Request failed with status code 429",
+      "Failed timeout of 10000ms exceeded",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "advplyr/audiobookshelf",
+      issues: [],
       pullRequests: []
     }
   };

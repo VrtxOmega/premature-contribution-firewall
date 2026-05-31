@@ -485,6 +485,112 @@ test("project-specific documented bug headings count as structured evidence", ()
   assert.ok(result.checks.some((check) => check.id === "reproducer" && check.status === "pass"));
 });
 
+test("project-specific feature template sections count as feature evidence", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "[Enhancement]: Embed ASIN when writing m4b",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "### Type of Enhancement",
+      "",
+      "Server Backend",
+      "",
+      "### Describe the Feature/Enhancement",
+      "",
+      "If an audiobook has ASIN metadata and it is written via Merge or Quick Embed, that ASIN should be written to the m4b metadata alongside the other embedded metadata.",
+      "",
+      "### Why would this be helpful?",
+      "",
+      "This would make it easier to recover a library from files, because ASIN matching can be fast and definitive when present.",
+      "",
+      "### Future Implementation (Screenshot)",
+      "",
+      "This is entirely metadata, so nothing specific to show.",
+      "",
+      "### Audiobookshelf Server Version",
+      "",
+      "v2.35.1",
+      "",
+      "### Current Implementation (Screenshot)",
+      "",
+      "This is not a visual change, no screenshot appropriate.",
+      "",
+      "### Implementation",
+      "",
+      "This may be a small ffmetadata change in the M4B writer."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "advplyr/audiobookshelf",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-use-case"), false);
+  assert.equal(result.labels.includes("needs-feature-solution"), false);
+  assert.equal(result.labels.includes("needs-feature-scope"), false);
+});
+
+test("project-specific bug template headings count as bug evidence", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "[Bug]: 429 Too Many Requests responses when matching books using Open Library",
+    labels: [{ name: "bug" }],
+    body: [
+      "### What happened?",
+      "",
+      "When matching books with titles consisting of a single word, the number of returned books is too high, resulting in 429 Too Many Requests responses from Open Library.",
+      "",
+      "### What did you expect to happen?",
+      "",
+      "When matching a book on Open Library, the server returns a list of likely matches.",
+      "",
+      "### Steps to reproduce the issue",
+      "",
+      "1. Add the book Focus: The ASML Way.",
+      "2. Match it using Open Library.",
+      "3. The server searches only for the word Focus and then fetches details for thousands of results.",
+      "4. Open Library responds with 429s and no matches are found.",
+      "",
+      "### Audiobookshelf version",
+      "",
+      "v2.32.1",
+      "",
+      "### How are you running audiobookshelf?",
+      "",
+      "Docker",
+      "",
+      "### What OS is your Audiobookshelf server hosted from?",
+      "",
+      "Linux",
+      "",
+      "### If the issue is being seen in the UI, what browsers are you seeing the problem on?",
+      "",
+      "None",
+      "",
+      "### Logs",
+      "",
+      "```shell",
+      "Failed Request failed with status code 429",
+      "Failed timeout of 10000ms exceeded",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "advplyr/audiobookshelf",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-expected-actual"), false);
+  assert.equal(result.labels.includes("needs-technical-analysis"), false);
+  assert.ok(result.checks.some((check) => check.id === "reproducer" && check.status === "pass"));
+});
+
 test("structured bug template with uncertain reproduction still needs repair", () => {
   const result = evaluateContribution({
     kind: "issue",

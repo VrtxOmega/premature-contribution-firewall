@@ -25,6 +25,7 @@ It is not a list of endorsements. A target repository appearing here means PCF r
 | `jarnedemeulemeester/findroid` | Private only | None | 2 review / 6 repair / 4 defer | 7 review / 0 repair / 5 defer | Complete Android/media bug templates need first-triage credit without requiring logs/root-cause analysis, while uncertain repros stay out of review-now. |
 | `FreeTubeApp/FreeTube` | Private only | None | 1 review / 10 repair / 1 defer | 3 review / 8 repair / 1 defer | Bug-template reproduction steps may be embedded in description sections, and `U: reproduced` is maintainer validation unless repository context conflicts. |
 | `photoprism/photoprism` | Private only | None | 6 review / 3 repair / 3 defer | 9 review / 1 repair / 2 defer | Project-specific bug headings, contextual follow-up references, and GitHub search pacing matter for media-heavy queues. |
+| `advplyr/audiobookshelf` | Private only | None | 3 review / 7 repair / 2 defer | 6 review / 6 repair / 0 defer | Enhancement templates and "What happened?" bug templates need project-specific section recognition while duplicate context stays active. |
 
 ## tuya-local
 
@@ -700,13 +701,91 @@ b3213fb646ee935ac11af1c36345df6ac0bb2b0f0eb8c0f24362d77a75362457
 cbe38104b842e819c952b46288e7058b8d243df8746d4d4b4c53f92eff35559c
 ```
 
+## Audiobookshelf
+
+Target: `advplyr/audiobookshelf`
+
+Queue shape:
+
+- enhancement-heavy server/API/media-library requests
+- audiobook and podcast metadata edge cases
+- API payload and mobile-client efficiency proposals
+- bug reports with structured "What happened?" and "What did you expect to happen?" headings
+- duplicate-adjacent endpoint, metadata, and redirect reports
+
+Templates inspected:
+
+- `bug.yaml`
+- `feature.yml`
+- `config.yml`
+
+Initial private pilot:
+
+- 12 sampled issues
+- 3 review-now
+- 7 repair
+- 2 defer
+- repository context checked all 12
+- context findings: 13
+- items with context findings: 6
+- context unavailable: 0
+
+What PCF got wrong:
+
+- `#5271` completed Audiobookshelf's enhancement template with requested backup-location behavior, user value, screenshot/context, current version, and current implementation, but PCF still asked for feature solution and scope.
+- `#5273` completed the same enhancement template for ASIN metadata embedding, including implementation notes, but PCF treated "no screenshot appropriate" as missing feature detail.
+- `#5048` completed the bug template with "What happened?", "What did you expect to happen?", reproduction steps, version/install/OS/browser fields, and logs, but PCF did not recognize those headings as complete bug evidence.
+
+Fixes made:
+
+- Added structured feature-template section recognition for `Describe the Feature/Enhancement`, `Why would this be helpful?`, `Future Implementation`, and `Current Implementation`.
+- Added bug-template recognition for `What happened?`, `What did you expect to happen?`, and `Steps to reproduce the issue`.
+- Added Audiobookshelf environment fields such as server version, install method, server OS, and browser field.
+- Kept duplicate/solved repository-context blockers active for otherwise complete reports.
+
+Final private pilot:
+
+- 12 sampled issues
+- 6 review-now
+- 6 repair
+- 0 defer
+- repository context checked all 12
+- context findings: 13
+- items with context findings: 6
+- context unavailable: 0
+
+Notable final routing:
+
+- `#5048`, `#5271`, and `#5273` moved to review-now after PCF learned the project template sections.
+- `#5275`, `#5277`, `#5129`, and `#5230` stayed in repair because similar open issue context still needs a maintainer call.
+- `#5251` and `#5261` stayed in repair because closed/solved context is relevant.
+
+Verification:
+
+- Focused evaluator and benchmark tests passed.
+- Benchmark corpus increased to 55 cases:
+  - `project-specific-feature-template-sections`
+  - `project-specific-bug-what-happened-headings`
+- Current benchmark result: 55/55 passing.
+- GitHub writes to `advplyr/audiobookshelf`: none.
+- Public outreach: none.
+
+Private artifact hashes:
+
+```text
+a6113e2d97bc09779a5a5cf8aada8d79892058a332efef7bcdf22d16fb736aff
+b3b272f005b970460780d3dd2f66dcbf3968bd1297449a1e734d8f7127cd5e8f
+1bd6e957161935c7fea52a9bc092ef2240bec5826d25a4c62679786effd710bc
+96aed30043e188baa0b1f6ec7cebe9b641bd1f84926c0a551500e46019dcb950
+```
+
 ## Current Gate State
 
 The pilot ledger should be updated whenever a real pilot changes PCF behavior.
 
 Current expected proof state:
 
-- benchmark: 53/53
+- benchmark: 55/55
 - adversarial red test: 8/8
 - maintainer demo: PASS
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner

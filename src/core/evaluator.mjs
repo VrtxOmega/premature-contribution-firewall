@@ -713,14 +713,20 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
   const hasDeviceTelemetry = /\b(local\s+dps|dps information|device matches)\b/i.test(body)
     && (/```/.test(body) || /[\[{][\s\S]{20,}[\]}]/.test(body) || /^\s*(name|products|entities):\s+/mi.test(body));
   const hasDeviceIdentity = deviceSupportIntent && hasProductId && hasProductName;
+  const featureDescription = markdownSection(body, /describe (?:the )?(?:feature(?:\/enhancement)?|enhancement)|describe the solution|solution you'd like/i);
+  const featureWhy = markdownSection(body, /why would this be helpful|why is this helpful|use case|related to a problem/i);
+  const featureFuture = markdownSection(body, /future implementation|current implementation|acceptance criteria|alternatives/i);
   const hasFeatureUseCase = featureRequestIntent && (
+    hasMeaningfulSection(featureWhy) ||
     /\b(use case|workflow|problem|frustrated|current approach|current workflow|currently|need to|want to|so that|because|when i|i expect)\b/i.test(body)
     || /describe the feature you'd like to request/i.test(body)
   );
   const hasFeatureSolution = featureRequestIntent && (
+    hasMeaningfulSection(featureDescription) ||
     /\b(describe the solution|solution you'd like|requested behavior|add (?:a|an|the)?|allow(?:s|ing)?|support(?:s|ing)?|setting|should|would like)\b/i.test(body)
   );
   const hasFeatureScope = featureRequestIntent && (
+    hasMeaningfulSection(featureFuture, { minLength: 2 }) ||
     /\b(alternatives?|constraints?|acceptance criteria|current approach|workaround|manual|instead|at least|configurable|rate limits?|preserv(?:e|ing|es)|detect conflicts?)\b/i.test(body)
     || /describe alternatives you've considered/i.test(body)
   );
@@ -731,10 +737,10 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     hasExplicitExpectedActual
     || (hasExpectedSignal && hasObservedFailureSignal && (SIGNALS.repro.test(body) || SIGNALS.logs.test(body) || SIGNALS.rootCause.test(body)))
   );
-  const issueDescription = markdownSection(body, /describe (?:your|the) issue|describe the bug|what is not working as documented/i);
-  const explicitStepsToReproduce = markdownSection(body, /steps to reproduce|reproduction|how can we reproduce it/i);
+  const issueDescription = markdownSection(body, /describe (?:your|the) issue|describe the bug|what is not working as documented|what happened/i);
+  const explicitStepsToReproduce = markdownSection(body, /steps to reproduce(?: the issue)?|reproduction|how can we reproduce it/i);
   const stepsToReproduce = explicitStepsToReproduce || (hasEmbeddedReproductionSteps(issueDescription) ? issueDescription : "");
-  const expectedBehavior = markdownSection(body, /expected behaviou?r|what behaviou?r do you expect/i);
+  const expectedBehavior = markdownSection(body, /expected behaviou?r|what behaviou?r do you expect|what did you expect to happen/i);
   const hasStructuredIssueDescription = hasMeaningfulSection(issueDescription);
   const hasUncertainReproduction = hasUncertainReproductionSteps(stepsToReproduce);
   const hasStructuredSteps = hasMeaningfulSection(stepsToReproduce) && !hasUncertainReproduction;
@@ -751,7 +757,11 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     markdownSection(body, /primary api used/i),
     markdownSection(body, /last known working/i),
     markdownSection(body, /which software versions do you use/i),
-    markdownSection(body, /on what device is .+ installed/i)
+    markdownSection(body, /on what device is .+ installed/i),
+    markdownSection(body, /audiobookshelf version/i),
+    markdownSection(body, /how are you running audiobookshelf/i),
+    markdownSection(body, /what os is your audiobookshelf server hosted from/i),
+    markdownSection(body, /what browsers are you seeing/i)
   ].some((section) => hasMeaningfulSection(section, { minLength: 2 }));
   const structuredBugReportComplete = !featureRequestIntent
     && hasStructuredIssueDescription
