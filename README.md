@@ -52,7 +52,7 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Includes a CLI for fixtures, saved payloads, and pre-submission checks.
 - Ingests repository policy files such as `CONTRIBUTING.md`, PR templates, issue templates, `CODEOWNERS`, `MAINTAINERS`, and common project manifests to infer required sections, owner routing, and test commands.
 - Checks repository and upstream context for similar open issues, concurrent PRs, closed/solved duplicates, linked issues that are already closed, and upstream fixes.
-- Builds a dry-run maintainer queue for open GitHub PRs/issues, with status counts, review-budget totals, context findings, queue actions, and markdown export.
+- Builds a dry-run maintainer queue for open GitHub PRs/issues, with status counts, repair sub-actions, review-budget totals, context findings, queue actions, and markdown export.
 - Shows GitHub App setup posture without exposing secrets: dry-run/write mode, webhook secret presence, app credential readiness, queue history status, and read-only connection testing.
 - Stores local queue history so maintainers can compare runs, including improved, regressed, unchanged, and new queue items.
 - Captures maintainer feedback as local evidence case files: agreement, false positives, false negatives, too-harsh/too-lenient calls, missed duplicates, missed upstream fixes, and missed concurrent work.
@@ -346,7 +346,15 @@ Queue items are grouped into:
 - `send-repair-request` for `needs-repair`
 - `do-not-review-yet` for `low-review-value`
 
-The response includes per-item top reasons, labels, repository-context summaries, review-budget estimates, the full underlying evaluation, and markdown suitable for a maintainer report. GitHub queue collection is dry-run/read-only; comment and label writes still require explicit webhook write configuration.
+Each item also includes a `nextAction` object that explains the concrete maintainer move behind non-ready work:
+
+- `ask-reporter-for-evidence`: send the item back to the submitter for missing evidence.
+- `check-duplicate-or-fixed-first`: check related, duplicate, concurrent, solved, or upstream-fixed work before spending fresh review time.
+- `route-to-subsystem-or-process`: route through repository ownership, subsystem, policy, or contribution process.
+- `needs-maintainer-decision`: make a judgment call because PCF cannot reduce the item to reporter evidence, context lookup, routing, or waiting.
+- `not-actionable-yet`: wait because the item is parked, pending, draft, or otherwise blocked on external state.
+
+The response includes per-item top reasons, labels, repository-context summaries, review-budget estimates, sub-action counts, the full underlying evaluation, and markdown suitable for a maintainer report. GitHub queue collection is dry-run/read-only; comment and label writes still require explicit webhook write configuration.
 
 ## Pilot Mode
 
@@ -369,7 +377,7 @@ npm run pilot:public -- --repository owner/repo --limit 10 --capture /tmp/pcf-ow
 npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --write /tmp/pcf-owner-repo-replay.md
 ```
 
-The public pilot artifact leads with `review-now` versus `send-repair-request`, preserves repository-context findings such as duplicates, concurrent work, and upstream fixes, and records collection errors. `--capture` writes the normalized queue payload that PCF actually evaluated so future before/after comparisons can replay the same input with `--fixture` instead of depending on a live queue that may have changed. Captures include third-party issue/PR bodies and repository-context results; keep them private and do not commit them without maintainer consent. Set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token for larger pilots or repeated search-heavy runs; the guide reports only whether a token is configured and never returns the token value. PCF spaces GitHub search calls with `PCF_GITHUB_SEARCH_DELAY_MS` so multi-repo pilots do not collapse into secondary rate-limit noise.
+The public pilot artifact leads with `review-now` versus `send-repair-request`, breaks non-ready work into `nextAction` buckets, preserves repository-context findings such as duplicates, concurrent work, and upstream fixes, and records collection errors. `--capture` writes the normalized queue payload that PCF actually evaluated so future before/after comparisons can replay the same input with `--fixture` instead of depending on a live queue that may have changed. Captures include third-party issue/PR bodies and repository-context results; keep them private and do not commit them without maintainer consent. Set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token for larger pilots or repeated search-heavy runs; the guide reports only whether a token is configured and never returns the token value. PCF spaces GitHub search calls with `PCF_GITHUB_SEARCH_DELAY_MS` so multi-repo pilots do not collapse into secondary rate-limit noise.
 
 The same guide is available from the API once the local server is running:
 
@@ -405,7 +413,7 @@ History tracks:
 - latest ready / repair / low-value counts
 - total estimated review budget
 - improved, regressed, unchanged, new, and gone queue items between runs
-- compact per-item status, score, labels, budget, and context-finding counts
+- compact per-item status, action, next action, score, labels, budget, and context-finding counts
 
 ## Maintainer Feedback Calibration
 
@@ -422,6 +430,10 @@ curl -s \
       "title": "webhook: include dry-run labels",
       "status": "needs-repair",
       "action": "send-repair-request",
+      "nextAction": {
+        "id": "check-duplicate-or-fixed-first",
+        "target": "maintainer"
+      },
       "score": 82
     },
     "verdict": "too-harsh",

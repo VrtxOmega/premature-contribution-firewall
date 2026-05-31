@@ -99,6 +99,7 @@ export function renderMaintainerDemoMarkdown(report) {
     item.number ? `#${item.number}` : item.id,
     item.title,
     item.action,
+    item.nextAction?.id || "unknown",
     String(item.contextFindings),
     String(item.reviewBudgetMinutes)
   ]);
@@ -142,10 +143,12 @@ export function renderMaintainerDemoMarkdown(report) {
     "",
     `Ready: ${report.proof.maintainerQueue.ready}; needs repair: ${report.proof.maintainerQueue.needsRepair}; low review value: ${report.proof.maintainerQueue.lowReviewValue}; review budget: ${report.proof.maintainerQueue.reviewBudgetMinutes} minutes.`,
     "",
+    `Repair sub-actions: ${formatCounts(report.proof.maintainerQueue.repairSubActions)}.`,
+    "",
     `Feedback calibration matches: ${report.proof.feedbackCalibration.matches}; review-needed conflicts: ${report.proof.feedbackCalibration.reviewNeeded}.`,
     "",
-    "| Status | Kind | Item | Title | Action | Context | Budget |",
-    "| --- | --- | --- | --- | --- | ---: | ---: |",
+    "| Status | Kind | Item | Title | Action | Next Action | Context | Budget |",
+    "| --- | --- | --- | --- | --- | --- | ---: | ---: |",
     ...queueRows.map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`),
     "",
     "## Feedback Candidate Proof",
@@ -341,6 +344,8 @@ function compactQueue(queue) {
     calibrationReviewNeeded: queue.summary.calibrationReviewNeeded,
     reviewBudgetMinutes: queue.summary.reviewBudgetMinutes,
     actions: queue.summary.actions,
+    nextActions: queue.summary.nextActions,
+    repairSubActions: queue.summary.repairSubActions,
     labels: queue.summary.labels,
     items: queue.items.map((item) => ({
       id: item.id,
@@ -349,6 +354,7 @@ function compactQueue(queue) {
       title: item.title,
       status: item.status,
       action: item.action,
+      nextAction: item.nextAction,
       score: item.score,
       contextFindings: item.contextFindings,
       calibrationMatches: item.calibration?.matches || 0,
@@ -413,6 +419,15 @@ function sha256(value) {
 
 function escapeTableCell(value) {
   return String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+}
+
+function formatCounts(counts = {}) {
+  const entries = Object.entries(counts || {});
+  if (!entries.length) return "none";
+  return entries
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([label, count]) => `${label} ${count}`)
+    .join(", ");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -21,10 +21,18 @@ test("maintainer queue summarizes ready, repair, and low-value work", async () =
   assert.equal(queue.summary.statuses["low-review-value"], 1);
   assert.equal(queue.summary.contextFindings, 3);
   assert.equal(queue.summary.calibrationMatches, 0);
+  assert.equal(queue.summary.nextActions["review-now"], 1);
+  assert.equal(queue.summary.nextActions["check-duplicate-or-fixed-first"], 1);
+  assert.equal(queue.summary.nextActions["ask-reporter-for-evidence"], 1);
+  assert.equal(queue.summary.repairSubActions["check-duplicate-or-fixed-first"], 1);
+  assert.equal(queue.summary.repairSubActions["ask-reporter-for-evidence"], 1);
   assert.equal(queue.items[0].status, "ready-for-maintainer");
+  assert.equal(queue.items[0].nextAction.id, "review-now");
   assert.equal(queue.items[1].action, "send-repair-request");
+  assert.equal(queue.items[1].nextAction.id, "check-duplicate-or-fixed-first");
   assert.ok(queue.items[1].labels.includes("possibly-duplicate"));
   assert.ok(queue.markdown.includes("Maintainer Queue"));
+  assert.ok(queue.markdown.includes("Next actions:"));
 });
 
 test("maintainer queue carries feedback calibration matches", async () => {
@@ -74,11 +82,65 @@ test("queue items preserve maintainer reasons and evaluation details", async () 
   assert.equal(item.kind, "issue");
   assert.equal(item.status, "low-review-value");
   assert.equal(item.action, "do-not-review-yet");
+  assert.equal(item.nextAction.id, "ask-reporter-for-evidence");
   assert.ok(item.topReasons.some((reason) => reason.id === "reproducer"));
   assert.equal(item.evaluation.kind, "issue");
   assert.equal(item.fixtureInput.kind, "issue");
   assert.equal(item.fixtureInput.title, "Bug");
   assert.equal(item.fixtureInput.body.includes("vulnerability"), true);
+});
+
+test("queue repair sub-actions distinguish reporter, context, routing, maintainer, and waiting work", async () => {
+  const fixture = JSON.parse(await readFile(new URL("../fixtures/queue-sample.json", import.meta.url), "utf8"));
+  const calibration = buildFeedbackCalibration({
+    repository: "VrtxOmega/premature-contribution-firewall-demo",
+    feedbackEntries: [
+      {
+        id: "decision-needed",
+        repository: "VrtxOmega/premature-contribution-firewall-demo",
+        item: {
+          kind: "pull_request",
+          number: 12,
+          title: "webhook: reject oversized payload bodies",
+          repository: "VrtxOmega/premature-contribution-firewall-demo",
+          status: "ready-for-maintainer",
+          labels: ["ready-for-maintainer"]
+        },
+        verdict: "too-lenient",
+        expectedStatus: "needs-repair",
+        note: "Maintainer wants to compare this exception before changing the heuristic."
+      }
+    ]
+  });
+  const payload = {
+    repository: "VrtxOmega/premature-contribution-firewall-demo",
+    items: [
+      { ...fixture.items[0], repository: "VrtxOmega/premature-contribution-firewall-demo" },
+      fixture.items[1],
+      fixture.items[2],
+      wrongRepositoryIssue(),
+      backlogIssue()
+    ],
+    feedbackCalibration: calibration
+  };
+  const queue = buildMaintainerQueue(payload, { now: "2026-05-30T00:00:00Z" });
+  const byId = Object.fromEntries(queue.items.map((item) => [item.id, item]));
+
+  assert.equal(byId["pr-ready-small"].action, "review-now");
+  assert.equal(byId["pr-ready-small"].nextAction.id, "needs-maintainer-decision");
+  assert.equal(byId["pr-context-duplicate"].nextAction.id, "check-duplicate-or-fixed-first");
+  assert.equal(byId["issue-low-evidence"].nextAction.id, "ask-reporter-for-evidence");
+  assert.equal(byId["wrong-repository"].nextAction.id, "route-to-subsystem-or-process");
+  assert.equal(byId["accepted-backlog"].nextAction.id, "not-actionable-yet");
+  assert.equal(queue.summary.nextActions["needs-maintainer-decision"], 1);
+  assert.equal(queue.summary.nextActions["check-duplicate-or-fixed-first"], 1);
+  assert.equal(queue.summary.nextActions["ask-reporter-for-evidence"], 1);
+  assert.equal(queue.summary.nextActions["route-to-subsystem-or-process"], 1);
+  assert.equal(queue.summary.nextActions["not-actionable-yet"], 1);
+  assert.equal(queue.summary.repairSubActions["check-duplicate-or-fixed-first"], 1);
+  assert.equal(queue.summary.repairSubActions["ask-reporter-for-evidence"], 1);
+  assert.equal(queue.summary.repairSubActions["route-to-subsystem-or-process"], 1);
+  assert.equal(queue.summary.repairSubActions["not-actionable-yet"], 1);
 });
 
 test("queue markdown is README-ready", async () => {
@@ -89,5 +151,65 @@ test("queue markdown is README-ready", async () => {
   assert.match(markdown, /Ready: 1/);
   assert.match(markdown, /Needs repair: 1/);
   assert.match(markdown, /Low review value: 1/);
+  assert.match(markdown, /check-duplicate-or-fixed-first: 1/);
+  assert.match(markdown, /Next action: check-duplicate-or-fixed-first/);
   assert.match(markdown, /webhook: include labels in dry-run response/);
 });
+
+function wrongRepositoryIssue() {
+  return {
+    id: "wrong-repository",
+    kind: "issue",
+    repository: "termux/termux-app",
+    number: 100,
+    title: "pip install cryptography fails",
+    body: [
+      "### Problem description",
+      "Running pip install cryptography fails while building a wheel.",
+      "",
+      "### Steps to reproduce",
+      "1. Open Termux.",
+      "2. Run pip install cryptography.",
+      "",
+      "### Expected behavior",
+      "The package installs.",
+      "",
+      "### Actual behavior",
+      "The build fails in maturin with a Rust crate error.",
+      "",
+      "### System information",
+      "Termux 0.118 on Android 14."
+    ].join("\n"),
+    repositoryContext: {
+      repository: "termux/termux-app",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function backlogIssue() {
+  return {
+    id: "accepted-backlog",
+    kind: "issue",
+    repository: "owner/repo",
+    number: 101,
+    title: "Add long-term import scheduler",
+    labels: ["status/icebox"],
+    body: [
+      "### Feature description",
+      "Add a scheduler for long-running imports.",
+      "",
+      "### Why would this be helpful?",
+      "Operators currently run imports manually during maintenance windows.",
+      "",
+      "### Alternatives",
+      "Manual import remains possible."
+    ].join("\n"),
+    repositoryContext: {
+      repository: "owner/repo",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}

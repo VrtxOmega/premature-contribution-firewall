@@ -26,13 +26,15 @@ The after-only `make-all/tuya-local` pilot added another 8 sampled issues with a
 
 The large-maintainer bench added 10 private read-only pilots and 120 final sampled issues. Its initial-to-final aggregate moved from 17 review / 61 repair / 42 defer to 22 review / 60 repair / 38 defer, with repository context checked on all 120 final items and 0 collection errors.
 
+The queue now preserves that top-level split while adding `nextAction` buckets for non-ready work. This prevents `send-repair-request` from hiding different maintainer moves such as reporter evidence requests, duplicate/fixed checks, subsystem or process routing, maintainer judgment calls, and externally blocked items.
+
 The useful signal is not that every final queue is "right." The useful signal is that live queues exposed wrong assumptions, the assumptions were fixed narrowly, and the fixes were locked into reproducible tests and benchmark cases.
 
 ## Current Proof State
 
 | Surface | Current result | What it proves |
 | --- | ---: | --- |
-| Unit and integration tests | 131/131 | Core evaluator, GitHub queue, API, feedback, setup, and context behavior stay green together. |
+| Unit and integration tests | 132/132 | Core evaluator, GitHub queue, API, feedback, setup, and context behavior stay green together. |
 | Maintainer benchmark | 69/69 | The permanent corpus captures the real breakage classes discovered so far. |
 | Adversarial red test | 8/8 | Known bad inputs still fail closed. |
 | Maintainer demo | PASS | The repo can produce the public proof bundle in one repeatable command. |

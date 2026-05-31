@@ -414,6 +414,7 @@ function compactPcfEvidence(item = {}, pcf = {}) {
   return {
     status: String(source.status || ""),
     action: String(source.action || ""),
+    nextAction: source.nextAction || null,
     score: Number.isFinite(Number(source.score)) ? Number(source.score) : 0,
     labels: normalizeStringList(source.labels).slice(0, 20),
     contextSummary: truncate(String(source.contextSummary || ""), 400),

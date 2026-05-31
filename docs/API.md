@@ -104,7 +104,7 @@ Webhook mode can collect repository context through read-only GitHub search when
 
 ## Maintainer Queue
 
-The queue endpoint evaluates a batch of open work and returns a maintainer triage view with status counts, labels, review-budget totals, repository-context findings, queue actions, and markdown export.
+The queue endpoint evaluates a batch of open work and returns a maintainer triage view with status counts, labels, repair sub-actions, review-budget totals, repository-context findings, queue actions, and markdown export.
 
 For deterministic/local use, supply `items` directly:
 
@@ -155,6 +155,15 @@ Queue responses are shaped as:
         "low-review-value": 1
       },
       "contextFindings": 3,
+      "nextActions": {
+        "review-now": 1,
+        "check-duplicate-or-fixed-first": 1,
+        "ask-reporter-for-evidence": 1
+      },
+      "repairSubActions": {
+        "check-duplicate-or-fixed-first": 1,
+        "ask-reporter-for-evidence": 1
+      },
       "reviewBudgetMinutes": 55
     },
     "items": [
@@ -163,6 +172,11 @@ Queue responses are shaped as:
         "number": 12,
         "status": "ready-for-maintainer",
         "action": "review-now",
+        "nextAction": {
+          "id": "review-now",
+          "target": "maintainer",
+          "summary": "Ready for maintainer review."
+        },
         "score": 100,
         "labels": ["ready-for-maintainer"],
         "topReasons": []
@@ -173,7 +187,7 @@ Queue responses are shaped as:
 }
 ```
 
-Queue actions are `review-now`, `send-repair-request`, and `do-not-review-yet`. Live GitHub collection uses read-only API calls and a short in-memory cache; comments and labels are still controlled only by the explicit webhook write settings.
+Queue actions remain the coarse compatibility values `review-now`, `send-repair-request`, and `do-not-review-yet`. `nextAction.id` refines the maintainer move behind the queue item: `ask-reporter-for-evidence`, `check-duplicate-or-fixed-first`, `route-to-subsystem-or-process`, `needs-maintainer-decision`, or `not-actionable-yet` for non-ready work. Live GitHub collection uses read-only API calls and a short in-memory cache; comments and labels are still controlled only by the explicit webhook write settings.
 
 ## GitHub App Setup
 
@@ -237,7 +251,7 @@ History entries contain compact queue data:
 - summary counts for ready, repair, and low-value work
 - review-budget totals
 - collection errors
-- compact item records
+- compact item records, including coarse `action` and refined `nextAction`
 - transition counts and item transitions: `improved`, `regressed`, `unchanged`, `new`, and `gone`
 
 ## Maintainer Feedback
@@ -257,6 +271,10 @@ curl -s \
       "title": "webhook: include dry-run labels",
       "status": "needs-repair",
       "action": "send-repair-request",
+      "nextAction": {
+        "id": "check-duplicate-or-fixed-first",
+        "target": "maintainer"
+      },
       "score": 82,
       "labels": ["needs-repair"],
       "contextSummary": "1 concurrent pull request found"

@@ -4,6 +4,39 @@ export const QUEUE_VERSION = "2026.05.30";
 export const DEFAULT_QUEUE_LIMIT = 25;
 export const MAX_QUEUE_LIMIT = 100;
 
+export const NEXT_ACTIONS = {
+  "review-now": {
+    id: "review-now",
+    target: "maintainer",
+    summary: "Ready for maintainer review."
+  },
+  "ask-reporter-for-evidence": {
+    id: "ask-reporter-for-evidence",
+    target: "reporter",
+    summary: "Ask the submitter for missing evidence, verification, or clearer reproduction details."
+  },
+  "check-duplicate-or-fixed-first": {
+    id: "check-duplicate-or-fixed-first",
+    target: "maintainer",
+    summary: "Check related, duplicate, solved, concurrent, or upstream-fixed work before spending fresh review time."
+  },
+  "route-to-subsystem-or-process": {
+    id: "route-to-subsystem-or-process",
+    target: "maintainer/process",
+    summary: "Route through the repository's subsystem, policy, ownership, or project process before normal review."
+  },
+  "needs-maintainer-decision": {
+    id: "needs-maintainer-decision",
+    target: "maintainer",
+    summary: "Requires maintainer judgment because the next step is not obvious from reporter evidence alone."
+  },
+  "not-actionable-yet": {
+    id: "not-actionable-yet",
+    target: "external-state",
+    summary: "No useful maintainer action is available until external state changes."
+  }
+};
+
 const STATUS_ORDER = {
   "ready-for-maintainer": 0,
   "needs-repair": 1,
@@ -15,6 +48,64 @@ const STATUS_ACTIONS = {
   "needs-repair": "send-repair-request",
   "low-review-value": "do-not-review-yet"
 };
+
+const CONTEXT_NEXT_ACTION_LABELS = new Set([
+  "possibly-duplicate",
+  "possibly-solved",
+  "linked-issue-closed",
+  "concurrent-work",
+  "possibly-upstream-fixed"
+]);
+
+const ROUTE_NEXT_ACTION_LABELS = new Set([
+  "wrong-repository",
+  "policy-failed",
+  "needs-maintainer-targeting",
+  "drive-by-risk",
+  "kernel-subject-discipline",
+  "needs-series-split"
+]);
+
+const NOT_ACTIONABLE_NEXT_ACTION_LABELS = new Set([
+  "maintainer-backlog",
+  "maintainer-pending-clarification",
+  "draft-pr"
+]);
+
+const REPORTER_EVIDENCE_NEXT_ACTION_LABELS = new Set([
+  "needs-clear-summary",
+  "needs-context",
+  "too-broad",
+  "suspicious-path",
+  "needs-tests",
+  "needs-human-verification",
+  "ci-missing",
+  "ci-failed",
+  "dependency-review",
+  "generated-artifact-review",
+  "secrets-risk",
+  "prompt-injection-risk",
+  "maintainer-attention-risk",
+  "needs-reproducer",
+  "needs-use-case",
+  "needs-feature-solution",
+  "needs-feature-scope",
+  "needs-expected-actual",
+  "needs-environment",
+  "needs-logs",
+  "duplicate-search-needed",
+  "needs-technical-analysis",
+  "security-claim-needs-reproducer",
+  "needs-real-evidence",
+  "needs-project-test-command",
+  "needs-dco-signoff",
+  "needs-patch-rationale",
+  "needs-fixes-tag",
+  "stable-discipline-failed",
+  "needs-kernel-build-evidence",
+  "needs-tool-provenance",
+  "review-budget-high"
+]);
 
 export function buildMaintainerQueue(payload = {}, options = {}) {
   const limit = clampLimit(payload.limit ?? options.limit ?? DEFAULT_QUEUE_LIMIT);
@@ -61,6 +152,8 @@ export function evaluateQueueItem(rawItem = {}, { index = 0, profile = "", feedb
   });
   const signals = queueSignals(evaluation);
   const id = String(rawItem.id || input.id || `${input.kind}-${input.number || index + 1}`);
+  const action = STATUS_ACTIONS[evaluation.status] || "inspect";
+  const nextAction = classifyNextAction(evaluation, { coarseAction: action });
 
   return {
     id,
@@ -73,7 +166,8 @@ export function evaluateQueueItem(rawItem = {}, { index = 0, profile = "", feedb
     authorAssociation: input.authorAssociation || "",
     updatedAt: input.updatedAt || "",
     status: evaluation.status,
-    action: STATUS_ACTIONS[evaluation.status] || "inspect",
+    action,
+    nextAction,
     score: evaluation.score,
     labels: evaluation.labels,
     topReasons: signals.topReasons,
@@ -127,6 +221,10 @@ export function formatMaintainerQueueMarkdown(queue = {}) {
     "",
     "## Queue"
   ].filter((line) => line !== "");
+  const nextActionLines = formatCountLines(summary.nextActions);
+  if (nextActionLines.length) {
+    lines.splice(lines.length - 1, 0, "Next actions:", ...nextActionLines.map((line) => `- ${line}`), "");
+  }
 
   for (const item of queue.items || []) {
     const number = item.number ? `#${item.number} ` : "";
@@ -139,6 +237,7 @@ export function formatMaintainerQueueMarkdown(queue = {}) {
       `- Kind: ${item.kind}`,
       `- Status: ${item.status} (${item.score}/100)`,
       `- Action: ${item.action}`,
+      `- Next action: ${formatNextAction(item.nextAction)}`,
       `- Labels: ${item.labels?.length ? item.labels.map((label) => `\`${label}\``).join(", ") : "none"}`,
       `- Context: ${item.contextSummary || "none"}`,
       `- Feedback calibration: ${item.calibration?.active ? item.calibration.summary : "none"}`,
@@ -158,6 +257,8 @@ function summarizeQueue(items) {
     kinds: {},
     labels: {},
     actions: {},
+    nextActions: {},
+    repairSubActions: {},
     ready: 0,
     needsRepair: 0,
     lowReviewValue: 0,
@@ -174,6 +275,11 @@ function summarizeQueue(items) {
     summary.statuses[item.status] = (summary.statuses[item.status] || 0) + 1;
     summary.kinds[item.kind] = (summary.kinds[item.kind] || 0) + 1;
     summary.actions[item.action] = (summary.actions[item.action] || 0) + 1;
+    const nextActionId = item.nextAction?.id || "unknown";
+    summary.nextActions[nextActionId] = (summary.nextActions[nextActionId] || 0) + 1;
+    if (item.action !== "review-now") {
+      summary.repairSubActions[nextActionId] = (summary.repairSubActions[nextActionId] || 0) + 1;
+    }
     if (item.status === "ready-for-maintainer") summary.ready += 1;
     if (item.status === "needs-repair") summary.needsRepair += 1;
     if (item.status === "low-review-value") summary.lowReviewValue += 1;
@@ -228,6 +334,64 @@ function queueSignals(evaluation) {
   return { topReasons };
 }
 
+export function classifyNextAction(evaluation = {}, { coarseAction = "" } = {}) {
+  const labels = new Set(evaluation.labels || []);
+  const checkLabels = (evaluation.checks || [])
+    .filter((check) => check.status === "fail" || check.status === "warn")
+    .map((check) => check.label)
+    .filter(Boolean);
+  const allLabels = new Set([...labels, ...checkLabels]);
+  const reason = reasonFromLabels(allLabels);
+
+  if (allLabels.has("feedback-calibration-needed")) {
+    return nextAction("needs-maintainer-decision", "Maintainer feedback conflicts with the current heuristic result.");
+  }
+  if (coarseAction === "review-now" || evaluation.status === "ready-for-maintainer") {
+    return nextAction("review-now");
+  }
+  if (hasAny(allLabels, CONTEXT_NEXT_ACTION_LABELS)) {
+    return nextAction("check-duplicate-or-fixed-first", reason || "Repository context found related work that should be checked first.");
+  }
+  if (hasAny(allLabels, ROUTE_NEXT_ACTION_LABELS)) {
+    return nextAction("route-to-subsystem-or-process", reason || "Repository process or ownership should route this before normal review.");
+  }
+  if (hasAny(allLabels, NOT_ACTIONABLE_NEXT_ACTION_LABELS)) {
+    return nextAction("not-actionable-yet", reason || "Repository state says this is blocked or already parked.");
+  }
+  if (hasAny(allLabels, REPORTER_EVIDENCE_NEXT_ACTION_LABELS)) {
+    return nextAction("ask-reporter-for-evidence", reason || "The submitter needs to provide missing evidence before review.");
+  }
+  if (evaluation.status === "low-review-value") {
+    return nextAction("not-actionable-yet", "The item is below the threshold for useful maintainer action.");
+  }
+  return nextAction("needs-maintainer-decision", "PCF could not reduce this item to a reporter, context, routing, or wait action.");
+}
+
+function nextAction(id, reason = "") {
+  const action = NEXT_ACTIONS[id] || NEXT_ACTIONS["needs-maintainer-decision"];
+  return {
+    ...action,
+    reason: reason || action.summary
+  };
+}
+
+function hasAny(labels, candidates) {
+  for (const label of candidates) {
+    if (labels.has(label)) return true;
+  }
+  return false;
+}
+
+function reasonFromLabels(labels) {
+  for (const label of labels) {
+    if (CONTEXT_NEXT_ACTION_LABELS.has(label)) return `Repository context label: ${label}.`;
+    if (ROUTE_NEXT_ACTION_LABELS.has(label)) return `Routing or process label: ${label}.`;
+    if (NOT_ACTIONABLE_NEXT_ACTION_LABELS.has(label)) return `Blocked or parked label: ${label}.`;
+    if (REPORTER_EVIDENCE_NEXT_ACTION_LABELS.has(label)) return `Reporter evidence label: ${label}.`;
+  }
+  return "";
+}
+
 function buildFixtureInput(input = {}) {
   return {
     kind: input.kind || "pull_request",
@@ -259,6 +423,17 @@ function compareQueueItems(left, right) {
     return (left.reviewBudget?.minutes || 0) - (right.reviewBudget?.minutes || 0);
   }
   return right.score - left.score;
+}
+
+function formatNextAction(nextAction) {
+  if (!nextAction?.id) return "unknown";
+  return `${nextAction.id} (${nextAction.target || "unknown"}) - ${nextAction.reason || nextAction.summary || ""}`.trim();
+}
+
+function formatCountLines(counts = {}) {
+  return Object.entries(counts)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([label, count]) => `${label}: ${count}`);
 }
 
 function clampLimit(value) {

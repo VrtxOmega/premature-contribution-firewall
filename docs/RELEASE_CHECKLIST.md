@@ -82,6 +82,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - PCF evaluates review readiness, scope, evidence, repository policy, repository context, and maintainer attention cost.
 - PCF includes deterministic local benchmark and adversarial red-test corpora.
 - PCF can expose a read-only/dry-run GitHub maintainer queue and a callable local API.
+- PCF can preserve coarse queue actions while adding `nextAction` buckets that separate reporter evidence requests, duplicate/fixed checks, routing/process work, maintainer decisions, and blocked/not-actionable items.
 - PCF can print a guided GitHub App pilot checklist and first dry-run queue commands without exposing secret values.
 - PCF can generate a private public-repo shadow pilot artifact that preserves review-priority breakdowns and repository-context findings without writing to GitHub.
 - PCF can capture normalized private pilot payloads and replay them offline so before/after evaluator comparisons do not depend on live queue churn.

@@ -1,6 +1,6 @@
 # Premature Contribution Firewall Maintainer Demo
 
-Generated: 2026-05-31T11:53:13.916Z
+Generated: 2026-05-31T12:18:47.146Z
 
 Verdict: **PASS**
 
@@ -48,13 +48,15 @@ Repository: VrtxOmega/premature-contribution-firewall-demo
 
 Ready: 1; needs repair: 1; low review value: 1; review budget: 36 minutes.
 
+Repair sub-actions: ask-reporter-for-evidence 1, check-duplicate-or-fixed-first 1.
+
 Feedback calibration matches: 2; review-needed conflicts: 0.
 
-| Status | Kind | Item | Title | Action | Context | Budget |
-| --- | --- | --- | --- | --- | ---: | ---: |
-| ready-for-maintainer | pull_request | #12 | webhook: reject oversized payload bodies | review-now | 0 | 12 |
-| needs-repair | pull_request | #13 | webhook: include labels in dry-run response | send-repair-request | 3 | 16 |
-| low-review-value | issue | #14 | Bug | do-not-review-yet | 0 | 8 |
+| Status | Kind | Item | Title | Action | Next Action | Context | Budget |
+| --- | --- | --- | --- | --- | --- | ---: | ---: |
+| ready-for-maintainer | pull_request | #12 | webhook: reject oversized payload bodies | review-now | review-now | 0 | 12 |
+| needs-repair | pull_request | #13 | webhook: include labels in dry-run response | send-repair-request | check-duplicate-or-fixed-first | 3 | 16 |
+| low-review-value | issue | #14 | Bug | do-not-review-yet | ask-reporter-for-evidence | 0 | 8 |
 
 ## Feedback Candidate Proof
 

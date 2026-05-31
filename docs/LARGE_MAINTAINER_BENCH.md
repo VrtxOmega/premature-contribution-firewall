@@ -46,6 +46,8 @@ Aggregate split:
 
 Because these are live queues, exact item order can change between runs. Item-level movement below is reported only for issue numbers present in both the initial and final sample for a repository.
 
+When replay captures are available, large benches should report `nextAction` distribution alongside the coarse review/repair/defer split. The coarse split shows review priority; `nextAction` shows whether the remaining work should go to the reporter, a duplicate/fixed check, subsystem/process routing, a maintainer decision, or a blocked/not-actionable wait state.
+
 Future large benches should use replay capture before evaluator changes:
 
 ```bash

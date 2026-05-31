@@ -28,7 +28,7 @@ What this proves:
 
 - The benchmark corpus passes.
 - The adversarial red-test corpus passes.
-- The maintainer queue sorts ready, repair-needed, and low-value work.
+- The maintainer queue sorts ready, repair-needed, and low-value work, then decomposes non-ready work into concrete `nextAction` buckets.
 - Repository and upstream context can affect triage.
 - Maintainer feedback can become a replayable candidate fixture.
 - Candidate replay comparison can catch policy regressions before merge.
@@ -50,7 +50,7 @@ http://127.0.0.1:3791
 Show these surfaces:
 
 - `GitHub App Setup`: dry-run/write posture, webhook posture, queue-history posture, and read-only connection testing.
-- `Maintainer Queue`: run the demo queue and show ready, repair, low-value, context findings, review budget, and markdown export.
+- `Maintainer Queue`: run the demo queue and show ready, repair, low-value, context findings, repair sub-actions, review budget, and markdown export.
 - `Feedback Calibration`: record a maintainer correction from a queue item, export regression candidates, and show calibration matches on later triage.
 - `Feedback Candidate Corpus`: apply selected runnable candidates, replay the corpus, export evidence, capture a baseline, and compare replay.
 - `API Spec`: show that the same workflow is callable without the browser.
@@ -76,7 +76,7 @@ npm run pilot:public -- --repository owner/repo --limit 10 --capture /tmp/pcf-ow
 npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --write /tmp/pcf-owner-repo-replay.md
 ```
 
-This artifact is for private review before approaching a maintainer. It shows the `review-now`, `send-repair-request`, and `do-not-review-yet` split, repository-context labels, collection errors, and possible red-test leads. The replay capture is the stable input set for evaluator before/after comparisons; keep it private because it contains normalized third-party issue/PR bodies and repository-context results. For larger or repeated live pilots, set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token so GitHub search rate limits do not hide duplicate/concurrent-work context.
+This artifact is for private review before approaching a maintainer. It shows the `review-now`, `send-repair-request`, and `do-not-review-yet` split, the refined `nextAction` buckets, repository-context labels, collection errors, and possible red-test leads. The replay capture is the stable input set for evaluator before/after comparisons; keep it private because it contains normalized third-party issue/PR bodies and repository-context results. For larger or repeated live pilots, set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token so GitHub search rate limits do not hide duplicate/concurrent-work context.
 
 ## What To Say
 

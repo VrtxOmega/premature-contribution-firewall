@@ -30,6 +30,11 @@ export function buildPublicPilotProof({
   const guide = setupGuide || buildSetupGuide(config, { repository: targetRepository });
   const items = evaluatedQueue.items || [];
   const actionCounts = countBy(items, (item) => item.action || "inspect");
+  const nextActionCounts = countBy(items, (item) => item.nextAction?.id || "unknown");
+  const repairSubActionCounts = countBy(
+    items.filter((item) => item.action !== "review-now"),
+    (item) => item.nextAction?.id || "unknown"
+  );
   const statusCounts = countBy(items, (item) => item.status || "unknown");
   const contextLabelCounts = {};
   for (const item of items) {
@@ -78,6 +83,8 @@ export function buildPublicPilotProof({
     breakdown: {
       total: items.length,
       actionCounts,
+      nextActionCounts,
+      repairSubActionCounts,
       statusCounts,
       reviewNow: reviewNow.length,
       sendRepairRequest: repair.length,
@@ -108,6 +115,7 @@ export function buildPublicPilotProof({
 export function renderPublicPilotMarkdown(proof = {}) {
   const queueRows = (proof.queue?.items || []).map((item) => [
     item.action,
+    item.nextAction?.id || "unknown",
     item.status,
     item.kind,
     item.number ? `#${item.number}` : item.id,
@@ -125,6 +133,7 @@ export function renderPublicPilotMarkdown(proof = {}) {
   ]);
   const contextLabelRows = Object.entries(proof.context?.labels || {}).map(([label, count]) => [label, String(count)]);
   const errorRows = (proof.context?.collectionErrors || []).map((error) => [error.scope || "collection", error.message || "unknown error"]);
+  const repairSubActionRows = Object.entries(proof.breakdown?.repairSubActionCounts || {}).map(([label, count]) => [label, String(count)]);
 
   return [
     "# Premature Contribution Firewall Public Repo Pilot Proof",
@@ -148,8 +157,12 @@ export function renderPublicPilotMarkdown(proof = {}) {
     `Do not review yet: ${proof.breakdown?.doNotReviewYet || 0}`,
     `Estimated review budget: ${proof.breakdown?.reviewBudgetMinutes || 0} minutes`,
     "",
-    "| Action | Status | Kind | Item | Title | Context Findings | Context Labels | Context Summary | Budget |",
-    "| --- | --- | --- | --- | --- | ---: | --- | --- | ---: |",
+    "| Repair Sub-Action | Count |",
+    "| --- | ---: |",
+    ...(repairSubActionRows.length ? repairSubActionRows : [["none", "0"]]).map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`),
+    "",
+    "| Action | Next Action | Status | Kind | Item | Title | Context Findings | Context Labels | Context Summary | Budget |",
+    "| --- | --- | --- | --- | --- | --- | ---: | --- | --- | ---: |",
     ...queueRows.map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`),
     "",
     "## Context Intelligence",
@@ -199,6 +212,7 @@ export function renderPublicPilotSummary(proof = {}) {
     `Review now: ${proof.breakdown?.reviewNow || 0}`,
     `Send repair request: ${proof.breakdown?.sendRepairRequest || 0}`,
     `Do not review yet: ${proof.breakdown?.doNotReviewYet || 0}`,
+    `Repair sub-actions: ${formatCounts(proof.breakdown?.repairSubActionCounts)}`,
     `Context findings: ${proof.context?.findings || 0}`,
     `Context checked: ${proof.context?.itemsChecked || 0}`,
     `Collection errors: ${proof.context?.collectionErrors?.length || 0}`,
@@ -228,6 +242,7 @@ function compactQueueItem(item = {}) {
     htmlUrl: item.htmlUrl || "",
     status: item.status || "",
     action: item.action || "",
+    nextAction: item.nextAction || { id: "unknown", target: "", summary: "", reason: "" },
     score: item.score || 0,
     labels: item.labels || [],
     contextLabels,
@@ -282,6 +297,15 @@ function countBy(items, getKey) {
     counts[key] = (counts[key] || 0) + 1;
   }
   return counts;
+}
+
+function formatCounts(counts = {}) {
+  const entries = Object.entries(counts || {});
+  if (!entries.length) return "none";
+  return entries
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([label, count]) => `${label} ${count}`)
+    .join(", ");
 }
 
 function escapeTableCell(value) {

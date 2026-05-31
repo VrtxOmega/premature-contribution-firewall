@@ -58,7 +58,7 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
       {
         method: "POST",
         path: "/api/github/queue",
-        description: "Evaluate supplied queue items or collect a read-only dry-run queue for a GitHub repository."
+        description: "Evaluate supplied queue items or collect a read-only dry-run queue with coarse actions and refined nextAction buckets for a GitHub repository."
       },
       {
         method: "GET",
@@ -133,7 +133,7 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
       {
         method: "GET",
         path: "/api/repositories/:owner/:repo/queue",
-        description: "Collect and evaluate a read-only dry-run maintainer queue for one GitHub repository."
+        description: "Collect and evaluate a read-only dry-run maintainer queue for one GitHub repository, including nextAction sub-action counts."
       },
       {
         method: "POST",
@@ -187,6 +187,10 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
         includePullRequests: "boolean, default true",
         includeIssues: "boolean, default true",
         items: "optional supplied queue items; when present no GitHub network collection is required"
+      },
+      queueItem: {
+        action: "review-now | send-repair-request | do-not-review-yet",
+        nextAction: "review-now | ask-reporter-for-evidence | check-duplicate-or-fixed-first | route-to-subsystem-or-process | needs-maintainer-decision | not-actionable-yet"
       },
       githubSetup: {
         mode: "dry-run | read-only | write-armed",

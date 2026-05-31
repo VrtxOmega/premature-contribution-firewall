@@ -34,6 +34,8 @@ test("public pilot proof emphasizes review priority and context intelligence", a
   assert.equal(proof.breakdown.reviewNow, 1);
   assert.equal(proof.breakdown.sendRepairRequest, 1);
   assert.equal(proof.breakdown.doNotReviewYet, 1);
+  assert.equal(proof.breakdown.repairSubActionCounts["check-duplicate-or-fixed-first"], 1);
+  assert.equal(proof.breakdown.repairSubActionCounts["ask-reporter-for-evidence"], 1);
   assert.equal(proof.context.findings, 3);
   assert.equal(proof.context.itemsChecked, 3);
   assert.equal(proof.context.itemsCleared, 2);
@@ -58,7 +60,10 @@ test("public pilot markdown is maintainer-readable and path-safe", async () => {
   assert.match(markdown, /Context Summary/);
   assert.match(markdown, /Potential Red-Test Leads/);
   assert.match(markdown, /send-repair-request/);
+  assert.match(markdown, /Repair Sub-Action/);
+  assert.match(markdown, /check-duplicate-or-fixed-first/);
   assert.match(summary, /Send repair request: 1/);
+  assert.match(summary, /Repair sub-actions: ask-reporter-for-evidence 1, check-duplicate-or-fixed-first 1/);
   assert.match(summary, /Context checked: 3/);
   assert.equal(markdown.includes(localHomePrefix), false);
   assert.equal(markdown.includes("GITHUB_TOKEN="), false);
@@ -173,8 +178,8 @@ test("public pilot CLI captures normalized payloads for offline replay", async (
 
     assert.deepEqual(replay.breakdown, proof.breakdown);
     assert.deepEqual(
-      replay.queue.items.map((item) => [item.id, item.action, item.status, item.contextFindings]),
-      proof.queue.items.map((item) => [item.id, item.action, item.status, item.contextFindings])
+      replay.queue.items.map((item) => [item.id, item.action, item.nextAction.id, item.status, item.contextFindings]),
+      proof.queue.items.map((item) => [item.id, item.action, item.nextAction.id, item.status, item.contextFindings])
     );
   } finally {
     await rm(dir, { recursive: true, force: true });

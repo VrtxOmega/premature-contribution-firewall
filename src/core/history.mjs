@@ -168,6 +168,7 @@ function compactQueueItem(item) {
     htmlUrl: item.htmlUrl || "",
     status: item.status || "",
     action: item.action || "",
+    nextAction: item.nextAction || null,
     score: item.score || 0,
     labels: (item.labels || []).slice(0, 20),
     contextFindings: item.contextFindings || 0,

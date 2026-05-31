@@ -957,6 +957,7 @@ function renderQueueItem(item) {
     <div class="queue-item-stats"></div>
     <div class="queue-item-labels"></div>
     <ul class="plain-list queue-reasons"></ul>
+    <p class="queue-next-action"></p>
     <p class="queue-context"></p>
     <div class="queue-feedback">
       <div class="feedback-controls">
@@ -1030,6 +1031,10 @@ function renderQueueItem(item) {
       ? item.topReasons.map((reason) => `${reason.status}: ${reason.title} - ${reason.reason}`)
       : ["No repair reasons."]
   );
+  const nextAction = item.nextAction || {};
+  article.querySelector(".queue-next-action").textContent = nextAction.id
+    ? `Next action: ${nextAction.id}${nextAction.target ? ` (${nextAction.target})` : ""}`
+    : "Next action: unknown";
   article.querySelector(".queue-context").textContent = `Context: ${item.contextSummary || "none"}`;
   if (item.calibration?.active) {
     const calibration = document.createElement("p");
@@ -1092,6 +1097,7 @@ function compactQueueItemForFeedback(item) {
     updatedAt: item.updatedAt,
     status: item.status,
     action: item.action,
+    nextAction: item.nextAction,
     score: item.score,
     labels: item.labels,
     contextSummary: item.contextSummary,
