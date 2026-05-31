@@ -1,13 +1,13 @@
 # Premature Contribution Firewall Maintainer Demo
 
-Generated: 2026-05-31T13:03:20.721Z
+Generated: 2026-05-31T13:50:46.198Z
 
 Verdict: **PASS**
 
 ## Claims This Demo Proves
 
 - 69/69 deterministic benchmark cases pass.
-- 10/10 adversarial red-test cases pass.
+- 11/11 adversarial red-test cases pass.
 - Maintainer queue sorts 3 supplied GitHub items with repository and upstream context.
 - Feedback calibration attaches 2 matching local candidate signal(s) to future queue output.
 - 1/1 promoted feedback fixture candidates replay cleanly.
@@ -36,7 +36,7 @@ npm run demo:maintainer -- --fail-on-regression
 | Surface | Result | Count | Note |
 | --- | --- | --- | --- |
 | Benchmark | PASS | 69/69 | Deterministic fixture corpus |
-| Adversarial red test | PASS | 10/10 | Breakage residue corpus |
+| Adversarial red test | PASS | 11/11 | Breakage residue corpus |
 | Maintainer queue | PASS | 3 items | 3 context findings |
 | Feedback calibration | PASS | 2 match(es) | 1 candidate fixture(s) |
 | Feedback candidate replay | PASS | 1/1 | Promoted fixture draft |
@@ -80,6 +80,7 @@ Replay comparison: 1 unchanged, 0 improved, 0 regressed, risk stable.
 | empty-patch-text | patch-parser | PASS | Initial probe already held; kept as a canary that empty patch text remains low-review-value. |
 | next-action-context-reason-priority | queue-explanation | PASS | Large-bench replay residue showed `check-duplicate-or-fixed-first` items whose reason could say `Reporter evidence label: duplicate-search-needed`, forcing maintainers to re-triage the triage. |
 | next-action-wait-state-reason-priority | queue-explanation | PASS | Large-bench replay residue showed `not-actionable-yet` items whose reason could cite reporter evidence instead of the maintainer-pending state. |
+| next-action-maintainer-owned-reporter-suppression | queue-actor | PASS | Large-bench ask-reporter residue included a maintainer-authored issue that still routed to `ask-reporter-for-evidence`, misidentifying the next actor. |
 
 ## Release Note
 

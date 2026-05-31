@@ -150,7 +150,7 @@ npm run redtest:write
 
 Current generated results live in [`docs/adversarial-red-team-results.md`](docs/adversarial-red-team-results.md):
 
-- 10/10 adversarial cases passing
+- 11/11 adversarial cases passing
 - negated test/verification claims no longer count as proof
 - suspicious repository paths are blocked before docs-only logic can bless them
 - AWS-style secret material is caught
@@ -159,6 +159,7 @@ Current generated results live in [`docs/adversarial-red-team-results.md`](docs/
 - prompt-injection or review-bypass language is quarantined
 - malformed batch API payloads fail closed
 - mixed queue labels cannot make a context or wait-state action explain itself as a reporter-evidence request
+- maintainer-owned queue items cannot be sent back to a generic reporter when maintainer judgment is the next action
 
 This corpus is meant to grow whenever the firewall breaks. The residue from a break becomes the next regression case.
 

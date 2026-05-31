@@ -112,6 +112,23 @@ export const ADVERSARIAL_CASES = [
       reasonIncludes: "Blocked or parked label: maintainer-pending-clarification",
       reasonExcludes: "Reporter evidence label"
     }
+  },
+  {
+    id: "next-action-maintainer-owned-reporter-suppression",
+    category: "queue-actor",
+    attack: "Combines maintainer-owned authorship with missing-evidence labels so an internal maintainer item can be sent back to a reporter.",
+    residue: "Large-bench ask-reporter residue included a maintainer-authored issue that still routed to `ask-reporter-for-evidence`, misidentifying the next actor.",
+    nextActionInput: {
+      status: "low-review-value",
+      labels: ["needs-context", "needs-reproducer", "maintainer-authored"],
+      checks: []
+    },
+    coarseAction: "do-not-review-yet",
+    expect: {
+      status: "needs-maintainer-decision",
+      reasonIncludes: "Maintainer-owned label: maintainer-authored",
+      reasonExcludes: "Reporter evidence label"
+    }
   }
 ];
 

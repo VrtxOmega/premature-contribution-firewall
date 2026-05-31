@@ -72,6 +72,11 @@ const NOT_ACTIONABLE_NEXT_ACTION_LABELS = new Set([
   "draft-pr"
 ]);
 
+const MAINTAINER_DECISION_NEXT_ACTION_LABELS = new Set([
+  "maintainer-approved",
+  "maintainer-authored"
+]);
+
 const REPORTER_EVIDENCE_NEXT_ACTION_LABELS = new Set([
   "needs-clear-summary",
   "needs-context",
@@ -356,6 +361,9 @@ export function classifyNextAction(evaluation = {}, { coarseAction = "" } = {}) 
   }
   if (hasAny(allLabels, NOT_ACTIONABLE_NEXT_ACTION_LABELS)) {
     return nextAction("not-actionable-yet", reasonFromLabels(allLabels, NOT_ACTIONABLE_NEXT_ACTION_LABELS, "Blocked or parked label") || "Repository state says this is blocked or already parked.");
+  }
+  if (hasAny(allLabels, MAINTAINER_DECISION_NEXT_ACTION_LABELS)) {
+    return nextAction("needs-maintainer-decision", reasonFromLabels(allLabels, MAINTAINER_DECISION_NEXT_ACTION_LABELS, "Maintainer-owned label") || "Repository maintainer ownership or approval requires maintainer judgment.");
   }
   if (hasAny(allLabels, REPORTER_EVIDENCE_NEXT_ACTION_LABELS)) {
     return nextAction("ask-reporter-for-evidence", reasonFromLabels(allLabels, REPORTER_EVIDENCE_NEXT_ACTION_LABELS, "Reporter evidence label") || "The submitter needs to provide missing evidence before review.");

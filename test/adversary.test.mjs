@@ -15,7 +15,8 @@ test("adversarial corpus preserves concrete red-team residue", () => {
     "batch-non-array-items",
     "empty-patch-text",
     "next-action-context-reason-priority",
-    "next-action-wait-state-reason-priority"
+    "next-action-wait-state-reason-priority",
+    "next-action-maintainer-owned-reporter-suppression"
   ]) {
     assert.ok(ids.has(id), `missing adversarial case ${id}`);
   }
@@ -40,6 +41,7 @@ test("adversarial cases expose the hardening labels maintainers need", () => {
   assert.equal(byId.get("batch-non-array-items").ok, false);
   assert.equal(byId.get("next-action-context-reason-priority").actualStatus, "check-duplicate-or-fixed-first");
   assert.equal(byId.get("next-action-wait-state-reason-priority").actualStatus, "not-actionable-yet");
+  assert.equal(byId.get("next-action-maintainer-owned-reporter-suppression").actualStatus, "needs-maintainer-decision");
 });
 
 test("adversarial markdown is README-ready and includes residue", () => {

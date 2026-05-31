@@ -5,7 +5,7 @@ This red-test corpus captures hostile or malformed submissions that previously e
 ## Summary
 
 - Version: 2026.05.30
-- Cases: 10/10 passing
+- Cases: 11/11 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
@@ -19,6 +19,7 @@ This red-test corpus captures hostile or malformed submissions that previously e
 - api-schema: 1/1 passing
 - patch-parser: 1/1 passing
 - queue-explanation: 2/2 passing
+- queue-actor: 1/1 passing
 
 ## Cases
 
@@ -34,3 +35,4 @@ This red-test corpus captures hostile or malformed submissions that previously e
 | PASS | patch-parser | empty-patch-text | low-review-value | low-review-value | 0 | `needs-context`, `needs-tests`, `needs-human-verification`, `ci-missing` | Initial probe already held; kept as a canary that empty patch text remains low-review-value. |
 | PASS | queue-explanation | next-action-context-reason-priority | check-duplicate-or-fixed-first | check-duplicate-or-fixed-first | n/a | Repository context label: possibly-solved. | Large-bench replay residue showed `check-duplicate-or-fixed-first` items whose reason could say `Reporter evidence label: duplicate-search-needed`, forcing maintainers to re-triage the triage. |
 | PASS | queue-explanation | next-action-wait-state-reason-priority | not-actionable-yet | not-actionable-yet | n/a | Blocked or parked label: maintainer-pending-clarification. | Large-bench replay residue showed `not-actionable-yet` items whose reason could cite reporter evidence instead of the maintainer-pending state. |
+| PASS | queue-actor | next-action-maintainer-owned-reporter-suppression | needs-maintainer-decision | needs-maintainer-decision | n/a | Maintainer-owned label: maintainer-authored. | Large-bench ask-reporter residue included a maintainer-authored issue that still routed to `ask-reporter-for-evidence`, misidentifying the next actor. |

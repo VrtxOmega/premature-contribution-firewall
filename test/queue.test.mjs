@@ -160,6 +160,11 @@ test("queue nextAction reasons match the selected action family", () => {
     labels: ["needs-reproducer", "wrong-repository"],
     checks: []
   }, { coarseAction: "do-not-review-yet" });
+  const maintainerOwned = classifyNextAction({
+    status: "low-review-value",
+    labels: ["needs-context", "maintainer-authored"],
+    checks: []
+  }, { coarseAction: "do-not-review-yet" });
 
   assert.equal(contextFirst.id, "check-duplicate-or-fixed-first");
   assert.match(contextFirst.reason, /Repository context label: possibly-solved/);
@@ -169,6 +174,9 @@ test("queue nextAction reasons match the selected action family", () => {
   assert.doesNotMatch(parkedFirst.reason, /Reporter evidence label/);
   assert.equal(routeFirst.id, "route-to-subsystem-or-process");
   assert.match(routeFirst.reason, /Routing or process label: wrong-repository/);
+  assert.equal(maintainerOwned.id, "needs-maintainer-decision");
+  assert.match(maintainerOwned.reason, /Maintainer-owned label: maintainer-authored/);
+  assert.doesNotMatch(maintainerOwned.reason, /Reporter evidence label/);
 });
 
 test("queue markdown is README-ready", async () => {

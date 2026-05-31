@@ -257,6 +257,8 @@ export function renderLargeBenchMarkdown(result = {}) {
     String(count)
   ]);
   const duplicateCheckCount = aggregate.nextActionCounts?.["check-duplicate-or-fixed-first"] || 0;
+  const askReporterCount = aggregate.nextActionCounts?.["ask-reporter-for-evidence"] || 0;
+  const maintainerDecisionCount = aggregate.nextActionCounts?.["needs-maintainer-decision"] || 0;
   const waitStateCount = aggregate.nextActionCounts?.["not-actionable-yet"] || 0;
   const hashRows = (result.repositories || []).map((row) => [
     code(row.repository),
@@ -362,12 +364,13 @@ export function renderLargeBenchMarkdown(result = {}) {
     "",
     "## Replay Residue Mined",
     "",
-    `This replay contained ${duplicateCheckCount} duplicate/fixed/context checks and ${waitStateCount} not-actionable wait-state items. Those buckets were mined for red-test leads without committing raw issue bodies.`,
+    `This replay contained ${askReporterCount} reporter-evidence requests, ${duplicateCheckCount} duplicate/fixed/context checks, ${maintainerDecisionCount} maintainer-decision item, and ${waitStateCount} not-actionable wait-state items. Those buckets were mined for red-test leads without committing raw issue bodies.`,
     "",
-    "The useful residue was a queue-explanation failure mode: mixed labels could select the right `nextAction` while explaining it with the wrong label family. That now has synthetic adversarial coverage:",
+    "The first useful residue was a queue-explanation failure mode: mixed labels could select the right `nextAction` while explaining it with the wrong label family. The ask-reporter bucket then exposed queue-actor confusion: maintainer-owned items must not be routed back to a generic reporter. Those now have synthetic adversarial coverage:",
     "",
     "- `next-action-context-reason-priority`: context actions must explain themselves with repository-context labels, not reporter-evidence labels.",
     "- `next-action-wait-state-reason-priority`: wait-state actions must explain themselves with blocked/parked labels, not reporter-evidence labels.",
+    "- `next-action-maintainer-owned-reporter-suppression`: maintainer-owned items must not be sent back to a generic reporter when maintainer judgment is the next action.",
     "",
     "## Non-Claims",
     "",

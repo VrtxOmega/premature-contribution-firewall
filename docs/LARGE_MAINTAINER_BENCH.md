@@ -51,8 +51,9 @@ This is the maintainer-useful split inside and beyond the old repair bucket.
 | Next action | Count | Maintainer meaning |
 | --- | ---: | --- |
 | `review-now` | 20 | Ready for maintainer attention. |
-| `ask-reporter-for-evidence` | 40 | Send back to the reporter for missing evidence. |
+| `ask-reporter-for-evidence` | 39 | Send back to the reporter for missing evidence. |
 | `check-duplicate-or-fixed-first` | 52 | Check duplicate, solved, concurrent, linked, or upstream-fixed context first. |
+| `needs-maintainer-decision` | 1 | Maintainer judgment is required; PCF cannot reduce the next move further. |
 | `not-actionable-yet` | 8 | Blocked, parked, stale, draft, or otherwise not actionable now. |
 
 ## Non-Ready Sub-Actions
@@ -61,8 +62,9 @@ This excludes `review-now` and shows where maintainer work goes when an item is 
 
 | Sub-action | Count | Maintainer meaning |
 | --- | ---: | --- |
-| `ask-reporter-for-evidence` | 40 | Send back to the reporter for missing evidence. |
+| `ask-reporter-for-evidence` | 39 | Send back to the reporter for missing evidence. |
 | `check-duplicate-or-fixed-first` | 52 | Check duplicate, solved, concurrent, linked, or upstream-fixed context first. |
+| `needs-maintainer-decision` | 1 | Maintainer judgment is required; PCF cannot reduce the next move further. |
 | `not-actionable-yet` | 8 | Blocked, parked, stale, draft, or otherwise not actionable now. |
 
 ## Context Intelligence
@@ -85,7 +87,7 @@ Collection errors: 0
 
 | Repository | Items | Coarse split | Next actions | Context findings | Context checked | Unavailable | Errors | Capture hash | Replay proof hash |
 | --- | ---: | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
-| `python/cpython` | 12 | 0 review / 4 repair / 8 defer | `ask-reporter-for-evidence` 5<br>`check-duplicate-or-fixed-first` 7 | 12 | 12/12 | 0 | 0 | `40c8221ee09e843c` | `0dc8bc7971dbdde7` |
+| `python/cpython` | 12 | 0 review / 4 repair / 8 defer | `ask-reporter-for-evidence` 4<br>`check-duplicate-or-fixed-first` 7<br>`needs-maintainer-decision` 1 | 12 | 12/12 | 0 | 0 | `40c8221ee09e843c` | `3ac3814d8b4640e6` |
 | `rust-lang/rust` | 12 | 3 review / 6 repair / 3 defer | `review-now` 3<br>`check-duplicate-or-fixed-first` 9 | 42 | 12/12 | 0 | 0 | `80437dbf33dfe3fe` | `4321e40eb5a179c3` |
 | `golang/go` | 12 | 2 review / 3 repair / 7 defer | `review-now` 2<br>`ask-reporter-for-evidence` 4<br>`check-duplicate-or-fixed-first` 6 | 31 | 12/12 | 0 | 0 | `c66f25d30d48f627` | `6e3f5de72178c942` |
 | `nodejs/node` | 12 | 0 review / 8 repair / 4 defer | `ask-reporter-for-evidence` 2<br>`check-duplicate-or-fixed-first` 4<br>`not-actionable-yet` 6 | 6 | 12/12 | 0 | 0 | `74d1ec27644d472e` | `3801e3db64be57b5` |
@@ -100,7 +102,7 @@ Collection errors: 0
 
 | Repository | Capture SHA-256 | Replay proof SHA-256 |
 | --- | --- | --- |
-| `python/cpython` | `40c8221ee09e843c062aa7590cd692f427af504211d13e45adede61f9036bc06` | `0dc8bc7971dbdde7b47a4302d800b1268b4e548aeef9b087f2cdd3452b9d7bc1` |
+| `python/cpython` | `40c8221ee09e843c062aa7590cd692f427af504211d13e45adede61f9036bc06` | `3ac3814d8b4640e6b096da1cfeb40f763c20889479b1f7fb3c2d9ae36d9c7883` |
 | `rust-lang/rust` | `80437dbf33dfe3fe71899bd5177128c1e157cf017ad48035f539f8cb3cb32d8a` | `4321e40eb5a179c3a55877841d743520e466ddc9a18ac3939b0a7f64fa8e45e8` |
 | `golang/go` | `c66f25d30d48f627dad544f56390447a3873523029d969e8d10a61019ab65ac6` | `6e3f5de72178c942995402ea40f4d8ba9211c79c50d30a19941906b39d03a507` |
 | `nodejs/node` | `74d1ec27644d472e7b462784512adadbdafbe1ca7257fc76ead6e8a5e070dc09` | `3801e3db64be57b5a9297c86c071b787fe990a4c133f9780162369673e77e02b` |
@@ -123,12 +125,13 @@ Regression lock-in:
 
 ## Replay Residue Mined
 
-This replay contained 52 duplicate/fixed/context checks and 8 not-actionable wait-state items. Those buckets were mined for red-test leads without committing raw issue bodies.
+This replay contained 39 reporter-evidence requests, 52 duplicate/fixed/context checks, 1 maintainer-decision item, and 8 not-actionable wait-state items. Those buckets were mined for red-test leads without committing raw issue bodies.
 
-The useful residue was a queue-explanation failure mode: mixed labels could select the right `nextAction` while explaining it with the wrong label family. That now has synthetic adversarial coverage:
+The first useful residue was a queue-explanation failure mode: mixed labels could select the right `nextAction` while explaining it with the wrong label family. The ask-reporter bucket then exposed queue-actor confusion: maintainer-owned items must not be routed back to a generic reporter. Those now have synthetic adversarial coverage:
 
 - `next-action-context-reason-priority`: context actions must explain themselves with repository-context labels, not reporter-evidence labels.
 - `next-action-wait-state-reason-priority`: wait-state actions must explain themselves with blocked/parked labels, not reporter-evidence labels.
+- `next-action-maintainer-owned-reporter-suppression`: maintainer-owned items must not be sent back to a generic reporter when maintainer judgment is the next action.
 
 ## Non-Claims
 
