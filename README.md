@@ -14,6 +14,7 @@ The output is a maintainer queue, not a vibe score: labels, repair checklists, r
 ## What Maintainers Get
 
 - A sorted queue that separates ready work from low-evidence, too-broad, duplicate, already-solved, or context-missing work.
+- A next-actor model that shows whether the next useful move belongs to the reporter, maintainer, repository context lookup, process routing, or external state.
 - Repair checklists contributors can act on before maintainers spend review time.
 - Repository policy ingestion for templates, `CODEOWNERS`, `MAINTAINERS`, scripts, manifests, and contribution rules.
 - Upstream and concurrent-work context for duplicates, solved issues, merged upstream fixes, and competing PRs.
@@ -348,13 +349,15 @@ Queue items are grouped into:
 - `send-repair-request` for `needs-repair`
 - `do-not-review-yet` for `low-review-value`
 
-Each item also includes a `nextAction` object that explains the concrete maintainer move behind non-ready work:
+Each item also includes a `nextAction` object that explains who can usefully act next and why. See [`docs/NEXT_ACTOR_MODEL.md`](docs/NEXT_ACTOR_MODEL.md) for the full next-actor model and precedence rules.
 
 - `ask-reporter-for-evidence`: send the item back to the submitter for missing evidence.
 - `check-duplicate-or-fixed-first`: check related, duplicate, concurrent, solved, or upstream-fixed work before spending fresh review time.
 - `route-to-subsystem-or-process`: route through repository ownership, subsystem, policy, or contribution process.
 - `needs-maintainer-decision`: make a judgment call because PCF cannot reduce the item to reporter evidence, context lookup, routing, or waiting.
 - `not-actionable-yet`: wait because the item is parked, pending, draft, or otherwise blocked on external state.
+
+The rule of thumb is that higher-cost maintainer-side signals beat generic reporter evidence: context lookup, repository routing, wait-state labels, and maintainer-owned work should not be hidden behind "please add logs."
 
 The response includes per-item top reasons, labels, repository-context summaries, review-budget estimates, sub-action counts, the full underlying evaluation, and markdown suitable for a maintainer report. GitHub queue collection is dry-run/read-only; comment and label writes still require explicit webhook write configuration.
 

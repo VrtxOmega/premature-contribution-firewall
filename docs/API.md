@@ -187,7 +187,7 @@ Queue responses are shaped as:
 }
 ```
 
-Queue actions remain the coarse compatibility values `review-now`, `send-repair-request`, and `do-not-review-yet`. `nextAction.id` refines the maintainer move behind the queue item: `ask-reporter-for-evidence`, `check-duplicate-or-fixed-first`, `route-to-subsystem-or-process`, `needs-maintainer-decision`, or `not-actionable-yet` for non-ready work. Live GitHub collection uses read-only API calls and a short in-memory cache; comments and labels are still controlled only by the explicit webhook write settings.
+Queue actions remain the coarse compatibility values `review-now`, `send-repair-request`, and `do-not-review-yet`. `nextAction.id` refines the queue by next actor: `review-now`, `ask-reporter-for-evidence`, `check-duplicate-or-fixed-first`, `route-to-subsystem-or-process`, `needs-maintainer-decision`, or `not-actionable-yet`. The precedence model is documented in [NEXT_ACTOR_MODEL.md](NEXT_ACTOR_MODEL.md): repository context, repository routing, wait-state labels, and maintainer-owned work are not hidden behind generic reporter-evidence requests. Live GitHub collection uses read-only API calls and a short in-memory cache; comments and labels are still controlled only by the explicit webhook write settings.
 
 ## GitHub App Setup
 

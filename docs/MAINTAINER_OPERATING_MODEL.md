@@ -70,3 +70,5 @@ A serious maintainer should be able to clone the repo and answer four questions 
 - Will it stay read-only until I deliberately enable writes?
 
 The README, CI workflow, benchmark corpus, adversarial corpus, replay capture rules, `nextAction` queue output, feedback calibration, feedback replay, and release checklist exist to make those answers inspectable.
+
+The detailed next-actor lanes and precedence rules live in [NEXT_ACTOR_MODEL.md](NEXT_ACTOR_MODEL.md).
