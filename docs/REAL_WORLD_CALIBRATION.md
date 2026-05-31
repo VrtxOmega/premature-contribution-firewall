@@ -27,6 +27,8 @@ Live pilots are useful when they surface one of these failures:
 
 The output of a pilot is not a claim that PCF knows better than the project maintainer. It is a candidate evidence package.
 
+The running record of pilot repositories, queue splits, fixes, artifact hashes, and public/private status lives in [PILOT_LEDGER.md](PILOT_LEDGER.md).
+
 ## Pilot Pattern
 
 Every real-world calibration pass should answer four questions:

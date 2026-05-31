@@ -660,7 +660,7 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     && (/```/.test(body) || /[\[{][\s\S]{20,}[\]}]/.test(body) || /^\s*(name|products|entities):\s+/mi.test(body));
   const hasDeviceIdentity = deviceSupportIntent && hasProductId && hasProductName;
   const hasFeatureUseCase = featureRequestIntent && (
-    /\b(use case|workflow|problem|frustrated|current approach|current workflow|need to|want to|so that|because)\b/i.test(body)
+    /\b(use case|workflow|problem|frustrated|current approach|current workflow|currently|need to|want to|so that|because|when i|i expect)\b/i.test(body)
     || /describe the feature you'd like to request/i.test(body)
   );
   const hasFeatureSolution = featureRequestIntent && (

@@ -5,16 +5,16 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 ## Summary
 
 - Version: 2026.05.30
-- Cases: 38/38 passing
+- Cases: 40/40 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
 - standard-pr: 9/9 passing
 - tool-use: 2/2 passing
-- issue: 8/8 passing
+- issue: 9/9 passing
 - repo-policy: 3/3 passing
-- repo-context: 3/3 passing
+- repo-context: 4/4 passing
 - kernel-grade: 7/7 passing
 - patch-series: 4/4 passing
 - review-budget: 2/2 passing
@@ -37,6 +37,7 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 | PASS | issue | ready-issue | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | device-support-issue | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | feature-request-ready | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | feature-request-current-workflow | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | feature-request-thin | low-review-value | low-review-value | 45 | `needs-clear-summary`, `needs-context`, `needs-use-case`, `duplicate-search-needed` |
 | PASS | issue | unready-issue | low-review-value | low-review-value | 0 | `needs-clear-summary`, `needs-context`, `needs-reproducer`, `needs-expected-actual` |
 | PASS | issue | security-no-reproducer-issue | low-review-value | low-review-value | 8 | `needs-context`, `needs-reproducer`, `needs-expected-actual`, `needs-environment` |
@@ -46,6 +47,7 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 | PASS | repo-policy | policy-unready-pr | low-review-value | low-review-value | 0 | `needs-clear-summary`, `needs-context`, `needs-tests`, `needs-human-verification` |
 | PASS | repo-policy | policy-codeowners-route | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | repo-context | repo-context-similar-open-issue | needs-repair | needs-repair | 90 | `possibly-duplicate`, `needs-repair` |
+| PASS | repo-context | repo-context-comment-linked-issue | needs-repair | needs-repair | 84 | `duplicate-search-needed`, `possibly-duplicate`, `needs-repair` |
 | PASS | repo-context | repo-context-concurrent-pr | needs-repair | needs-repair | 90 | `concurrent-work`, `needs-repair` |
 | PASS | repo-context | repo-context-upstream-fixed | needs-repair | needs-repair | 82 | `possibly-upstream-fixed`, `needs-repair` |
 | PASS | kernel-grade | kernel-ready-pr | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |

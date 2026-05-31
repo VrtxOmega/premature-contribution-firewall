@@ -40,6 +40,9 @@ test("GitHub client collects a read-only maintainer queue", async () => {
         }
       ]);
     }
+    if (parsed.pathname === "/repos/owner/repo/issues/4/comments") {
+      return jsonResponse([]);
+    }
     if (parsed.pathname === "/search/issues") {
       const query = parsed.searchParams.get("q") || "";
       if (query.includes("repo:upstream/repo")) {
@@ -146,6 +149,9 @@ test("GitHub client fills issue-only queues when GitHub issue pages include PRs"
       }
       return jsonResponse([issuePayload(5), issuePayload(6)]);
     }
+    if (/^\/repos\/owner\/repo\/issues\/\d+\/comments$/.test(parsed.pathname)) {
+      return jsonResponse([]);
+    }
     if (parsed.pathname === "/search/issues") {
       return jsonResponse({ items: [] });
     }
@@ -169,6 +175,72 @@ test("GitHub client fills issue-only queues when GitHub issue pages include PRs"
     assert.deepEqual(queue.items.map((item) => item.number), [4, 5, 6]);
     assert.ok(calls.some((call) => call.includes("page=2")));
     assert.equal(calls.some((call) => call.startsWith("/repos/owner/repo/pulls")), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("GitHub client includes direct issue refs from issue comments in repository context", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url) => {
+    const parsed = new URL(url);
+    calls.push(parsed.pathname + parsed.search);
+    if (parsed.pathname === "/repos/owner/repo/issues") {
+      return jsonResponse([
+        {
+          number: 10,
+          title: "Add the ability to have TrackLink inserted by default",
+          body: [
+            "**Is your feature request related to a problem? Please describe.**",
+            "I am frustrated when I forget to click the TrackLink checkbox.",
+            "",
+            "**Describe the solution you'd like**",
+            "I would like a setting that automatically enables TrackLink for pasted links."
+          ].join("\n"),
+          state: "open",
+          labels: [{ name: "enhancement" }],
+          html_url: "https://github.example/owner/repo/issues/10",
+          updated_at: "2026-05-30T00:00:00Z"
+        }
+      ]);
+    }
+    if (parsed.pathname === "/repos/owner/repo/issues/10/comments") {
+      return jsonResponse([{ body: "See https://github.com/elsewhere/project/issues/100 and #9" }]);
+    }
+    if (parsed.pathname === "/repos/owner/repo/issues/9") {
+      return jsonResponse({
+        number: 9,
+        title: "feat: Auto-track all links and views without manual configuration",
+        body: "Automatically track all links and views without manual steps.",
+        state: "open",
+        labels: [{ name: "enhancement" }],
+        html_url: "https://github.example/owner/repo/issues/9"
+      });
+    }
+    if (parsed.pathname === "/search/issues") {
+      return jsonResponse({ items: [] });
+    }
+    throw new Error(`unexpected fetch ${parsed.pathname}`);
+  };
+
+  try {
+    const client = createGitHubClient({
+      githubApiBase: "https://api.github.test",
+      githubCacheTtlMs: 0
+    });
+    const queue = await client.collectRepositoryQueue({
+      owner: "owner",
+      repo: "repo",
+      limit: 1,
+      includePullRequests: false,
+      includeIssues: true
+    });
+
+    assert.deepEqual(queue.items[0].repositoryContext.currentIssueRefs, ["9"]);
+    assert.ok(queue.items[0].repositoryContext.issues.some((issue) => issue.number === 9));
+    assert.ok(calls.some((call) => call.startsWith("/repos/owner/repo/issues/10/comments")));
+    assert.ok(calls.some((call) => call === "/repos/owner/repo/issues/9"));
   } finally {
     globalThis.fetch = originalFetch;
   }

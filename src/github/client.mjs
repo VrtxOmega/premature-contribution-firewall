@@ -90,6 +90,7 @@ export function createGitHubClient(config = {}) {
     upstreamRepository = ""
   }) {
     const repository = `${owner}/${repo}`;
+    const currentIssueRefs = extractIssueRefs(`${title}\n${body}`, repository);
     const terms = searchTerms(`${title}\n${body}`);
     const queryText = terms.length ? terms.join(" ") : title || repo;
     const localSearch = await readRequest(installationId, `/search/issues?q=${encodeURIComponent(`${queryText} repo:${repository} in:title,body`)}&per_page=20`);
@@ -106,9 +107,18 @@ export function createGitHubClient(config = {}) {
       else issues.push(normalized);
     }
 
+    for (const issueRef of currentIssueRefs) {
+      if (String(issueRef) === String(number)) continue;
+      const referenced = await safeReadIssue({ owner, repo, number: issueRef, installationId });
+      if (!referenced) continue;
+      if (referenced.type === "pull_request") pushContextItem(pullRequests, referenced);
+      else pushContextItem(issues, referenced);
+    }
+
     const context = {
       source: "github-api",
       repository,
+      currentIssueRefs: [...currentIssueRefs],
       issues,
       pullRequests,
       upstream: {
@@ -310,6 +320,26 @@ export function createGitHubClient(config = {}) {
     }
   }
 
+  async function safeReadIssue({ owner, repo, number, installationId }) {
+    try {
+      const issue = await readRequest(installationId, `/repos/${owner}/${repo}/issues/${number}`);
+      return issue ? normalizeSearchItem(issue) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function safeReadIssueCommentBodies({ owner, repo, number, installationId }) {
+    try {
+      const comments = await readRequest(installationId, `/repos/${owner}/${repo}/issues/${number}/comments?per_page=20`);
+      return Array.isArray(comments)
+        ? comments.map((comment) => String(comment.body || "").trim()).filter(Boolean).join("\n\n")
+        : "";
+    } catch {
+      return "";
+    }
+  }
+
   async function normalizePullRequestQueueItem({ owner, repo, pullRequest, files, installationId, upstreamRepository }) {
     const repository = `${owner}/${repo}`;
     const title = pullRequest.title || "";
@@ -355,13 +385,15 @@ export function createGitHubClient(config = {}) {
     const title = issue.title || "";
     const body = issue.body || "";
     const number = issue.number;
+    const commentBody = await safeReadIssueCommentBodies({ owner, repo, number, installationId });
+    const contextBody = [body, commentBody ? `Issue comments:\n${commentBody}` : ""].filter(Boolean).join("\n\n");
     const repositoryContext = await safeCollectQueueContext({
       owner,
       repo,
       number,
       kind: "issue",
       title,
-      body,
+      body: contextBody,
       files: [],
       installationId,
       upstreamRepository
@@ -457,6 +489,35 @@ function normalizeSearchItem(item, scope = "local") {
     mergedAt: item.pull_request?.merged_at || "",
     updatedAt: item.updated_at || ""
   };
+}
+
+function extractIssueRefs(text, repository = "") {
+  const refs = new Set();
+  const source = String(text || "");
+  for (const match of source.matchAll(/#(\d+)\b/gi)) {
+    refs.add(match[1]);
+  }
+  const [owner, repo] = String(repository || "").split("/");
+  if (owner && repo) {
+    const sameRepoPattern = new RegExp(`github\\.com/${escapeRegExp(owner)}/${escapeRegExp(repo)}/(?:issues|pull)/(\\d+)\\b`, "gi");
+    for (const match of source.matchAll(sameRepoPattern)) refs.add(match[1]);
+  }
+  for (const match of source.matchAll(/\b(?:issues|pull)\/(\d+)\b/gi)) {
+    const prefix = source.slice(Math.max(0, (match.index || 0) - 80), match.index || 0);
+    if (/github\.com\/[^/\s]+\/[^/\s]+\/$/i.test(prefix)) continue;
+    refs.add(match[1]);
+  }
+  return refs;
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function pushContextItem(items, item) {
+  if (!items.some((existing) => String(existing.number) === String(item.number) && existing.type === item.type)) {
+    items.push(item);
+  }
 }
 
 function searchTerms(text) {

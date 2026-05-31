@@ -107,6 +107,13 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", minScore: 90, labels: ["ready-for-maintainer"], absentLabels: ["needs-reproducer", "needs-logs", "needs-expected-actual"], repoContext: true }
   },
   {
+    id: "feature-request-current-workflow",
+    category: "issue",
+    name: "Feature request with current workflow and expected behavior",
+    input: featureRequestCurrentWorkflowIssue(),
+    expect: { status: "ready-for-maintainer", minScore: 90, labels: ["ready-for-maintainer"], absentLabels: ["needs-use-case"], repoContext: true }
+  },
+  {
     id: "feature-request-thin",
     category: "issue",
     name: "Thin feature request without user problem",
@@ -167,6 +174,13 @@ export const BENCHMARK_CASES = [
     category: "repo-context",
     name: "Similar open issue is surfaced before duplicate triage",
     input: repoContextPr({ mode: "similar-open" }),
+    expect: { status: "needs-repair", labels: ["possibly-duplicate"], repoContext: true, contextFindings: 1 }
+  },
+  {
+    id: "repo-context-comment-linked-issue",
+    category: "repo-context",
+    name: "Issue references from comments surface duplicate context",
+    input: commentLinkedIssueContext(),
     expect: { status: "needs-repair", labels: ["possibly-duplicate"], repoContext: true, contextFindings: 1 }
   },
   {
@@ -696,6 +710,26 @@ function featureRequestIssue({ ready }) {
   };
 }
 
+function featureRequestCurrentWorkflowIssue() {
+  return {
+    kind: "issue",
+    title: "Feature request: Select Subscription Status on list export",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "When I use a single opt-in list, I expect exports to distinguish confirmed and unconfirmed subscribers.",
+      "Currently, the default export contains every subscriber regardless of subscription status.",
+      "I would like to select which statuses should be exported from the List Subscribers overview.",
+      "For double opt-in lists, I can already filter confirmed subscriptions and export those."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "knadh/listmonk",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
 function policyPr({ ready, ownerRouteOnly = false }) {
   return {
     ...readyPr(),
@@ -728,6 +762,38 @@ function policyPr({ ready, ownerRouteOnly = false }) {
       { path: "package.json", content: "{\"scripts\":{\"test\":\"node --test\",\"check\":\"node --check src/core/evaluator.mjs\"}}" }
     ],
     authorAssociation: ownerRouteOnly ? "MEMBER" : "CONTRIBUTOR"
+  };
+}
+
+function commentLinkedIssueContext() {
+  return {
+    kind: "issue",
+    number: 10,
+    title: "Add the ability to have TrackLink inserted by default",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "**Is your feature request related to a problem? Please describe.**",
+      "I am frustrated when I forget to click the TrackLink checkbox before sending a campaign.",
+      "",
+      "**Describe the solution you'd like**",
+      "I would like a setting that automatically enables TrackLink for pasted links."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "knadh/listmonk",
+      currentIssueRefs: [9],
+      issues: [
+        {
+          number: 9,
+          title: "feat: Auto-track all links and views without manual configuration",
+          body: "Automatically track all links and views without manual steps.",
+          state: "open",
+          labels: ["enhancement"],
+          htmlUrl: "https://github.example/issues/9"
+        }
+      ],
+      pullRequests: []
+    }
   };
 }
 

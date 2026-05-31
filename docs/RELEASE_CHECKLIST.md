@@ -22,7 +22,7 @@ Expected result:
 - Syntax check passes.
 - Repository hygiene verification passes.
 - Unit tests pass.
-- Benchmark stays at 38/38 or the documented case count increases with reviewed expectations.
+- Benchmark stays at 40/40 or the documented case count increases with reviewed expectations.
 - Adversarial red test stays at 8/8 or grows with preserved breakage residue.
 - Maintainer demo reports `PASS`.
 - CI workflow verification reports all required gates present and forbidden write posture absent.

@@ -41,6 +41,7 @@ export function normalizeRepositoryContext(rawContext = null) {
         commits: [],
         releases: []
       },
+      currentIssueRefs: [],
       error: ""
     };
   }
@@ -59,6 +60,7 @@ export function normalizeRepositoryContext(rawContext = null) {
         commits: [],
         releases: []
       },
+      currentIssueRefs: [],
       error: String(rawContext.error || "")
     };
   }
@@ -77,6 +79,7 @@ export function normalizeRepositoryContext(rawContext = null) {
       commits: normalizeItems(rawContext.upstreamCommits || upstream.commits || [], "commit", "upstream"),
       releases: normalizeItems(rawContext.upstreamReleases || upstream.releases || [], "release", "upstream")
     },
+    currentIssueRefs: normalizeIssueRefs(rawContext.currentIssueRefs || rawContext.currentRefs || []),
     error: String(rawContext.error || "")
   };
 }
@@ -104,7 +107,7 @@ export function analyzeRepositoryContext(input = {}) {
     });
   }
 
-  const current = currentFingerprint(input);
+  const current = currentFingerprint(input, context);
   const localIssues = context.issues.filter((item) => !sameContribution(item, input));
   const localPullRequests = context.pullRequests.filter((item) => !sameContribution(item, input));
   const upstreamItems = [
@@ -117,9 +120,13 @@ export function analyzeRepositoryContext(input = {}) {
   const linkedIssues = localIssues
     .filter((item) => item.number && current.issueRefs.has(String(item.number)))
     .map((item) => enrichMatch(item, current, "linked-issue"));
+  const linkedOpenIssues = linkedIssues.filter((item) => isOpen(item));
   const linkedClosedIssues = linkedIssues.filter((item) => isClosed(item) || isSolved(item));
 
-  const similarOpenIssues = rankMatches(localIssues.filter((item) => isOpen(item)), current, "similar-open-issue");
+  const similarOpenIssues = uniqueMatches([
+    ...linkedOpenIssues,
+    ...rankMatches(localIssues.filter((item) => isOpen(item)), current, "similar-open-issue")
+  ]);
   const similarClosedIssues = rankMatches(localIssues.filter((item) => isClosed(item) || isSolved(item)), current, "similar-closed-issue");
   const concurrentPullRequests = rankMatches(localPullRequests.filter((item) => isOpen(item)), current, "concurrent-pr", { requireOverlap: false })
     .filter((item) => item.fileOverlap.length > 0 || item.score >= 0.24);
@@ -169,6 +176,11 @@ function normalizeItems(items, fallbackType, scope) {
     .filter((item) => item.title || item.body || item.number || item.url);
 }
 
+function normalizeIssueRefs(refs) {
+  if (!Array.isArray(refs)) return [];
+  return [...new Set(refs.map((ref) => String(ref || "").trim()).filter(Boolean))];
+}
+
 function normalizeItem(item, fallbackType, scope) {
   const labels = normalizeLabels(item.labels);
   const type = String(item.type || item.kind || (item.pull_request ? "pull_request" : fallbackType));
@@ -192,16 +204,30 @@ function normalizeItem(item, fallbackType, scope) {
   };
 }
 
-function currentFingerprint(input) {
+function currentFingerprint(input, context = {}) {
   const text = [input.title, input.body, ...(input.commits || [])].filter(Boolean).join("\n");
+  const issueRefs = extractIssueRefs(text, context.repository);
+  for (const ref of context.currentIssueRefs || []) issueRefs.add(String(ref));
   return {
     number: input.number === undefined || input.number === null ? "" : String(input.number),
     kind: input.kind,
     tokens: tokenize(text),
     titleTokens: tokenize(input.title || ""),
     files: normalizeFiles(input.files || []),
-    issueRefs: extractIssueRefs(text)
+    issueRefs
   };
+}
+
+function uniqueMatches(items) {
+  const seen = new Set();
+  const unique = [];
+  for (const item of items) {
+    const key = `${item.type}:${item.number}:${item.url}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(item);
+  }
+  return unique;
 }
 
 function rankMatches(items, current, relation, options = {}) {
@@ -293,12 +319,27 @@ function sameContribution(item, input) {
   return Boolean(number && item.number === number && item.type === (input.kind === "issue" ? "issue" : "pull_request"));
 }
 
-function extractIssueRefs(text) {
+function extractIssueRefs(text, repository = "") {
   const refs = new Set();
-  for (const match of String(text || "").matchAll(/(?:#|issues\/|pull\/)(\d+)\b/gi)) {
+  const source = String(text || "");
+  for (const match of source.matchAll(/#(\d+)\b/gi)) {
+    refs.add(match[1]);
+  }
+  const [owner, repo] = String(repository || "").split("/");
+  if (owner && repo) {
+    const sameRepoPattern = new RegExp(`github\\.com/${escapeRegExp(owner)}/${escapeRegExp(repo)}/(?:issues|pull)/(\\d+)\\b`, "gi");
+    for (const match of source.matchAll(sameRepoPattern)) refs.add(match[1]);
+  }
+  for (const match of source.matchAll(/\b(?:issues|pull)\/(\d+)\b/gi)) {
+    const prefix = source.slice(Math.max(0, (match.index || 0) - 80), match.index || 0);
+    if (/github\.com\/[^/\s]+\/[^/\s]+\/$/i.test(prefix)) continue;
     refs.add(match[1]);
   }
   return refs;
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function tokenize(text) {

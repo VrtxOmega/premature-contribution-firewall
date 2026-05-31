@@ -96,6 +96,75 @@ test("closed linked issue is surfaced before maintainer triage", () => {
   assert.ok(result.repositoryContext.linkedClosedIssues.some((item) => item.number === "42"));
 });
 
+test("comment-supplied issue refs surface open linked duplicates", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    number: 10,
+    title: "Add the ability to have TrackLink inserted by default",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "**Is your feature request related to a problem? Please describe.**",
+      "I am frustrated when I forget to click the TrackLink checkbox before sending the campaign.",
+      "",
+      "**Describe the solution you'd like**",
+      "I would like a setting that automatically enables TrackLink for pasted links."
+    ].join("\n"),
+    repositoryContext: {
+      repository: "knadh/listmonk",
+      currentIssueRefs: [9],
+      issues: [
+        {
+          number: 9,
+          title: "feat: Auto-track all links and views without manual configuration",
+          body: "Automatically track all links and views without manual steps.",
+          state: "open",
+          labels: ["enhancement"],
+          htmlUrl: "https://github.example/issues/9"
+        }
+      ]
+    }
+  });
+
+  assert.equal(result.status, "needs-repair");
+  assert.ok(result.labels.includes("possibly-duplicate"));
+  assert.ok(result.repositoryContext.similarOpenIssues.some((item) => item.number === "9" && item.directReference));
+});
+
+test("external GitHub issue URLs are not treated as local linked issues", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    number: 10,
+    title: "Document SMTP relay hostname requirement",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "**Is your feature request related to a problem? Please describe.**",
+      "I spent time debugging smtp-relay.google.com and found that it requires a HELO hostname.",
+      "",
+      "**Describe the solution you'd like**",
+      "Add documentation near SMTP settings so users know when to configure the HELO hostname.",
+      "",
+      "I found a related explanation at https://github.com/other/project/issues/42."
+    ].join("\n"),
+    repositoryContext: {
+      repository: "knadh/listmonk",
+      issues: [
+        {
+          number: 42,
+          title: "Unrelated closed local issue",
+          body: "This closed local issue should not be linked by an external URL.",
+          state: "closed",
+          labels: ["fixed"],
+          htmlUrl: "https://github.example/issues/42"
+        }
+      ]
+    }
+  });
+
+  assert.equal(result.labels.includes("linked-issue-closed"), false);
+  assert.equal(result.labels.includes("possibly-solved"), false);
+  assert.equal(result.repositoryContext.linkedClosedIssues.length, 0);
+});
+
 test("markdown report includes repository context findings", () => {
   const result = evaluateContribution(readyPrWithContext());
   const markdown = renderMarkdownReport(result);

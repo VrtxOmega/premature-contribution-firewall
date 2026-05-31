@@ -170,6 +170,30 @@ test("feature request with problem and requested behavior does not require alter
   assert.ok(result.checks.some((check) => check.id === "feature-scope" && check.status === "pass"));
 });
 
+test("feature request with current workflow and expected behavior counts as use-case evidence", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Feature request: Select Subscription Status(es) on List export",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "When I use a single opt-in list, I expect emails to be sent to subscribers with both the confirmed and unconfirmed status.",
+      "Currently, the default export contains all subscribers regardless of subscription status.",
+      "I would like to select which statuses should be exported when clicking Export in the default List Subscribers overview.",
+      "For double opt-in lists, I can already see only the confirmed subscriptions and export those."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "knadh/listmonk",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.ok(result.checks.some((check) => check.id === "feature-use-case" && check.status === "pass"));
+  assert.equal(result.labels.includes("needs-use-case"), false);
+});
+
 test("markdown report includes status, labels, repairs, and marker", async () => {
   const result = evaluateContribution(await fixture("pr-ready"));
   const markdown = renderMarkdownReport(result);
