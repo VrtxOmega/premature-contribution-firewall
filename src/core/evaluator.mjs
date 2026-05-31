@@ -30,6 +30,7 @@ const SIGNALS = {
   logs: /```|stack trace|traceback|journal|log output|error output|exception|panic/i,
   rootCause: /\b(root cause|cause|because|bisect|regression|culprit|patch|proposed fix|analysis)\b/i,
   aiDisclosure: /\b(ai|llm|chatgpt|copilot|claude|gemini|generated)\b/i,
+  aiReportClaim: /\b(?:asked\s+(?:an?\s+)?ai|ai\s+(?:said|says|found|reported|detected|suggested)|(?:chatgpt|copilot|claude|gemini|ai tool|llm)\s+(?:said|says|found|reported|detected|suggested|generated|wrote|claims?))\b/i,
   humanAccountability: /\b(tested|verified|reviewed|reproduced|i understand|manual|locally)\b/i,
   dependencyJustification: /\b(dependenc(?:y|ies)|package|lockfile|upgrade|security update|npm install|npm audit|vulnerability)\b/i,
   securityClaim: /\b(vulnerability|cve|exploit|rce|xss|csrf|injection|overflow)\b|\bsecurity\s+(?:vulnerability|issue|bug|flaw|risk|report|advisory|incident|hole)\b/i,
@@ -70,6 +71,26 @@ const PROFILES = {
     description: "Strict patch-discipline checks inspired by Linux kernel contribution norms."
   }
 };
+
+const ISSUE_SOFT_REPAIR_LABELS = new Set([
+  "needs-context",
+  "needs-reproducer",
+  "needs-use-case",
+  "needs-feature-solution",
+  "needs-feature-scope",
+  "needs-expected-actual",
+  "needs-environment",
+  "needs-logs",
+  "duplicate-search-needed",
+  "needs-technical-analysis",
+  "needs-real-evidence"
+]);
+
+const ISSUE_HARD_RISK_LABELS = new Set([
+  "secrets-risk",
+  "prompt-injection-risk",
+  "security-claim-needs-reproducer"
+]);
 
 export function evaluateContribution(rawInput = {}, options = {}) {
   const input = normalizeInput(rawInput);
@@ -415,16 +436,17 @@ export function evaluateIssue(input, options = {}) {
   const body = input.body.trim();
   const title = input.title.trim();
   const securityClaim = SIGNALS.securityClaim.test(`${title}\n${body}`);
-  const aiWithoutEvidence = SIGNALS.aiDisclosure.test(body) && !SIGNALS.logs.test(body) && !SIGNALS.repro.test(body);
+  const aiWithoutEvidence = SIGNALS.aiReportClaim.test(body) && !SIGNALS.logs.test(body) && !SIGNALS.repro.test(body);
   const secretFindings = findSecrets(input);
   const promptInjection = SIGNALS.promptInjection.test(aggregateContributionText(input));
   const policyProfile = buildPolicyProfile(input);
   const repositoryTriage = analyzeRepositoryContext(input);
   const issueEvidence = analyzeIssueEvidence(input, { title, body });
+  const maintainerTriage = analyzeMaintainerTriage(input.labels);
   const featureRequest = issueEvidence.featureRequestIntent && !issueEvidence.deviceSupportIntent && !securityClaim;
   const repositoryContextCleared = repositoryTriage.hasContext && repositoryTriage.checkStatus === "pass";
   const hasReproducer = featureRequest ? issueEvidence.hasFeatureUseCase : SIGNALS.repro.test(body) || issueEvidence.deviceSupportComplete;
-  const hasExpectedActual = featureRequest ? issueEvidence.hasFeatureSolution : SIGNALS.expectedActual.test(body) || issueEvidence.deviceSupportComplete;
+  const hasExpectedActual = featureRequest ? issueEvidence.hasFeatureSolution : issueEvidence.hasBugBehaviorEvidence || issueEvidence.deviceSupportComplete;
   const hasEnvironment = featureRequest || SIGNALS.version.test(body) || issueEvidence.hasDeviceIdentity;
   const hasLogEvidence = featureRequest || SIGNALS.logs.test(body) || issueEvidence.hasDeviceTelemetry;
   const hasDuplicateSearch = SIGNALS.duplicateSearch.test(body) || repositoryContextCleared;
@@ -478,8 +500,10 @@ export function evaluateIssue(input, options = {}) {
       ? "Feature request describes the requested behavior or solution."
       : featureRequest
         ? "Feature request should describe the requested behavior or solution."
-        : SIGNALS.expectedActual.test(body)
+        : issueEvidence.hasExplicitExpectedActual
       ? "Expected and actual behavior are present."
+      : issueEvidence.hasBugBehaviorEvidence
+        ? "Expected behavior and concrete observed failure output are present."
       : issueEvidence.deviceSupportComplete
         ? "Device-support request uses product/DPS evidence instead of a classic expected/actual bug format."
         : "Expected and actual behavior should be explicit."
@@ -605,13 +629,22 @@ export function evaluateIssue(input, options = {}) {
   });
 
   const score = scoreChecks(checks);
-  const status = classify(score, checks);
+  const maintainerTriageDecision = applyIssueMaintainerTriage({
+    status: classify(score, checks),
+    score,
+    checks,
+    labels,
+    maintainerTriage,
+    repositoryTriage
+  });
+  const status = maintainerTriageDecision.status;
   const blockers = checks.filter((check) => check.status === "fail" && check.blocking);
   const failing = checks.filter((check) => check.status === "fail");
   const warning = checks.filter((check) => check.status === "warn");
   const reviewBudget = estimateReviewBudget(input, checks, profile.id);
 
   for (const check of [...blockers, ...failing, ...warning]) {
+    if (maintainerTriageDecision.suppressSoftRepairs && ISSUE_SOFT_REPAIR_LABELS.has(check.label)) continue;
     if (check.repair) repairSteps.push(check.repair);
   }
   if (SIGNALS.repro.test(body)) strengths.push("Includes reproduction details.");
@@ -620,6 +653,8 @@ export function evaluateIssue(input, options = {}) {
   if (issueEvidence.deviceSupportComplete) strengths.push("Includes device identity, local telemetry, and DPS mapping evidence.");
   if (featureRequest && issueEvidence.hasFeatureUseCase) strengths.push("Describes a concrete feature use case.");
   if (featureRequest && issueEvidence.hasFeatureSolution) strengths.push("Describes the requested feature behavior.");
+  if (maintainerTriage.state === "approved") strengths.push("Repository labels indicate this has already been accepted for maintainer attention.");
+  if (maintainerTriage.state === "backlog") strengths.push("Repository labels indicate this belongs in the accepted backlog rather than the active review queue.");
   addStatusLabel(labels, status);
 
   return {
@@ -639,6 +674,7 @@ export function evaluateIssue(input, options = {}) {
     },
     reviewBudget,
     provenance: analyzeProvenance(input),
+    maintainerTriage: publicMaintainerTriage(maintainerTriage),
     policyProfile: publicPolicyProfile(policyProfile),
     repositoryContext: publicRepositoryContext(repositoryTriage),
     patchSeries: null,
@@ -670,6 +706,13 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     /\b(alternatives?|constraints?|acceptance criteria|current approach|workaround|manual|instead|at least|configurable|rate limits?|preserv(?:e|ing|es)|detect conflicts?)\b/i.test(body)
     || /describe alternatives you've considered/i.test(body)
   );
+  const hasExplicitExpectedActual = SIGNALS.expectedActual.test(body);
+  const hasExpectedSignal = /\b(expected|should|should be able|intended|healthy|reachable|worked(?:\s+just\s+fine)?|prior to|previously)\b/i.test(body);
+  const hasObservedFailureSignal = /\b(actual|observed|result|results in|failure mode|fails?|failed|error|unable|cannot|can't|does not|doesn't|disconnected|rejects|returns|reports|broken)\b/i.test(body);
+  const hasBugBehaviorEvidence = !featureRequestIntent && (
+    hasExplicitExpectedActual
+    || (hasExpectedSignal && hasObservedFailureSignal && (SIGNALS.repro.test(body) || SIGNALS.logs.test(body) || SIGNALS.rootCause.test(body)))
+  );
   return {
     deviceSupportIntent,
     hasDeviceIdentity,
@@ -679,7 +722,104 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     hasFeatureUseCase,
     hasFeatureSolution,
     hasFeatureScope,
-    featureRequestComplete: featureRequestIntent && hasFeatureUseCase && hasFeatureSolution
+    featureRequestComplete: featureRequestIntent && hasFeatureUseCase && hasFeatureSolution,
+    hasExplicitExpectedActual,
+    hasBugBehaviorEvidence
+  };
+}
+
+function analyzeMaintainerTriage(labels = []) {
+  const normalized = normalizeLabels(labels).map((label) => label.trim()).filter(Boolean);
+  const labelText = normalized.join(" ");
+  const backlog = /\b(?:status[/: -]?)?(?:icebox|backlog|deferred|later|someday|parking lot)\b/i.test(labelText);
+  const pendingClarification = /\b(?:status[/: -]?)?(?:pending[ _-]?clarification|needs?[ _-]?info|waiting[ _-]?for[ _-]?(?:reporter|response|author)|more[ _-]?info)\b/i.test(labelText);
+  const approved = /\b(?:status[/: -]?)?(?:approved|accepted|confirmed|ready[ _-]?(?:for[ _-]?)?(?:implementation|review)?)\b/i.test(labelText);
+
+  if (pendingClarification) {
+    return {
+      state: "pending-clarification",
+      label: "maintainer-pending-clarification",
+      summary: "Repository labels say maintainer clarification is already pending."
+    };
+  }
+  if (backlog) {
+    return {
+      state: "backlog",
+      label: "maintainer-backlog",
+      summary: "Repository labels place this item in an accepted backlog or icebox."
+    };
+  }
+  if (approved) {
+    return {
+      state: "approved",
+      label: "maintainer-approved",
+      summary: "Repository labels say this item is approved or accepted for maintainer attention."
+    };
+  }
+  return {
+    state: "none",
+    label: "",
+    summary: "No explicit maintainer triage label detected."
+  };
+}
+
+function applyIssueMaintainerTriage({ status, score, checks, labels, maintainerTriage, repositoryTriage }) {
+  if (!maintainerTriage || maintainerTriage.state === "none") {
+    return {
+      status,
+      suppressSoftRepairs: false
+    };
+  }
+
+  const hasHardRisk = checks.some((check) => check.status === "fail" && ISSUE_HARD_RISK_LABELS.has(check.label));
+  const contextFindings = repositoryTriage?.findings?.length || 0;
+  const contextConflict = repositoryTriage?.hasContext && repositoryTriage.checkStatus !== "pass" && contextFindings > 0;
+  labels.add(maintainerTriage.label);
+
+  if (maintainerTriage.state === "pending-clarification") {
+    return {
+      status: status === "ready-for-maintainer" ? "needs-repair" : status,
+      suppressSoftRepairs: false
+    };
+  }
+
+  if (maintainerTriage.state === "backlog" && !hasHardRisk) {
+    clearIssueSoftRepairLabels(labels);
+    return {
+      status: "low-review-value",
+      suppressSoftRepairs: true
+    };
+  }
+
+  if (maintainerTriage.state === "approved" && score >= 60 && !hasHardRisk && !contextConflict) {
+    clearIssueSoftRepairLabels(labels);
+    return {
+      status: "ready-for-maintainer",
+      suppressSoftRepairs: true
+    };
+  }
+
+  return {
+    status,
+    suppressSoftRepairs: false
+  };
+}
+
+function clearIssueSoftRepairLabels(labels) {
+  for (const label of ISSUE_SOFT_REPAIR_LABELS) labels.delete(label);
+}
+
+function publicMaintainerTriage(maintainerTriage) {
+  if (!maintainerTriage || maintainerTriage.state === "none") {
+    return {
+      state: "none",
+      summary: "No explicit maintainer triage label detected."
+    };
+  }
+  return {
+    state: maintainerTriage.state,
+    label: maintainerTriage.label,
+    summary: maintainerTriage.summary
   };
 }
 
@@ -698,6 +838,9 @@ export function renderMarkdownReport(result) {
   const repositoryContextLine = result.repositoryContext?.hasContext
     ? `**Repository context:** ${result.repositoryContext.summary}`
     : "**Repository context:** none supplied";
+  const maintainerTriageLine = result.maintainerTriage?.state && result.maintainerTriage.state !== "none"
+    ? `**Maintainer triage:** ${result.maintainerTriage.summary}`
+    : "";
   const calibrationLine = result.calibration?.active
     ? `**Feedback calibration:** ${result.calibration.summary}`
     : "";
@@ -726,6 +869,7 @@ export function renderMarkdownReport(result) {
     provenanceLine,
     policyLine,
     repositoryContextLine,
+    maintainerTriageLine,
     calibrationLine,
     seriesLine,
     labelsLine,

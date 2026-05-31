@@ -121,6 +121,34 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", minScore: 90, labels: ["ready-for-maintainer"], absentLabels: ["security-claim-needs-reproducer", "needs-reproducer", "needs-logs"], repoContext: true }
   },
   {
+    id: "bug-template-expected-failure-output",
+    category: "issue",
+    name: "Bug report with expected behavior and concrete failure output",
+    input: bugTemplateExpectedFailureIssue(),
+    expect: { status: "ready-for-maintainer", minScore: 80, labels: ["ready-for-maintainer"], absentLabels: ["needs-expected-actual"], repoContext: true }
+  },
+  {
+    id: "maintainer-approved-issue-label",
+    category: "issue",
+    name: "Maintainer-approved issue label preserves review-now routing",
+    input: maintainerApprovedIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["maintainer-approved", "ready-for-maintainer"], absentLabels: ["duplicate-search-needed"] }
+  },
+  {
+    id: "maintainer-icebox-feature-request",
+    category: "issue",
+    name: "Maintainer icebox label routes accepted backlog out of repair queue",
+    input: maintainerIceboxFeatureRequest(),
+    expect: { status: "low-review-value", labels: ["maintainer-backlog"], absentLabels: ["needs-real-evidence"], repoContext: true }
+  },
+  {
+    id: "llm-domain-feature-request",
+    category: "issue",
+    name: "LLM product feature request is not tool-only evidence",
+    input: llmDomainFeatureRequest(),
+    expect: { status: "ready-for-maintainer", labels: ["maintainer-approved", "ready-for-maintainer"], absentLabels: ["needs-real-evidence"], repoContext: true }
+  },
+  {
     id: "feature-request-thin",
     category: "issue",
     name: "Thin feature request without user problem",
@@ -765,6 +793,133 @@ function featureRequestSecurityMonitoringIssue() {
     repositoryContext: {
       source: "github-api",
       repository: "henrygd/beszel",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function bugTemplateExpectedFailureIssue() {
+  return {
+    kind: "issue",
+    title: "Android app can no longer connect to my self-hosted instance",
+    labels: [{ name: "bug" }, { name: "status/untriaged" }],
+    body: [
+      "### Describe the Bug",
+      "The Android app fails to connect to my self-hosted instance even though the same phone can open the instance URL in a browser.",
+      "```text",
+      "Network connection failed: Failed to connect to https://example.invalid:443",
+      "```",
+      "",
+      "### Steps to Reproduce",
+      "1. Open Android app.",
+      "2. Provide self-hosted URL and API key.",
+      "3. Attempt to connect.",
+      "",
+      "### Expected Behaviour",
+      "The app should connect because the instance is reachable from the same device browser.",
+      "",
+      "### Device Details",
+      "Android 16 on Pixel 10",
+      "",
+      "### Exact Karakeep Version",
+      "Latest version installed from Google Play store",
+      "",
+      "### Environment Details",
+      "Docker on Debian behind Traefik.",
+      "",
+      "### Have you checked the troubleshooting guide?",
+      "- [x] I have checked the troubleshooting guide and I haven't found a solution to my problem"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "karakeep-app/karakeep",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function maintainerApprovedIssue() {
+  return {
+    kind: "issue",
+    title: "Crawler: BROWSER_WEB_URL fails on IPv6-enabled Docker networks",
+    labels: [{ name: "bug" }, { name: "status/approved" }],
+    body: [
+      "**Summary**",
+      "When running on an IPv6-enabled Docker network, BROWSER_WEB_URL=http://chrome:9222 reports Chrome as Disconnected with HTTP 500 even though Chrome is healthy and reachable via IPv4.",
+      "",
+      "**Root Cause**",
+      "The code resolves chrome to an IPv6 address and assigns it to URL.hostname without brackets, so the URL stays http://chrome:9222/.",
+      "```js",
+      "const u = new URL('http://chrome:9222');",
+      "u.hostname = 'fd3a:d485:7e1d:e::3';",
+      "console.log(u.toString());",
+      "```",
+      "",
+      "Steps to Reproduce",
+      "1. Run karakeep with an IPv6-enabled Docker network.",
+      "2. Set BROWSER_WEB_URL=http://chrome:9222.",
+      "3. Observe the crawler reporting Chrome as disconnected.",
+      "",
+      "Environment",
+      "- Docker network with IPv6 enabled",
+      "- Chrome remote debugging bound to IPv4"
+    ].join("\n")
+  };
+}
+
+function maintainerIceboxFeatureRequest() {
+  return {
+    kind: "issue",
+    title: "Automatically hoard websites that get visited",
+    labels: [{ name: "feature request" }, { name: "status/icebox" }],
+    body: [
+      "### Describe the feature you'd like",
+      "I propose an opt-in browser extension setting that automatically snapshots a website once visited.",
+      "",
+      "### Describe the benefits this would bring to existing Karakeep users",
+      "People often try to find a site they visited years ago but forgot the title for. With Karakeep search and AI features, a browser-history-style snapshot can make that possible.",
+      "",
+      "### Can the goal of this request already be achieved via other means?",
+      "There is no browser extension setting that automatically hoards visited websites.",
+      "",
+      "### Have you searched for an existing open/closed issue?",
+      "- [x] I have searched for existing issues and none cover my fundamental request"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "karakeep-app/karakeep",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function llmDomainFeatureRequest() {
+  return {
+    kind: "issue",
+    title: "Feature Request: Allow configuring reasoning behavior for LLM calls",
+    labels: [{ name: "feature request" }, { name: "status/approved" }],
+    body: [
+      "### Describe the feature you'd like",
+      "Karakeep currently does not provide a way to control reasoning behavior when making LLM calls.",
+      "When using reasoning-capable models with structured JSON output, the model can consume all tokens on reasoning and return content: null.",
+      "Example real trace: prompt_tokens: 2244, completion_tokens: 2048, content: null, reasoning_content: present.",
+      "Proposed solution: allow users to configure reasoning behavior with parameters such as reasoning effort none.",
+      "",
+      "### Describe the benefits this would bring to existing Karakeep users",
+      "This improves reliability, performance, and compatibility for local and hosted model integrations.",
+      "",
+      "### Can the goal of this request already be achieved via other means?",
+      "A LiteLLM proxy may be able to work around this for one virtual key.",
+      "",
+      "### Have you searched for an existing open/closed issue?",
+      "- [x] I have searched for existing issues and none cover my fundamental request"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "karakeep-app/karakeep",
       issues: [],
       pullRequests: []
     }

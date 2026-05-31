@@ -5,14 +5,14 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 ## Summary
 
 - Version: 2026.05.30
-- Cases: 41/41 passing
+- Cases: 45/45 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
 - standard-pr: 9/9 passing
 - tool-use: 2/2 passing
-- issue: 10/10 passing
+- issue: 14/14 passing
 - repo-policy: 3/3 passing
 - repo-context: 4/4 passing
 - kernel-grade: 7/7 passing
@@ -39,6 +39,10 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 | PASS | issue | feature-request-ready | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | feature-request-current-workflow | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | feature-request-security-monitoring | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | bug-template-expected-failure-output | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | maintainer-approved-issue-label | ready-for-maintainer | ready-for-maintainer | 94 | `maintainer-approved`, `ready-for-maintainer` |
+| PASS | issue | maintainer-icebox-feature-request | low-review-value | low-review-value | 77 | `maintainer-backlog`, `low-review-value` |
+| PASS | issue | llm-domain-feature-request | ready-for-maintainer | ready-for-maintainer | 100 | `maintainer-approved`, `ready-for-maintainer` |
 | PASS | issue | feature-request-thin | low-review-value | low-review-value | 45 | `needs-clear-summary`, `needs-context`, `needs-use-case`, `duplicate-search-needed` |
 | PASS | issue | unready-issue | low-review-value | low-review-value | 0 | `needs-clear-summary`, `needs-context`, `needs-reproducer`, `needs-expected-actual` |
 | PASS | issue | security-no-reproducer-issue | low-review-value | low-review-value | 8 | `needs-context`, `needs-reproducer`, `needs-expected-actual`, `needs-environment` |

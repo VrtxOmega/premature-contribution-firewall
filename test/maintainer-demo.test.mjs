@@ -24,7 +24,7 @@ test("maintainer demo report covers all proof surfaces", async () => {
 
   assert.equal(report.ok, true);
   assert.equal(report.verdict, "PASS");
-  assert.equal(report.proof.benchmark.passed, 41);
+  assert.equal(report.proof.benchmark.passed, 45);
   assert.equal(report.proof.benchmark.failed, 0);
   assert.equal(report.proof.adversarialRedTest.passed, 8);
   assert.equal(report.proof.adversarialRedTest.failed, 0);
@@ -73,7 +73,7 @@ test("maintainer demo CLI emits JSON and honors fail-on-regression", async () =>
   const report = JSON.parse(stdout);
 
   assert.equal(report.ok, true);
-  assert.equal(report.proof.benchmark.total, 41);
+  assert.equal(report.proof.benchmark.total, 45);
   assert.equal(report.proof.adversarialRedTest.total, 8);
   assert.equal(report.proof.feedbackCalibration.matches, 2);
   assert.equal(report.proof.feedbackCandidate.replayFailed, 0);

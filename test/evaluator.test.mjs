@@ -236,6 +236,177 @@ test("security monitoring feature request is not treated as a vulnerability repo
   assert.ok(result.checks.some((check) => check.id === "feature-solution" && check.status === "pass"));
 });
 
+test("bug template with expected behavior and concrete failure output satisfies behavior evidence", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Android app can no longer connect to my self-hosted instance",
+    labels: [{ name: "bug" }, { name: "status/untriaged" }],
+    body: [
+      "### Describe the Bug",
+      "For the last couple of weeks my Android app has not been able to hoard links. Prior to that it worked just fine.",
+      "The app fails to connect even though the same phone can open the instance URL in a browser.",
+      "```",
+      "Network connection failed: Failed to connect to https://example.invalid:443",
+      "```",
+      "### Steps to Reproduce",
+      "Open Android app, provide self-hosted URL, copy in API key, then attempt to connect.",
+      "### Expected Behaviour",
+      "I should be able to connect to my instance from the app because my phone can connect to it via its browser.",
+      "### Device Details",
+      "Android 16 on Pixel 10",
+      "### Exact Karakeep Version",
+      "Latest version installed from Google Play store",
+      "### Environment Details",
+      "Docker on Debian behind Traefik.",
+      "### Have you checked the troubleshooting guide?",
+      "- [x] I have checked the troubleshooting guide and I haven't found a solution to my problem"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "karakeep-app/karakeep",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-expected-actual"), false);
+  assert.ok(result.checks.some((check) => check.id === "expected-actual" && check.status === "pass"));
+});
+
+test("approved maintainer label can route accepted issue without soft repair prompts", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Crawler: BROWSER_WEB_URL fails on IPv6-enabled Docker networks",
+    labels: [{ name: "bug" }, { name: "status/approved" }],
+    body: [
+      "**Summary**",
+      "When running on an IPv6-enabled Docker network, BROWSER_WEB_URL=http://chrome:9222 reports Chrome as Disconnected with HTTP 500 even though Chrome is healthy and reachable via IPv4.",
+      "**Root Cause**",
+      "The code resolves chrome to an IPv6 address and assigns it to URL.hostname without brackets, so the URL stays http://chrome:9222/.",
+      "```js",
+      "const u = new URL('http://chrome:9222');",
+      "u.hostname = 'fd3a:d485:7e1d:e::3';",
+      "console.log(u.toString());",
+      "```",
+      "Steps to Reproduce",
+      "1. Run karakeep with an IPv6-enabled Docker network.",
+      "2. Set BROWSER_WEB_URL=http://chrome:9222.",
+      "3. Observe the crawler reporting Chrome as disconnected.",
+      "Environment",
+      "- Docker network with IPv6 enabled",
+      "- Chrome remote debugging bound to IPv4"
+    ].join("\n")
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.ok(result.labels.includes("maintainer-approved"));
+  assert.equal(result.labels.includes("duplicate-search-needed"), false);
+  assert.equal(result.labels.includes("needs-repair"), false);
+  assert.equal(result.repairSteps.some((step) => /duplicate/i.test(step)), false);
+});
+
+test("LLM product feature request is not treated as an AI-generated report", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Feature Request: Allow configuring reasoning behavior for LLM calls",
+    labels: [{ name: "feature request" }, { name: "status/approved" }],
+    body: [
+      "### Describe the feature you'd like",
+      "Karakeep currently does not provide a way to control reasoning behavior when making LLM calls.",
+      "When using reasoning-capable models with structured JSON output, the model can consume all tokens on reasoning and return content: null.",
+      "Example real trace: prompt_tokens: 2244, completion_tokens: 2048, content: null, reasoning_content: present.",
+      "Proposed solution: allow users to configure reasoning behavior with parameters such as reasoning effort none.",
+      "### Describe the benefits this would bring to existing Karakeep users",
+      "This improves reliability, performance, and compatibility for local and hosted model integrations.",
+      "### Can the goal of this request already be achieved via other means?",
+      "A LiteLLM proxy may be able to work around this for one virtual key.",
+      "### Have you searched for an existing open/closed issue?",
+      "- [x] I have searched for existing issues and none cover my fundamental request"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "karakeep-app/karakeep",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-real-evidence"), false);
+  assert.ok(result.labels.includes("maintainer-approved"));
+});
+
+test("icebox maintainer label routes accepted backlog item out of the active repair queue", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Automatically hoard websites that get visited",
+    labels: [{ name: "feature request" }, { name: "status/icebox" }],
+    body: [
+      "### Describe the feature you'd like",
+      "I propose an opt-in browser extension setting that automatically snapshots a website once visited.",
+      "### Describe the benefits this would bring to existing Karakeep users",
+      "People often try to find a site they visited years ago but forgot the title for. With Karakeep search and AI features, a browser-history-style snapshot can make that possible.",
+      "### Can the goal of this request already be achieved via other means?",
+      "There is no browser extension setting that automatically hoards visited websites.",
+      "### Have you searched for an existing open/closed issue?",
+      "- [x] I have searched for existing issues and none cover my fundamental request"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "karakeep-app/karakeep",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "low-review-value");
+  assert.ok(result.labels.includes("maintainer-backlog"));
+  assert.equal(result.labels.includes("needs-real-evidence"), false);
+  assert.equal(result.labels.includes("needs-feature-solution"), false);
+  assert.equal(result.repairSteps.some((step) => /feature|tool-only|reproducible/i.test(step)), false);
+});
+
+test("pending clarification label prevents an issue from re-entering review-now", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Inference: Error: 400 url field must be a base64 encoded image",
+    labels: [{ name: "bug" }, { name: "status/pending_clarification" }],
+    body: [
+      "### Describe the Bug",
+      "When adding some images, inference returns a 400 error.",
+      "```",
+      "Error: 400 url field must be a base64 encoded image",
+      "```",
+      "### Steps to Reproduce",
+      "Add https://example.invalid/image.webp and wait for inference.",
+      "### Expected Behaviour",
+      "The image should be processed for tagging.",
+      "### Actual Behaviour",
+      "Inference fails with a 400 error.",
+      "### Exact Karakeep Version",
+      "0.25.0",
+      "### Environment Details",
+      "LM Studio with a local model.",
+      "### Debug Logs",
+      "```text",
+      "content: null",
+      "finish_reason: length",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "karakeep-app/karakeep",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "needs-repair");
+  assert.ok(result.labels.includes("maintainer-pending-clarification"));
+  assert.equal(result.labels.includes("ready-for-maintainer"), false);
+});
+
 test("markdown report includes status, labels, repairs, and marker", async () => {
   const result = evaluateContribution(await fixture("pr-ready"));
   const markdown = renderMarkdownReport(result);
