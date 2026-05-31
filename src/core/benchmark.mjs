@@ -212,6 +212,34 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-logs", "needs-technical-analysis", "needs-feature-solution"], repoContext: true }
   },
   {
+    id: "project-specific-yaml-log-bug-template",
+    category: "issue",
+    name: "Project-specific YAML and logs bug reports count as reproducer evidence",
+    input: projectSpecificYamlLogBugIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-reproducer", "needs-expected-actual", "needs-technical-analysis"], repoContext: true }
+  },
+  {
+    id: "numeric-version-root-cause-crash",
+    category: "issue",
+    name: "Numeric product versions and root-cause crash analysis count as issue evidence",
+    input: numericVersionRootCauseCrashIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-environment", "needs-expected-actual"], repoContext: true }
+  },
+  {
+    id: "placeholder-secret-references-not-leaks",
+    category: "issue",
+    name: "Project config placeholders are not treated as leaked credentials",
+    input: placeholderSecretReferenceIssue(),
+    expect: { status: "needs-repair", labels: ["needs-technical-analysis"], absentLabels: ["secrets-risk", "low-review-value"], repoContext: true }
+  },
+  {
+    id: "stale-label-prevents-review-now",
+    category: "issue",
+    name: "Stale maintainer label keeps complete issues out of review-now",
+    input: staleMaintainerLabelIssue(),
+    expect: { status: "needs-repair", labels: ["maintainer-pending-clarification"], absentLabels: ["ready-for-maintainer"], repoContext: true }
+  },
+  {
     id: "maintainer-approved-issue-label",
     category: "issue",
     name: "Maintainer-approved issue label preserves review-now routing",
@@ -1435,6 +1463,198 @@ function projectSpecificFeatureTitleIssue() {
     repositoryContext: {
       source: "github-api",
       repository: "termux/termux-app",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function projectSpecificYamlLogBugIssue() {
+  return {
+    kind: "issue",
+    title: "RP2040 target fails to build under Windows under 5.0+",
+    labels: [],
+    body: [
+      "### The problem",
+      "",
+      "Recent changes migrated from os.core.path to pathlib. On Windows this generates a mixed Windows/POSIX template path, so Jinja cannot load `lwipopts.h.jinja` while building an RP2040 target.",
+      "",
+      "### Which version of ESPHome has the issue?",
+      "",
+      "2026.5.1",
+      "",
+      "### What type of installation are you using?",
+      "",
+      "Home Assistant Add-on",
+      "",
+      "### What platform are you using?",
+      "",
+      "RP2040",
+      "",
+      "### Component causing the issue",
+      "",
+      "rp2040 lwipopts",
+      "",
+      "### YAML Config",
+      "",
+      "```yaml",
+      "rp2040:",
+      "  board: rpipicow",
+      "```",
+      "",
+      "### Anything in the logs that might be useful for us?",
+      "",
+      "```txt",
+      "jinja2.exceptions.TemplateNotFound: 'lwipopts.h.jinja' not found in search path",
+      "```",
+      "",
+      "### Additional information",
+      "",
+      "Pathlib passes the Windows template directory with backslashes, then Jinja appends the filename with a forward slash. I was able to fix the issue by using PurePosixPath for the template directory."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "esphome/esphome",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function numericVersionRootCauseCrashIssue() {
+  return {
+    kind: "issue",
+    title: "Null deref in VoiceAssistantConfigurationResponse",
+    labels: [],
+    body: [
+      "### The problem",
+      "",
+      "A voice_assistant device reboots whenever Home Assistant sends a VoiceAssistantConfigurationRequest, so the device enters a crash-reboot loop and never becomes usable.",
+      "",
+      "### Root cause",
+      "",
+      "`VoiceAssistantConfigurationResponse::active_wake_words` defaults to nullptr and both encode() and calculate_size() dereference it without a null check.",
+      "",
+      "### Decoded backtrace",
+      "",
+      "```txt",
+      "VoiceAssistantConfigurationResponse::calculate_size()",
+      "APIConnection::send_voice_assistant_get_configuration_response_(...)",
+      "APIConnection::loop()",
+      "```",
+      "",
+      "### Affected versions",
+      "",
+      "Confirmed present in 2026.5.0, 2026.5.1, and current dev."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "esphome/esphome",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function placeholderSecretReferenceIssue() {
+  return {
+    kind: "issue",
+    title: "Platform st7789v to mipi_spi conversion issue",
+    labels: [],
+    body: [
+      "### The problem",
+      "",
+      "After migrating from st7789v to mipi_spi, the display background is white instead of black and icons are missing.",
+      "",
+      "### Which version of ESPHome has the issue?",
+      "",
+      "2026.5.1",
+      "",
+      "### What type of installation are you using?",
+      "",
+      "Docker",
+      "",
+      "### What platform are you using?",
+      "",
+      "ESP32",
+      "",
+      "### Component causing the issue",
+      "",
+      "mipi_spi",
+      "",
+      "### YAML Config",
+      "",
+      "```yaml",
+      "api:",
+      "  encryption:",
+      "    key: $esphome_api_key",
+      "ota:",
+      "  - platform: esphome",
+      "    password: $esphome_ota_password",
+      "wifi:",
+      "  password: !secret wifi_password",
+      "```",
+      "",
+      "### Anything in the logs that might be useful for us?",
+      "",
+      "```txt",
+      "[C][display.mipi_spi:010]: MIPI_SPI Display",
+      "[C][display.mipi_spi:519]: Rotation: 270",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "esphome/esphome",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function staleMaintainerLabelIssue() {
+  return {
+    kind: "issue",
+    title: "i2s_audio local playback fails unless speaker.play is called twice",
+    labels: [{ name: "stale" }],
+    body: [
+      "### The problem",
+      "",
+      "Local audio embedded into firmware fails to play on the first button press, but quickly pressing twice works.",
+      "",
+      "### Which version of ESPHome has the issue?",
+      "",
+      "2025.11.2",
+      "",
+      "### What type of installation are you using?",
+      "",
+      "Home Assistant Add-on",
+      "",
+      "### What platform are you using?",
+      "",
+      "ESP32",
+      "",
+      "### Component causing the issue",
+      "",
+      "i2s_audio",
+      "",
+      "### YAML Config",
+      "",
+      "```yaml",
+      "speaker:",
+      "  - platform: i2s_audio",
+      "    id: my_speaker",
+      "```",
+      "",
+      "### Anything in the logs that might be useful for us?",
+      "",
+      "```txt",
+      "[D][i2s_audio.speaker:102]: Starting",
+      "[D][i2s_audio.speaker:116]: Stopped",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "esphome/esphome",
       issues: [],
       pullRequests: []
     }

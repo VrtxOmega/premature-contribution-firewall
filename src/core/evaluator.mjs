@@ -26,9 +26,9 @@ const SIGNALS = {
   repro: /\b(steps to reproduce|repro(?:duce|duction)?|expected|actual|before|after)\b/i,
   expectedActual: /\bexpected\b[\s\S]*\bactual\b|\bactual\b[\s\S]*\bexpected\b/i,
   duplicateSearch: /\b(duplicate|searched existing|searched issues|already fixed|current main|latest main|not a duplicate)\b/i,
-  version: /\b(version|commit|sha|main|release|v\d+\.\d+|node\s+\d+|python\s+\d+|os:|environment)\b/i,
+  version: /\b(version|commit|sha|main|release|v?\d{4}\.\d+(?:\.\d+)?|v\d+\.\d+|node\s+\d+|python\s+\d+|os:|environment)\b/i,
   logs: /```|stack trace|traceback|journal|log output|error output|exception|panic/i,
-  rootCause: /\b(root cause|cause|because|bisect|regression|culprit|patch|proposed fix|analysis)\b/i,
+  rootCause: /\b(root cause|cause[ds]?|because|bisect|regression|culprit|patch|proposed fix|able to fix|workaround|analysis)\b/i,
   aiDisclosure: /\b(ai|llm|chatgpt|copilot|claude|gemini|generated)\b/i,
   aiReportClaim: /\b(?:asked\s+(?:an?\s+)?ai|ai\s+(?:said|says|found|reported|detected|suggested)|(?:chatgpt|copilot|claude|gemini|ai tool|llm)\s+(?:said|says|found|reported|detected|suggested|generated|wrote|claims?))\b/i,
   humanAccountability: /\b(tested|verified|reviewed|reproduced|i understand|manual|locally)\b/i,
@@ -50,7 +50,7 @@ const SECRET_PATTERNS = [
   /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/,
   /\bAIza[0-9A-Za-z_-]{30,}\b/,
   /\bsk-[A-Za-z0-9]{20,}\b/,
-  /\b(?:api[_-]?key|token|secret|password|access[_-]?key)\s*[:=]\s*['"]?[^'"\s]{12,}['"]?/i
+  /\b(?:api[_-]?key|token|secret|password|access[_-]?key)\s*[:=]\s*['"]?(?![$!{<])[^'"\s]{12,}['"]?/i
 ];
 
 const STATUS_COPY = {
@@ -451,10 +451,10 @@ export function evaluateIssue(input, options = {}) {
   const hasReproductionSignal = SIGNALS.repro.test(body) && !issueEvidence.hasUncertainReproduction;
   const hasReproducer = featureRequest
     ? issueEvidence.hasFeatureUseCase
-    : hasReproductionSignal || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete;
+    : hasReproductionSignal || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete || issueEvidence.configLogBugReportComplete || issueEvidence.rootCauseCrashEvidence;
   const hasExpectedActual = featureRequest
     ? issueEvidence.hasFeatureSolution
-    : issueEvidence.hasBugBehaviorEvidence || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete;
+    : issueEvidence.hasBugBehaviorEvidence || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete || issueEvidence.configLogBugReportComplete;
   const hasEnvironment = featureRequest || SIGNALS.version.test(body) || issueEvidence.hasDeviceIdentity || issueEvidence.hasStructuredEnvironment;
   const hasLogEvidence = featureRequest || SIGNALS.logs.test(body) || issueEvidence.hasDeviceTelemetry || issueEvidence.structuredBugReportComplete;
   const hasDuplicateSearch = SIGNALS.duplicateSearch.test(body) || repositoryContextCleared;
@@ -497,6 +497,10 @@ export function evaluateIssue(input, options = {}) {
         ? "Device-support report includes product identity, local telemetry, and DPS mapping evidence."
         : issueEvidence.structuredBugReportComplete
           ? "Structured bug report includes concrete steps, expected behavior, and environment."
+          : issueEvidence.configLogBugReportComplete
+            ? "Structured config/log bug report includes environment, component, YAML, and diagnostic output."
+            : issueEvidence.rootCauseCrashEvidence
+              ? "Crash report includes root-cause analysis and diagnostic stack evidence."
         : "No clear steps to reproduce, expected behavior, or actual behavior found."
   });
 
@@ -518,6 +522,8 @@ export function evaluateIssue(input, options = {}) {
         ? "Device-support request uses product/DPS evidence instead of a classic expected/actual bug format."
       : issueEvidence.structuredBugReportComplete
         ? "Structured bug template includes observed issue and expected behavior."
+        : issueEvidence.configLogBugReportComplete
+          ? "Project bug template includes problem, component, config, logs, and environment evidence."
         : "Expected and actual behavior should be explicit."
   });
 
@@ -744,14 +750,25 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     /\b(alternatives?|constraints?|acceptance criteria|current approach|workaround|manual|instead|at least|configurable|rate limits?|preserv(?:e|ing|es)|detect conflicts?)\b/i.test(body)
     || /describe alternatives you've considered/i.test(body)
   );
+  const configSection = markdownSection(body, /yaml config|configuration|config/i);
+  const logsSection = markdownSection(body, /anything in the logs that might be useful for us|logs?|log output|error output/i);
+  const componentSection = markdownSection(body, /component causing the issue|component|platform causing the issue/i);
+  const hasStructuredConfig = hasMeaningfulSection(configSection);
+  const hasStructuredLogs = hasMeaningfulSection(logsSection);
+  const hasStructuredComponent = hasMeaningfulSection(componentSection, { minLength: 2 });
   const hasExplicitExpectedActual = SIGNALS.expectedActual.test(body);
   const hasExpectedSignal = /\b(expected|should|should be able|intended|healthy|reachable|worked(?:\s+just\s+fine)?|prior to|previously)\b/i.test(body);
-  const hasObservedFailureSignal = /\b(actual|observed|result|results in|failure mode|fails?|failed|error|unable|cannot|can't|does not|doesn't|disconnected|rejects|returns|reports|broken)\b/i.test(body);
+  const hasObservedFailureSignal = /\b(actual|observed|result|results in|failure mode|fails?|failed|error|unable|cannot|can't|does not|doesn't|disconnected|rejects|returns|reports|broken|crash(?:es|ed|-loops?)?|reboots?)\b/i.test(body);
   const hasBugBehaviorEvidence = !featureRequestIntent && (
     hasExplicitExpectedActual
     || (hasExpectedSignal && hasObservedFailureSignal && (SIGNALS.repro.test(body) || SIGNALS.logs.test(body) || SIGNALS.rootCause.test(body)))
+    || (SIGNALS.rootCause.test(body) && hasObservedFailureSignal && SIGNALS.logs.test(body))
   );
-  const issueDescription = markdownSection(body, /problem description|describe (?:your|the) issue|describe the bug|what is not working as documented|what happened/i);
+  const rootCauseCrashEvidence = !featureRequestIntent
+    && SIGNALS.rootCause.test(body)
+    && SIGNALS.logs.test(body)
+    && /\b(?:crash(?:es|ed|-loops?)?|reboots?|panic|null(?:ptr| pointer)?|deref(?:erence)?|backtrace|stack trace)\b/i.test(body);
+  const issueDescription = markdownSection(body, /the problem|problem description|describe (?:your|the) issue|describe the bug|what is not working as documented|what happened/i);
   const explicitStepsToReproduce = markdownSection(body, /steps to reproduce(?: (?:the )?(?:issue|behavior)\.?)?|reproduction|how can we reproduce it/i);
   const stepsToReproduce = explicitStepsToReproduce || (hasEmbeddedReproductionSteps(issueDescription) ? issueDescription : "");
   const expectedBehavior = markdownSection(body, /expected behaviou?r|what behaviou?r do you expect|what did you expect to happen|what is the expected behaviou?r/i);
@@ -776,6 +793,9 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     markdownSection(body, /how are you running audiobookshelf/i),
     markdownSection(body, /what os is your audiobookshelf server hosted from/i),
     markdownSection(body, /what browsers are you seeing/i),
+    markdownSection(body, /which version of esphome has the issue/i),
+    markdownSection(body, /what type of installation are you using/i),
+    markdownSection(body, /what platform are you using/i),
     markdownSection(body, /system information/i)
   ];
   const structuredCrashEnvironmentKeys = body.match(/\b(?:APP_NAME|PACKAGE_NAME|VERSION_NAME|VERSION_CODE|SDK_INT|OS_VERSION|RELEASE|MODEL|MANUFACTURER|BRAND|DEVICE)\b/g) || [];
@@ -786,6 +806,12 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     && hasStructuredSteps
     && hasStructuredExpectedBehavior
     && hasStructuredEnvironment;
+  const configLogBugReportComplete = !featureRequestIntent
+    && hasStructuredIssueDescription
+    && hasStructuredEnvironment
+    && hasStructuredComponent
+    && hasStructuredConfig
+    && hasStructuredLogs;
   return {
     deviceSupportIntent,
     hasDeviceIdentity,
@@ -798,9 +824,11 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     featureRequestComplete: featureRequestIntent && hasFeatureUseCase && hasFeatureSolution,
     hasExplicitExpectedActual,
     hasBugBehaviorEvidence,
+    rootCauseCrashEvidence,
     hasUncertainReproduction,
     hasStructuredEnvironment,
-    structuredBugReportComplete
+    structuredBugReportComplete,
+    configLogBugReportComplete
   };
 }
 
@@ -848,7 +876,7 @@ function analyzeMaintainerTriage(labels = [], authorAssociation = "") {
   const normalized = normalizeLabels(labels).map((label) => label.trim()).filter(Boolean);
   const labelText = normalized.join(" ");
   const backlog = /\b(?:status[/: -]?)?(?:icebox|backlog|deferred|later|someday|parking lot)\b/i.test(labelText);
-  const pendingClarification = /\b(?:status[/: -]?)?(?:pending[ _-]?clarification|needs?[ _-]?info|waiting[ _-]?for[ _-]?(?:reporter|response|author)|more[ _-]?info)\b/i.test(labelText);
+  const pendingClarification = /\b(?:status[/: -]?)?(?:pending[ _-]?clarification|needs?[ _-]?info|waiting[ _-]?for[ _-]?(?:reporter|response|author)|more[ _-]?info|stale)\b/i.test(labelText);
   const approved = /\b(?:status[/: -]?)?(?:approved|accepted|confirmed|reproduced|ready[ _-]?(?:for[ _-]?)?(?:implementation|review)?)\b/i.test(labelText);
   const authored = isMaintainerAuthorAssociation(authorAssociation);
 

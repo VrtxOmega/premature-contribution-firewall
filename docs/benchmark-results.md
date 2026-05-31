@@ -5,14 +5,14 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 ## Summary
 
 - Version: 2026.05.30
-- Cases: 58/58 passing
+- Cases: 62/62 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
 - standard-pr: 9/9 passing
 - tool-use: 2/2 passing
-- issue: 26/26 passing
+- issue: 30/30 passing
 - repo-context: 5/5 passing
 - repo-policy: 3/3 passing
 - kernel-grade: 7/7 passing
@@ -52,6 +52,10 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 | PASS | issue | package-install-wrong-repository | low-review-value | low-review-value | 65 | `wrong-repository`, `low-review-value` |
 | PASS | issue | project-specific-crash-report-headings | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | project-specific-feature-title-sections | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | project-specific-yaml-log-bug-template | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | numeric-version-root-cause-crash | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | placeholder-secret-references-not-leaks | needs-repair | needs-repair | 95 | `needs-technical-analysis`, `needs-repair` |
+| PASS | issue | stale-label-prevents-review-now | needs-repair | needs-repair | 95 | `needs-technical-analysis`, `maintainer-pending-clarification`, `needs-repair` |
 | PASS | issue | maintainer-approved-issue-label | ready-for-maintainer | ready-for-maintainer | 94 | `maintainer-approved`, `ready-for-maintainer` |
 | PASS | issue | maintainer-authored-internal-issue | ready-for-maintainer | ready-for-maintainer | 48 | `maintainer-authored`, `ready-for-maintainer` |
 | PASS | issue | maintainer-icebox-feature-request | low-review-value | low-review-value | 77 | `maintainer-backlog`, `low-review-value` |

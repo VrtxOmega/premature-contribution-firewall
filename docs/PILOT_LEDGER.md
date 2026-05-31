@@ -27,6 +27,7 @@ It is not a list of endorsements. A target repository appearing here means PCF r
 | `photoprism/photoprism` | Private only | None | 6 review / 3 repair / 3 defer | 9 review / 1 repair / 2 defer | Project-specific bug headings, contextual follow-up references, and GitHub search pacing matter for media-heavy queues. |
 | `advplyr/audiobookshelf` | Private only | None | 3 review / 7 repair / 2 defer | 6 review / 6 repair / 0 defer | Enhancement templates and "What happened?" bug templates need project-specific section recognition while duplicate context stays active. |
 | `termux/termux-app` | Private only | None | 2 review / 7 repair / 3 defer | 4 review / 3 repair / 5 defer | App-only repositories need wrong-repository routing for package/dependency reports, while nested crash environment and feature sections still count as reviewable evidence. |
+| `esphome/esphome` | Private only | None | 1 review / 4 repair / 7 defer | 4 review / 6 repair / 2 defer | YAML/log firmware reports need template-aware evidence, placeholder secrets should not block review, and stale labels keep old complete reports out of review-now. |
 
 ## tuya-local
 
@@ -861,13 +862,99 @@ Private artifact hashes:
 0072402874f53b287276b36769658d356746e2d1d103ee80c6aceb6601f118eb
 ```
 
+## ESPHome
+
+Target: `esphome/esphome`
+
+Queue shape:
+
+- component-level firmware bug reports
+- YAML configuration and diagnostic log evidence
+- build failures with Python/C++ stack traces
+- display, audio, MQTT, Tuya, voice assistant, and ESP8266/ESP32 platform issues
+- very PR-heavy repository context with active concurrent work
+- stale issues that can look complete but need current-version confirmation before review
+
+Templates inspected:
+
+- `bug_report.yml`
+- `config.yml`
+
+Initial private pilot:
+
+- 12 sampled issues
+- 1 review-now
+- 4 repair
+- 7 defer
+- repository context checked all 12
+- context findings: 2
+- items with context findings: 2
+- context unavailable: 0
+
+What PCF got wrong:
+
+- `#16732` completed ESPHome's bug-report shape with problem, version, installation type, platform, component, YAML config, logs, and a proposed fix, but PCF still required classic reproduction/expected sections.
+- `#16601` had a regression-style root cause and UART evidence, but PCF treated the missing explicit expected/actual section as a repair blocker.
+- `#16728` had root-cause crash analysis and numeric ESPHome versions, but PCF did not count numeric project versions or crash/backtrace analysis as enough evidence.
+- `#16714` used placeholder config references such as `$esphome_api_key` and `$esphome_ota_password`, but PCF treated them like leaked credentials.
+- `#12191` became review-now after YAML/log evidence was recognized, but its `stale` label means it should remain out of the active review-now queue until the reporter confirms current behavior.
+
+Fixes made:
+
+- Added ESPHome-style `The problem`, version, installation, platform, component, YAML config, and log headings to structured issue evidence.
+- Added config/log bug evidence so project templates without classic steps or expected/actual fields can still route complete reports to review-now.
+- Added numeric project-version recognition for versions such as `2026.5.1`.
+- Expanded technical-analysis detection for causal wording such as `caused`, `causes`, `able to fix`, and `workaround`.
+- Added root-cause crash evidence for reports with stack/backtrace/null-deref crash analysis.
+- Excluded placeholder secret references starting with `$`, `!`, `{`, or `<` from generic secret leakage detection while preserving real quoted key/password detection.
+- Treated `stale` labels as maintainer-pending clarification so old complete reports do not re-enter review-now.
+
+Final private pilot:
+
+- 12 sampled issues
+- 4 review-now
+- 6 repair
+- 2 defer
+- repository context checked all 12
+- context findings: 2
+- items with context findings: 2
+- context unavailable: 0
+
+Notable final routing:
+
+- `#16732`, `#16601`, and `#16728` moved to review-now after PCF learned ESPHome's firmware-report shape and root-cause crash evidence.
+- `#16714` moved from do-not-review-yet to repair after placeholder secret references stopped triggering `secrets-risk`; it stayed out of review-now because concurrent PR context still matters.
+- `#12191` stayed in repair because the `stale` maintainer label means current-version confirmation is pending.
+- `#16696` stayed do-not-review-yet because it includes an actual quoted API/OTA credential and concurrent-work context.
+
+Verification:
+
+- Focused evaluator and benchmark tests passed.
+- Benchmark corpus increased to 62 cases:
+  - `project-specific-yaml-log-bug-template`
+  - `numeric-version-root-cause-crash`
+  - `placeholder-secret-references-not-leaks`
+  - `stale-label-prevents-review-now`
+- Current benchmark result: 62/62 passing.
+- GitHub writes to `esphome/esphome`: none.
+- Public outreach: none.
+
+Private artifact hashes:
+
+```text
+a4f70a7dbb468f905524b94fdb960672fcfca1d3749bc4d7f7d2880f4a195171
+2af1f57a6c57bdcd6c47e39c85826ec866afa5376a619549ad47f52d1ae92771
+cff27f37bbdf88f39607e2ba173f25c2d35350f381a5edf85419828022303399
+20f4782b610790d48fcbba849c9bb0323d5b3394c32440cd6c5fc0984d615a2c
+```
+
 ## Current Gate State
 
 The pilot ledger should be updated whenever a real pilot changes PCF behavior.
 
 Current expected proof state:
 
-- benchmark: 58/58
+- benchmark: 62/62
 - adversarial red test: 8/8
 - maintainer demo: PASS
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner
