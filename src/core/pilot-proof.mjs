@@ -259,6 +259,15 @@ export function renderPublicPilotMarkdown(proof = {}) {
   const contextLabelRows = Object.entries(proof.context?.labels || {}).map(([label, count]) => [label, String(count)]);
   const errorRows = (proof.context?.collectionErrors || []).map((error) => [error.scope || "collection", error.message || "unknown error"]);
   const repairSubActionRows = Object.entries(proof.breakdown?.repairSubActionCounts || {}).map(([label, count]) => [label, String(count)]);
+  const preflight = proof.contributorPreflight?.enabled ? proof.contributorPreflight : null;
+  const preflightRows = (preflight?.candidates || []).map((candidate) => [
+    candidate.status,
+    candidate.number ? `#${candidate.number}` : candidate.id,
+    candidate.title,
+    candidate.blockers.length,
+    candidate.reason,
+    candidate.contributorAction
+  ]);
 
   return [
     "# Premature Contribution Firewall Public Repo Pilot Proof",
@@ -286,6 +295,21 @@ export function renderPublicPilotMarkdown(proof = {}) {
     "| --- | ---: |",
     ...(repairSubActionRows.length ? repairSubActionRows : [["none", "0"]]).map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`),
     "",
+    ...(preflight ? [
+      "## Contributor Preflight",
+      "",
+      "This optional gate checks `review-now` issue candidates for exact open PR ownership signals before contributor coding work starts.",
+      "",
+      `Checked candidates: ${preflight.summary?.checked || 0}`,
+      `Blocked by open PR overlap: ${preflight.summary?.blocked || 0}`,
+      `Candidate after PR-overlap check: ${preflight.summary?.candidate || 0}`,
+      `Unchecked: ${preflight.summary?.unchecked || 0}`,
+      "",
+      "| Status | Item | Title | Blockers | Reason | Contributor Action |",
+      "| --- | --- | --- | ---: | --- | --- |",
+      ...(preflightRows.length ? preflightRows : [["none", "n/a", "n/a", "0", "No review-now issue candidates in this sample.", "No contributor action."]]).map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`),
+      ""
+    ] : []),
     "| Action | Next Action | Status | Kind | Item | Title | Context Findings | Context Labels | Context Summary | Budget |",
     "| --- | --- | --- | --- | --- | --- | ---: | --- | --- | ---: |",
     ...queueRows.map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`),
@@ -446,6 +470,7 @@ function compactProofForHash(proof = {}) {
     dryRun: proof.dryRun !== false,
     breakdown: proof.breakdown || {},
     context: proof.context || {},
+    contributorPreflight: proof.contributorPreflight || null,
     queue: proof.queue || {},
     nonClaims: proof.nonClaims || []
   };
@@ -460,6 +485,9 @@ export function renderPublicPilotSummary(proof = {}) {
     `Send repair request: ${proof.breakdown?.sendRepairRequest || 0}`,
     `Do not review yet: ${proof.breakdown?.doNotReviewYet || 0}`,
     `Repair sub-actions: ${formatCounts(proof.breakdown?.repairSubActionCounts)}`,
+    ...(proof.contributorPreflight?.enabled ? [
+      `Contributor preflight: checked ${proof.contributorPreflight.summary?.checked || 0}, blocked ${proof.contributorPreflight.summary?.blocked || 0}, candidates ${proof.contributorPreflight.summary?.candidate || 0}, unchecked ${proof.contributorPreflight.summary?.unchecked || 0}`
+    ] : []),
     `Context findings: ${proof.context?.findings || 0}`,
     `Context checked: ${proof.context?.itemsChecked || 0}`,
     `Collection errors: ${proof.context?.collectionErrors?.length || 0}`,
@@ -487,6 +515,7 @@ function compactQueueItem(item = {}) {
     number: item.number || "",
     title: item.title || "",
     htmlUrl: item.htmlUrl || "",
+    repository: item.repository || "",
     status: item.status || "",
     action: item.action || "",
     nextAction: item.nextAction || { id: "unknown", target: "", summary: "", reason: "" },

@@ -288,6 +288,51 @@ test("GitHub client includes direct issue refs from issue comments in repository
   }
 });
 
+test("GitHub client searches open pull requests that reference an issue with search pacing", async () => {
+  const originalFetch = globalThis.fetch;
+  const searchTimes = [];
+  const queries = [];
+  globalThis.fetch = async (url) => {
+    const parsed = new URL(url);
+    if (parsed.pathname === "/search/issues") {
+      searchTimes.push(Date.now());
+      queries.push(parsed.searchParams.get("q") || "");
+      return jsonResponse({
+        items: [
+          {
+            number: 7016,
+            title: "fix: correct off-by-one error (#7005)",
+            body: "Closes #7005.",
+            state: "open",
+            html_url: "https://github.example/owner/repo/pull/7016",
+            updated_at: "2026-05-31T00:00:00Z"
+          }
+        ]
+      });
+    }
+    throw new Error(`unexpected fetch ${parsed.pathname}`);
+  };
+
+  try {
+    const client = createGitHubClient({
+      githubApiBase: "https://api.github.test",
+      githubCacheTtlMs: 0,
+      githubSearchDelayMs: 10
+    });
+    const first = await client.searchOpenPullRequestsForIssue({ owner: "owner", repo: "repo", issueNumber: 7005 });
+    const second = await client.searchOpenPullRequestsForIssue({ owner: "owner", repo: "repo", issueNumber: 7006 });
+
+    assert.equal(first[0].number, 7016);
+    assert.equal(second[0].state, "open");
+    assert.match(queries[0], /repo:owner\/repo is:pr is:open #7005/);
+    assert.match(queries[1], /repo:owner\/repo is:pr is:open #7006/);
+    assert.equal(searchTimes.length, 2);
+    assert.ok(searchTimes[1] - searchTimes[0] >= 5);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 function jsonResponse(data) {
   return {
     ok: true,

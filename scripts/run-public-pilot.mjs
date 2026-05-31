@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative } from "node:path";
 import { buildPublicPilotProof, renderPublicPilotMarkdown, renderPublicPilotSummary } from "../src/core/pilot-proof.mjs";
 import { buildMaintainerExportBundle, renderMaintainerExportMarkdown } from "../src/core/pilot-proof.mjs";
+import { buildContributorPreflight } from "../src/core/contributor-preflight.mjs";
 import { buildSetupGuide } from "../src/core/setup-guide.mjs";
 import { buildMaintainerQueue } from "../src/core/queue.mjs";
 import { loadConfig } from "../src/config.mjs";
@@ -18,6 +19,8 @@ export async function buildPublicPilotReport({
   includePullRequests = true,
   includeIssues = true,
   upstreamRepository = "",
+  contributorPreflight = false,
+  preflightChecks = null,
   generatedAt = new Date().toISOString(),
   config = loadConfig(new URL("..", import.meta.url).pathname)
 } = {}) {
@@ -42,7 +45,7 @@ export async function buildPublicPilotReport({
         upstreamRepository: queuePayload.upstreamRepository || upstreamRepository
       }));
     }
-    return buildPublicPilotProof({
+    let proof = buildPublicPilotProof({
       repository: targetRepository,
       queue,
       collectionErrors: queuePayload.collectionErrors || [],
@@ -51,6 +54,13 @@ export async function buildPublicPilotReport({
       generatedAt,
       limit
     });
+    if (contributorPreflight) {
+      proof = attachContributorPreflight(proof, {
+        checks: preflightChecks || [],
+        generatedAt
+      });
+    }
+    return proof;
   }
 
   const targetRepository = normalizeRepository(repository);
@@ -87,7 +97,7 @@ export async function buildPublicPilotReport({
     }));
   }
 
-  return buildPublicPilotProof({
+  let proof = buildPublicPilotProof({
     repository: targetRepository,
     queue,
     collectionErrors: collected.collectionErrors,
@@ -97,6 +107,13 @@ export async function buildPublicPilotReport({
     limit,
     target
   });
+  if (contributorPreflight) {
+    proof = attachContributorPreflight(proof, {
+      checks: preflightChecks || await collectLiveContributorPreflightChecks({ proof, githubClient, owner, repo }),
+      generatedAt
+    });
+  }
+  return proof;
 }
 
 export async function runPublicPilotCli(args = process.argv.slice(2)) {
@@ -112,6 +129,7 @@ export async function runPublicPilotCli(args = process.argv.slice(2)) {
   const includePullRequests = !args.includes("--no-pulls");
   const includeIssues = !args.includes("--no-issues");
   const failOnEmpty = args.includes("--fail-on-empty");
+  const contributorPreflight = args.includes("--contributor-preflight") || args.includes("--scout");
 
   if (!["summary", "json", "markdown"].includes(format)) {
     throw new Error(`Unsupported format '${format}'. Use summary, json, or markdown.`);
@@ -124,7 +142,8 @@ export async function runPublicPilotCli(args = process.argv.slice(2)) {
     limit,
     includePullRequests,
     includeIssues,
-    upstreamRepository
+    upstreamRepository,
+    contributorPreflight
   });
 
   if (bundlePath) {
@@ -144,7 +163,8 @@ export async function runPublicPilotCli(args = process.argv.slice(2)) {
         limit,
         upstreamRepository,
         includePullRequests,
-        includeIssues
+        includeIssues,
+        contributorPreflight
       })
     });
     await mkdir(dirname(bundlePath), { recursive: true });
@@ -245,7 +265,8 @@ function buildBundleCommandSet({
   limit = 10,
   upstreamRepository = "",
   includePullRequests = true,
-  includeIssues = true
+  includeIssues = true,
+  contributorPreflight = false
 } = {}) {
   const targetRepository = normalizeRepository(repository) || "owner/repo";
   const base = fixturePath
@@ -254,6 +275,7 @@ function buildBundleCommandSet({
   if (!fixturePath && upstreamRepository) base.push("--upstream", upstreamRepository);
   if (!includePullRequests) base.push("--no-pulls");
   if (!includeIssues) base.push("--no-issues");
+  if (contributorPreflight) base.push("--contributor-preflight");
 
   const captureTarget = capturePath || `/tmp/pcf-${targetRepository.replaceAll("/", "-")}-capture.json`;
   const bundleTarget = bundlePath || `/tmp/pcf-${targetRepository.replaceAll("/", "-")}-bundle.md`;
@@ -270,6 +292,40 @@ function buildBundleCommandSet({
     baseline: ["npm", "run", "pilot:public", "--", "--fixture", safeDisplayPath(replayFixture), "--format", "json", "--write", safeDisplayPath(baselineTarget)].map(shellArg).join(" "),
     capturePath: safeDisplayPath(captureTarget)
   };
+}
+
+function attachContributorPreflight(proof, { checks = [], generatedAt = new Date().toISOString() } = {}) {
+  return {
+    ...proof,
+    contributorPreflight: buildContributorPreflight({ proof, checks, generatedAt }),
+    nonClaims: [
+      ...(proof.nonClaims || []),
+      "Contributor preflight does not replace contribution policy checks, current-upstream behavior verification, or maintainer judgment."
+    ]
+  };
+}
+
+async function collectLiveContributorPreflightChecks({ proof = {}, githubClient, owner = "", repo = "" } = {}) {
+  const repository = `${owner}/${repo}`;
+  const candidates = (proof.queue?.items || []).filter((item) => item.kind === "issue" && item.action === "review-now");
+  const checks = [];
+  for (const item of candidates) {
+    try {
+      checks.push({
+        itemId: item.id,
+        number: item.number,
+        pullRequests: await githubClient.searchOpenPullRequestsForIssue({ owner, repo, issueNumber: item.number })
+      });
+    } catch (error) {
+      checks.push({
+        itemId: item.id,
+        number: item.number,
+        collectionError: error.message,
+        pullRequests: []
+      });
+    }
+  }
+  return checks;
 }
 
 function safeDisplayPath(path) {

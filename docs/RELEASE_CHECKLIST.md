@@ -80,6 +80,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - Keep feedback candidate promotion separate from the permanent benchmark until a maintainer reviews the case and expectation.
 - Run `npm run setup:pilot -- --repository owner/repo` and verify the guided GitHub App pilot path is still accurate before sending the repo to a maintainer.
 - Run `npm run pilot:public:markdown -- --repository owner/repo --limit 10 --write public-pilot.md` privately before approaching a maintainer.
+- For upstream contributor scouting, run `npm run pilot:scout -- --repository owner/repo --limit 10 --write scout.md`, then separately gate contribution policy and current-upstream behavior before cloning or coding.
 - For the GitHub Action pilot, use only `contents: read`, `issues: read`, and `pull-requests: read`, then upload `pcf-queue.md` as an artifact.
 - For evaluator changes from a live pilot, first run `npm run pilot:public -- --repository owner/repo --limit 10 --capture /tmp/pcf-owner-repo-capture.json`, then replay the captured payload with `--fixture` for before/after comparison.
 - Do not commit third-party pilot output or replay captures without maintainer consent.

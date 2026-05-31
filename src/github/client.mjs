@@ -229,6 +229,23 @@ export function createGitHubClient(config = {}) {
     };
   }
 
+  async function searchOpenPullRequestsForIssue({ owner, repo, issueNumber, installationId = "" }) {
+    const repository = `${owner}/${repo}`;
+    await waitForSearchSlot();
+    const data = await readRequest(
+      installationId,
+      `/search/issues?q=${encodeURIComponent(`repo:${repository} is:pr is:open #${issueNumber}`)}&per_page=20`
+    );
+    return (data.items || []).map((pullRequest) => ({
+      number: pullRequest.number,
+      title: pullRequest.title || "",
+      body: pullRequest.body || "",
+      state: pullRequest.state || "open",
+      htmlUrl: pullRequest.html_url || "",
+      updatedAt: pullRequest.updated_at || ""
+    }));
+  }
+
   async function ensureLabel({ owner, repo, label, installationId }) {
     const definition = labelDefinitionFor(label);
     const encoded = encodeURIComponent(label);
@@ -258,6 +275,7 @@ export function createGitHubClient(config = {}) {
     applyLabels,
     collectRepositoryContext,
     collectRepositoryQueue,
+    searchOpenPullRequestsForIssue,
     request
   };
 

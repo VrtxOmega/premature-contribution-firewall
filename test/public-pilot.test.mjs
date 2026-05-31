@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -137,6 +137,82 @@ test("public pilot CLI emits JSON from fixture without network", async () => {
   assert.equal(proof.breakdown.total, 3);
   assert.equal(proof.context.findings, 3);
   assert.equal(proof.setup.collectRepositoryContext, true);
+});
+
+test("public pilot contributor preflight is explicit and unchecked for fixture-only runs", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "pcf-public-pilot-preflight-"));
+  const preflightFixture = join(dir, "queue.json");
+  try {
+    await writeFile(preflightFixture, JSON.stringify({
+      repository: "owner/repo",
+      items: [
+        {
+          id: "issue-ready",
+          kind: "issue",
+          number: 101,
+          title: "Webhook returns 401 when signature header hex is uppercase",
+          body: [
+            "## Version",
+            "commit 7ab12cd on main",
+            "",
+            "## Steps to reproduce",
+            "1. Start the server with PCF_WEBHOOK_SECRET set.",
+            "2. Send a payload signed with uppercase SHA-256 hex.",
+            "3. Observe the webhook response.",
+            "",
+            "## Expected",
+            "The signature verifies.",
+            "",
+            "## Actual",
+            "The server returns 401.",
+            "",
+            "## Logs",
+            "```text",
+            "invalid webhook signature",
+            "```",
+            "",
+            "## Duplicate search",
+            "I searched existing issues for uppercase signature and webhook digest.",
+            "",
+            "## Technical analysis",
+            "The likely root cause is strict digest normalization before timing-safe comparison."
+          ].join("\n"),
+          labels: ["bug"],
+          repositoryContext: {
+            source: "github-api",
+            repository: "owner/repo",
+            issues: [],
+            pullRequests: [],
+            upstream: {
+              repository: "",
+              issues: [],
+              pullRequests: [],
+              commits: [],
+              releases: []
+            }
+          }
+        }
+      ]
+    }), "utf8");
+
+    const { stdout } = await execFileAsync(process.execPath, [
+      scriptPath,
+      "--fixture",
+      preflightFixture,
+      "--format",
+      "json",
+      "--contributor-preflight"
+    ], { cwd: repoRoot });
+    const proof = JSON.parse(stdout);
+
+    assert.equal(proof.contributorPreflight.enabled, true);
+    assert.equal(proof.contributorPreflight.summary.total, 1);
+    assert.equal(proof.contributorPreflight.summary.unchecked, 1);
+    assert.equal(proof.contributorPreflight.candidates[0].status, "unchecked");
+    assert.match(proof.nonClaims.join("\n"), /does not replace contribution policy checks/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test("public pilot artifact surfaces per-item repository context failures", () => {
