@@ -21,6 +21,7 @@ It is not a list of endorsements. A target repository appearing here means PCF r
 | `knadh/listmonk` | Private only | None | 6 review / 4 repair / 2 defer | 5 review / 6 repair / 1 defer | Current-workflow feature requests and issue-comment duplicate references both matter; external GitHub URLs must not be treated as local refs. |
 | `henrygd/beszel` | Private only | None | 5 review / 6 repair / 1 defer | 6 review / 6 repair / 0 defer | Security/SSL monitoring feature requests must not be mistaken for vulnerability reports requiring a reproducer. |
 | `karakeep-app/karakeep` | Private only | None | 2 review / 8 repair / 2 defer | 6 review / 3 repair / 3 defer | Maintainer triage labels, bug-template failure output, and AI/LLM product language need separate handling. |
+| `keymapperorg/KeyMapper` | Private only | None | 0 review / 5 repair / 7 defer | 5 review / 3 repair / 4 defer | Maintainer-authored internal issues should not get contributor repair prompts unless context or safety conflicts exist. |
 
 ## tuya-local
 
@@ -334,7 +335,7 @@ Verification:
   - `maintainer-approved-issue-label`
   - `maintainer-icebox-feature-request`
   - `llm-domain-feature-request`
-- Current benchmark result: 45/45 passing.
+- Benchmark result after this pilot: 45/45 passing.
 - GitHub writes to `karakeep-app/karakeep`: none.
 - Public outreach: none.
 
@@ -347,13 +348,103 @@ Private artifact hashes:
 2fd39abe3ebbc2b9f0f50269674b60b6ec9963db9aa777d55170e69c956fff68
 ```
 
+## KeyMapper
+
+Target: `keymapperorg/KeyMapper`
+
+Live metadata at pilot start:
+
+- stars: 2,370
+- forks: 248
+- open issues: 188
+- open pull requests: 2
+- default branch: `develop`
+- last pushed: 2026-05-31T00:18:16Z
+
+Queue shape:
+
+- Android button/input bugs
+- Android TV and device-specific behavior
+- expert-mode and system-bridge reports
+- UX complaints
+- maintainer-authored TODO issues
+- duplicate and solved-adjacent historical issues
+
+Templates inspected:
+
+- `bug_report.yml`
+- `feature_request.yml`
+- `ux_issue.yml`
+- `config.yml`
+
+Initial private pilot:
+
+- 12 sampled issues
+- 0 review-now
+- 5 repair
+- 7 defer
+- repository context checked all 12
+- context findings: 10
+- items with context findings: 4
+- context unavailable: 0
+
+What PCF got wrong:
+
+- Several KeyMapper issues were opened by repository collaborators as internal work items, including `#2069`, `#2137`, `#1656`, `#2107`, and `#1418`.
+- PCF treated those maintainer-authored issues like public drive-by reports and asked for contributor-style reproducer, log, environment, feature-scope, or expected/actual repairs.
+- That was wrong for a maintainer queue: internal maintainer-authored work should be surfaced for maintainer attention unless there is a hard safety issue or repository-context conflict.
+
+Fixes made:
+
+- Added maintainer-authored issue recognition for `OWNER`, `MEMBER`, and `COLLABORATOR` author associations.
+- Maintainer-authored issues can route to review-now when no hard safety issue or repository-context conflict is present.
+- Soft contributor repair prompts are suppressed for maintainer-authored review-now issues.
+- Repository context still wins: maintainer-authored issues with duplicate, solved, upstream, or concurrent-work conflicts stay out of review-now.
+
+Final private pilot:
+
+- 12 sampled issues
+- 5 review-now
+- 3 repair
+- 4 defer
+- repository context checked all 12
+- context findings: 10
+- items with context findings: 4
+- context unavailable: 0
+
+Notable final routing:
+
+- `#2069`, `#2137`, `#1656`, `#2107`, and `#1418` moved into review-now as maintainer-authored/internal work items.
+- `#2074` stayed in repair because repository context found similar open issues, a closed linked issue, and concurrent work.
+- `#2127` stayed in repair because a closed linked issue and solved-adjacent context need verification.
+- `#1306` stayed in repair because repository context found related open and closed work.
+- Thin external feature requests such as `#2147`, `#2140`, and `#2139` stayed do-not-review-yet.
+
+Verification:
+
+- Focused evaluator tests passed.
+- Benchmark corpus increased to 46 cases:
+  - `maintainer-authored-internal-issue`
+- Current benchmark result: 46/46 passing.
+- GitHub writes to `keymapperorg/KeyMapper`: none.
+- Public outreach: none.
+
+Private artifact hashes:
+
+```text
+1a12d580e810831d9b61376c58753599604f4f710ea5ca4f6a1059c1de17a991
+a5ce2402e52044a5abf2e642498b8a1d0e331eb73a03ef39949ceddccd4c2bf4
+32ffd46abce013598e5147e1ebac9aa5a6d4599c06a4d9efa8f624f3c3c3fd90
+3b98fe412ff64b67f0cd9d1bb6abd31b4d67484bfa14c28cdfedf73e2834bad8
+```
+
 ## Current Gate State
 
 The pilot ledger should be updated whenever a real pilot changes PCF behavior.
 
 Current expected proof state:
 
-- benchmark: 45/45
+- benchmark: 46/46
 - adversarial red test: 8/8
 - maintainer demo: PASS
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner

@@ -135,6 +135,13 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", labels: ["maintainer-approved", "ready-for-maintainer"], absentLabels: ["duplicate-search-needed"] }
   },
   {
+    id: "maintainer-authored-internal-issue",
+    category: "issue",
+    name: "Maintainer-authored internal issue avoids contributor repair prompts",
+    input: maintainerAuthoredInternalIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["maintainer-authored", "ready-for-maintainer"], absentLabels: ["needs-reproducer", "needs-expected-actual"], repoContext: true }
+  },
+  {
     id: "maintainer-icebox-feature-request",
     category: "issue",
     name: "Maintainer icebox label routes accepted backlog out of repair queue",
@@ -866,6 +873,27 @@ function maintainerApprovedIssue() {
       "- Docker network with IPv6 enabled",
       "- Chrome remote debugging bound to IPv4"
     ].join("\n")
+  };
+}
+
+function maintainerAuthoredInternalIssue() {
+  return {
+    kind: "issue",
+    title: "Some users do not restart accessibility service after it is killed by the system",
+    authorAssociation: "COLLABORATOR",
+    labels: [{ name: "user experience" }, { name: "needs triage" }],
+    body: [
+      "A user in Discord would tap Proceed and then close the online guide. This does not restart the accessibility service.",
+      "It is possible restart suggests it will reboot the device, causing users to avoid that option.",
+      "The current online guide is ineffective for users who are unlikely to read the full guide or follow outdated steps.",
+      "More aggressive service restarting might have better results."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "keymapperorg/KeyMapper",
+      issues: [],
+      pullRequests: []
+    }
   };
 }
 

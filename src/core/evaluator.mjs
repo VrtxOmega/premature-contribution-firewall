@@ -73,6 +73,7 @@ const PROFILES = {
 };
 
 const ISSUE_SOFT_REPAIR_LABELS = new Set([
+  "needs-clear-summary",
   "needs-context",
   "needs-reproducer",
   "needs-use-case",
@@ -442,7 +443,7 @@ export function evaluateIssue(input, options = {}) {
   const policyProfile = buildPolicyProfile(input);
   const repositoryTriage = analyzeRepositoryContext(input);
   const issueEvidence = analyzeIssueEvidence(input, { title, body });
-  const maintainerTriage = analyzeMaintainerTriage(input.labels);
+  const maintainerTriage = analyzeMaintainerTriage(input.labels, input.authorAssociation);
   const featureRequest = issueEvidence.featureRequestIntent && !issueEvidence.deviceSupportIntent && !securityClaim;
   const repositoryContextCleared = repositoryTriage.hasContext && repositoryTriage.checkStatus === "pass";
   const hasReproducer = featureRequest ? issueEvidence.hasFeatureUseCase : SIGNALS.repro.test(body) || issueEvidence.deviceSupportComplete;
@@ -655,6 +656,7 @@ export function evaluateIssue(input, options = {}) {
   if (featureRequest && issueEvidence.hasFeatureSolution) strengths.push("Describes the requested feature behavior.");
   if (maintainerTriage.state === "approved") strengths.push("Repository labels indicate this has already been accepted for maintainer attention.");
   if (maintainerTriage.state === "backlog") strengths.push("Repository labels indicate this belongs in the accepted backlog rather than the active review queue.");
+  if (maintainerTriage.state === "authored") strengths.push("Issue was opened by a repository collaborator, member, or owner.");
   addStatusLabel(labels, status);
 
   return {
@@ -728,12 +730,13 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
   };
 }
 
-function analyzeMaintainerTriage(labels = []) {
+function analyzeMaintainerTriage(labels = [], authorAssociation = "") {
   const normalized = normalizeLabels(labels).map((label) => label.trim()).filter(Boolean);
   const labelText = normalized.join(" ");
   const backlog = /\b(?:status[/: -]?)?(?:icebox|backlog|deferred|later|someday|parking lot)\b/i.test(labelText);
   const pendingClarification = /\b(?:status[/: -]?)?(?:pending[ _-]?clarification|needs?[ _-]?info|waiting[ _-]?for[ _-]?(?:reporter|response|author)|more[ _-]?info)\b/i.test(labelText);
   const approved = /\b(?:status[/: -]?)?(?:approved|accepted|confirmed|ready[ _-]?(?:for[ _-]?)?(?:implementation|review)?)\b/i.test(labelText);
+  const authored = isMaintainerAuthorAssociation(authorAssociation);
 
   if (pendingClarification) {
     return {
@@ -754,6 +757,13 @@ function analyzeMaintainerTriage(labels = []) {
       state: "approved",
       label: "maintainer-approved",
       summary: "Repository labels say this item is approved or accepted for maintainer attention."
+    };
+  }
+  if (authored) {
+    return {
+      state: "authored",
+      label: "maintainer-authored",
+      summary: "Issue author is a repository collaborator, member, or owner."
     };
   }
   return {
@@ -799,10 +809,22 @@ function applyIssueMaintainerTriage({ status, score, checks, labels, maintainerT
     };
   }
 
+  if (maintainerTriage.state === "authored" && score >= 40 && !hasHardRisk && !contextConflict) {
+    clearIssueSoftRepairLabels(labels);
+    return {
+      status: "ready-for-maintainer",
+      suppressSoftRepairs: true
+    };
+  }
+
   return {
     status,
     suppressSoftRepairs: false
   };
+}
+
+function isMaintainerAuthorAssociation(authorAssociation = "") {
+  return /^(OWNER|MEMBER|COLLABORATOR)$/i.test(String(authorAssociation || ""));
 }
 
 function clearIssueSoftRepairLabels(labels) {

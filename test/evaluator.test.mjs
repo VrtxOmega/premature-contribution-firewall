@@ -407,6 +407,64 @@ test("pending clarification label prevents an issue from re-entering review-now"
   assert.equal(result.labels.includes("ready-for-maintainer"), false);
 });
 
+test("maintainer-authored issue routes to review-now without contributor repair prompts", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Some users do not restart accessibility service after it is killed by the system",
+    authorAssociation: "COLLABORATOR",
+    labels: [{ name: "user experience" }, { name: "needs triage" }],
+    body: [
+      "A user in Discord would tap Proceed and then close the online guide. This does not restart the accessibility service.",
+      "It is possible restart suggests it will reboot the device, causing users to avoid that option.",
+      "The current online guide is ineffective for users who are unlikely to read the full guide or follow outdated steps.",
+      "More aggressive service restarting might have better results."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "keymapperorg/KeyMapper",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.ok(result.labels.includes("maintainer-authored"));
+  assert.equal(result.labels.includes("needs-reproducer"), false);
+  assert.equal(result.labels.includes("needs-expected-actual"), false);
+  assert.equal(result.repairSteps.some((step) => /reproduce|logs|version|expected/i.test(step)), false);
+});
+
+test("maintainer-authored issue does not override repository context conflicts", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    number: 77,
+    title: "Improve export flow",
+    authorAssociation: "COLLABORATOR",
+    labels: [{ name: "enhancement" }],
+    body: "Developer TODO: update the export flow so users can recover from a failed file picker.",
+    repositoryContext: {
+      source: "github-api",
+      repository: "keymapperorg/KeyMapper",
+      issues: [
+        {
+          number: 70,
+          title: "Improve export flow",
+          body: "Existing open issue for the same export flow work.",
+          state: "open",
+          labels: ["enhancement"],
+          htmlUrl: "https://github.example/issues/70"
+        }
+      ],
+      pullRequests: []
+    }
+  });
+
+  assert.notEqual(result.status, "ready-for-maintainer");
+  assert.ok(result.labels.includes("maintainer-authored"));
+  assert.ok(result.labels.includes("possibly-duplicate"));
+  assert.equal(result.labels.includes("ready-for-maintainer"), false);
+});
+
 test("markdown report includes status, labels, repairs, and marker", async () => {
   const result = evaluateContribution(await fixture("pr-ready"));
   const markdown = renderMarkdownReport(result);
