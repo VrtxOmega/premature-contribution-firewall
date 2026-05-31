@@ -20,6 +20,7 @@ Current public state:
 - Published release: [v0.1.0 read-only maintainer queue pilot](docs/RELEASE_POST_V0_1_0.md).
 - Canonical output sample: [maintainer export bundle from PCF's own public queue](docs/MAINTAINER_EXPORT_SAMPLE.md).
 - Build history: [36-hour idea-to-v0.1.0 evidence capsule](docs/BUILD_ARC_36_HOURS.md).
+- Maintainer feedback tracker: [five-maintainer artifact-shape feedback pass](docs/MAINTAINER_FEEDBACK_TRACKER.md).
 - Real-world usage so far: author-run read-only shadow pilots against public queues, with two public briefs in this repo and private replay captures for calibration.
 - Not currently a hosted service, Marketplace App, or write-enabled bot.
 - No target repository or maintainer listed in the pilot ledger is an endorsement.

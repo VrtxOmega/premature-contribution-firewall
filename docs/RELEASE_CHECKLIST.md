@@ -59,6 +59,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - `docs/BUILD_ARC_36_HOURS.md`
 - `docs/GITHUB_ACTION.md`
 - `docs/RELEASE_POST_V0_1_0.md`
+- `docs/MAINTAINER_FEEDBACK_TRACKER.md`
 - `docs/NEXT_ACTOR_MODEL.md`
 - `docs/MAINTAINER_DEMO.md`
 - `CONTRIBUTING.md`
