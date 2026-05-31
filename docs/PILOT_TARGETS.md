@@ -71,6 +71,9 @@ For every target that graduates from this bench into the pilot ledger, capture:
 - issue-template filenames inspected
 - initial queue split
 - final queue split if PCF changes
+- final `nextAction` distribution
+- repository-context checked, cleared, unavailable, and collection-error counts
+- replay capture path and hash when before/after comparison matters
 - the first concrete PCF miss
 - the wrong assumption that caused the miss
 - the narrow fix made

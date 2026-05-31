@@ -28,12 +28,13 @@ The firewall treats maintainer attention as the scarce resource. It does not rew
 ## Default Maintainer Flow
 
 1. Run PCF in dry-run mode against open issues and pull requests.
-2. Review the sorted queue by status, labels, context findings, and review-budget cost.
-3. Send repair checklists back to contributors for items that are not ready.
-4. Promote good feedback into candidate fixtures when PCF is too harsh, too lenient, or misses repository context.
-5. Use the feedback calibration profile to see when new queue items resemble prior maintainer corrections.
-6. Replay the candidate corpus before changing benchmark expectations.
-7. Enable write actions only after dry-run output matches project policy and maintainer judgment.
+2. Review the sorted queue by status, `nextAction`, labels, context findings, and review-budget cost.
+3. Use `nextAction` to distinguish reporter evidence requests from duplicate/fixed checks, subsystem or process routing, maintainer decisions, and blocked/not-actionable waits.
+4. Send repair checklists back to contributors only when the next action is reporter-directed.
+5. Promote good feedback into candidate fixtures when PCF is too harsh, too lenient, or misses repository context.
+6. Use the feedback calibration profile to see when new queue items resemble prior maintainer corrections.
+7. Replay the candidate corpus before changing benchmark expectations.
+8. Enable write actions only after dry-run output matches project policy and maintainer judgment.
 
 ## What PCF Should Block
 
@@ -68,4 +69,4 @@ A serious maintainer should be able to clone the repo and answer four questions 
 - Can I reproduce the benchmark and adversarial gates locally?
 - Will it stay read-only until I deliberately enable writes?
 
-The README, CI workflow, benchmark corpus, adversarial corpus, feedback calibration, feedback replay, and release checklist exist to make those answers inspectable.
+The README, CI workflow, benchmark corpus, adversarial corpus, replay capture rules, `nextAction` queue output, feedback calibration, feedback replay, and release checklist exist to make those answers inspectable.

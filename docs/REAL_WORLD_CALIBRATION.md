@@ -5,11 +5,12 @@ Premature Contribution Firewall should improve by preserving concrete breakage, 
 The rule is:
 
 1. Run a read-only shadow pilot.
-2. Find where the evaluator is wrong against real queue shape.
-3. Explain the wrong assumption in plain language.
-4. Make the smallest evaluator or policy fix that covers that shape.
-5. Add or update tests, benchmark cases, or red-test residue so the same miss cannot quietly return.
-6. Publish only the evidence that can be reproduced, with non-claims attached.
+2. Capture the normalized replay payload before evaluator changes when the result will be compared.
+3. Find where the evaluator is wrong against real queue shape.
+4. Explain the wrong assumption in plain language.
+5. Make the smallest evaluator or policy fix that covers that shape.
+6. Add or update tests, benchmark cases, red-test residue, or replay candidates so the same miss cannot quietly return.
+7. Publish only the evidence that can be reproduced, with non-claims attached.
 
 This is human-reviewed calibration. PCF does not automatically learn from maintainer queues, infer maintainer intent, or claim universal precision.
 
@@ -27,6 +28,8 @@ Live pilots are useful when they surface one of these failures:
 
 The output of a pilot is not a claim that PCF knows better than the project maintainer. It is a candidate evidence package.
 
+Modern pilot artifacts should report both the coarse queue split and the refined `nextAction` distribution. The coarse split shows review priority. `nextAction` shows whether non-ready work should go back to the reporter, receive a duplicate/fixed check, route through project process, wait for a maintainer decision, or remain blocked as not actionable yet.
+
 The running record of pilot repositories, queue splits, fixes, artifact hashes, and public/private status lives in [PILOT_LEDGER.md](PILOT_LEDGER.md).
 
 ## Pilot Pattern
@@ -39,6 +42,7 @@ Every real-world calibration pass should answer four questions:
 | What assumption caused the miss? | A short sentence about the evidence shape, not a claim about author motive. |
 | What changed? | A narrow code, policy, test, or benchmark change. |
 | How is it locked in? | Passing tests, benchmark case ids, red-test residue, or replayable feedback candidates. |
+| How can it be replayed? | A private capture path/hash, fixture id, or candidate id; never commit raw third-party payloads without consent. |
 
 If a pilot does not expose a specific miss, keep it private. Do not publish a clean run as proof of precision.
 

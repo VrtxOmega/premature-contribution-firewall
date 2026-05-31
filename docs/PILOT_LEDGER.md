@@ -11,6 +11,8 @@ For the maintainer-facing summary, queue movement totals, proof state, and repro
 - Keep pilots read-only unless a maintainer explicitly opts in.
 - Do not publish raw third-party pilot artifacts without maintainer consent.
 - Record queue splits, defects, fixes, and verification evidence.
+- Capture normalized replay payloads before evaluator changes when before/after evidence matters.
+- Record refined `nextAction` distribution once a pilot uses the repair sub-action split.
 - Promote only reviewed misses into tests, benchmark cases, red-test cases, or replay candidates.
 - Separate "PCF was wrong" from "the target project is wrong."
 
@@ -1146,9 +1148,12 @@ The pilot ledger should be updated whenever a real pilot changes PCF behavior.
 
 Current expected proof state:
 
+- unit/integration tests: 132/132
 - benchmark: 69/69
 - adversarial red test: 8/8
 - maintainer demo: PASS
+- queue proof: coarse actions plus refined `nextAction` repair sub-actions
+- replay proof: private normalized capture/replay path available for live-pilot before/after comparisons
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner
 
 ## Next Pilot Rule
@@ -1160,4 +1165,5 @@ Approach only when there is a useful story:
 - PCF got something wrong on that repository's public queue.
 - The miss was fixed narrowly.
 - The fix is locked into tests, benchmark cases, red-test residue, or replay candidates.
+- The artifact includes replay instructions, `nextAction` distribution, and context-collection state.
 - The public brief includes non-claims and does not write to the target repository.
