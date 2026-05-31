@@ -1,134 +1,129 @@
 # Large Maintainer Bench
 
-Generated from read-only GitHub pilots on May 31, 2026.
+Generated from read-only GitHub pilots on 2026-05-31.
 
-This bench stress-tests PCF against large public maintainer queues. It is not an outreach list, endorsement list, or claim that these projects want PCF. The point is to find where PCF is wrong under large-project intake pressure, fix only the proven misses, and preserve the result in reproducible tests.
+This bench stress-tests PCF against large public maintainer queues. It is not an outreach list, endorsement list, or claim that these projects want PCF. The point is to find where PCF is wrong under large-project intake pressure, replay the same captured input offline, and publish only aggregate maintainer-action evidence.
 
 ## Boundary
 
 - No comments, labels, reactions, closures, or writes were made to target repositories.
-- Raw private pilot artifacts remain under `/tmp` and are not committed.
-- `torvalds/linux` was inspected as a GitHub surface and has 0 GitHub issues and 0 GitHub pull requests. Linux-kernel-style work belongs to PCF's `kernel-grade` patch path, not a fake GitHub issue pilot.
-- `systemd/systemd` was used as the Linux-adjacent GitHub queue for this bench.
+- Raw replay captures contain third-party issue or PR payloads and are not committed.
+- Published hashes identify private local captures without disclosing their contents.
+- `torvalds/linux` remains a poor GitHub issue pilot target because Linux-kernel-style work belongs to PCF's `kernel-grade` patch path, not a fake GitHub issue queue.
+- `systemd/systemd` remains the Linux-adjacent GitHub queue for this bench.
 
-## Targets
+## Capture And Replay Method
 
-| Repository | Snapshot pressure | Template surface inspected |
-| --- | --- | --- |
-| `python/cpython` | 7,194 open issues, 2,115 open PRs | bug, crash, documentation, feature |
-| `rust-lang/rust` | 11,303 open issues, 1,152 open PRs | bug, ICE, regression, diagnostics, tracking |
-| `golang/go` | 9,662 open issues, 473 open PRs | bug, gopls, pkgsite, proposal, language change, vuln |
-| `nodejs/node` | 1,566 open issues, 909 open PRs | bug, feature, docs, flaky test |
-| `kubernetes/kubernetes` | 1,793 open issues, 928 open PRs | bug, enhancement, failing test, flaking test |
-| `microsoft/vscode` | 16,139 open issues, 2,091 open PRs | bug, Copilot bug, feature |
-| `pytorch/pytorch` | 15,559 open issues, 2,799 open PRs | bug, CI, docs, feature, PT2, release feature |
-| `tensorflow/tensorflow` | 1,030 open issues, 1,953 open PRs | TensorFlow issue, TFLite converter, TFLite op, Play Services |
-| `home-assistant/core` | 3,241 open issues, 833 open PRs | bug, task |
-| `systemd/systemd` | 2,800 open issues, 490 open PRs | bug, feature request |
+Each target was sampled with `--limit 12`, issues only (`--no-pulls`), repository context collection enabled, and GitHub search pacing from `PCF_GITHUB_SEARCH_DELAY_MS`.
 
-The snapshot counts came from the GitHub API during the May 31, 2026 bench run. They are expected to drift.
-
-## Result
-
-Each target was sampled with `--limit 12 --no-pulls`, repository context collection enabled, and paced GitHub search. The final run checked context for all 120 sampled issues and produced zero collection errors.
-
-Aggregate split:
-
-| Queue bucket | Initial | Final | Movement |
-| --- | ---: | ---: | ---: |
-| Review now | 17 | 22 | +5 |
-| Send repair request | 61 | 60 | -1 |
-| Do not review yet | 42 | 38 | -4 |
-| Repository context findings | 129 | 133 | +4 |
-| Context checked | 120/120 | 120/120 | stable |
-| Context unavailable | 0 | 0 | stable |
-| Collection errors | 0 | 0 | stable |
-
-Because these are live queues, exact item order can change between runs. Item-level movement below is reported only for issue numbers present in both the initial and final sample for a repository.
-
-When replay captures are available, large benches should report `nextAction` distribution alongside the coarse review/repair/defer split. The coarse split shows review priority; `nextAction` shows whether the remaining work should go to the reporter, a duplicate/fixed check, subsystem/process routing, a maintainer decision, or a blocked/not-actionable wait state.
-
-Future large benches should use replay capture before evaluator changes:
+The live pass wrote normalized replay payloads under a private capture directory. The published numbers below come from replaying those captures offline, which keeps the comparison stable even if the live GitHub queues change later.
 
 ```bash
-GH_TOKEN="<public-read token>" \
-PCF_COLLECT_REPOSITORY_CONTEXT=true \
-PCF_GITHUB_SEARCH_DELAY_MS=2500 \
-npm run pilot:public -- --repository rust-lang/rust --limit 12 --no-pulls --capture /tmp/pcf-rust-large-capture.json
-
-npm run pilot:public:markdown -- --fixture /tmp/pcf-rust-large-capture.json --write /tmp/pcf-rust-large-replay.md
+export GH_TOKEN="<public-read token>"
+export PCF_COLLECT_REPOSITORY_CONTEXT=true
+export PCF_GITHUB_SEARCH_DELAY_MS=2500
+npm run pilot:large -- --capture-dir /tmp/pcf-large-bench --write docs/LARGE_MAINTAINER_BENCH.md --format markdown
+npm run pilot:large -- --from-captures --capture-dir /tmp/pcf-large-bench --format markdown --write /tmp/pcf-large-bench-replay.md
 ```
 
-The capture file is the private normalized input set. It should not be committed or shared without maintainer consent.
+Private capture directory used for this run:
 
-## Pilot Table
+```text
+/tmp/pcf-large-bench-2026-05-31-nextactions
+```
 
-| Repository | Initial split | Final split | Context findings | Context checked | Final errors | Final JSON hash |
-| --- | ---: | ---: | ---: | ---: | ---: | --- |
-| `python/cpython` | 0 review / 2 repair / 10 defer | 0 review / 3 repair / 9 defer | 10 -> 10 | 12/12 | 0 | `dfee5cfb7d3d97f74ad129f5a3c3771107069d1c1854db9397d664344ce37a5a` |
-| `rust-lang/rust` | 2 review / 5 repair / 5 defer | 4 review / 5 repair / 3 defer | 40 -> 38 | 12/12 | 0 | `380f46a41f2995f64a16b0a4409286f3aaffbb79606029e5ba98c61ed95aa17a` |
-| `golang/go` | 1 review / 3 repair / 8 defer | 2 review / 3 repair / 7 defer | 21 -> 20 | 12/12 | 0 | `3751568a64a49294ef089b6f035f6751f66fbb7b6494a247929b3dee947a03a5` |
-| `nodejs/node` | 0 review / 8 repair / 4 defer | 0 review / 8 repair / 4 defer | 6 -> 6 | 12/12 | 0 | `f55c5091cdeccfcd52d37af77e9467d80ab011b0a1bfe010ff43ab9d0c8e88a6` |
-| `kubernetes/kubernetes` | 0 review / 7 repair / 5 defer | 1 review / 7 repair / 4 defer | 12 -> 12 | 12/12 | 0 | `f63095397db898b9d36795c77fc97ecf4fce7a85fcca1b024b4e4fd6bdf77906` |
-| `microsoft/vscode` | 2 review / 5 repair / 5 defer | 2 review / 5 repair / 5 defer | 15 -> 15 | 12/12 | 0 | `23283f277f25d7f7c6ca903edcc0c0f1a7fa2ba78a9428dbae146db20fdc43ba` |
-| `pytorch/pytorch` | 2 review / 10 repair / 0 defer | 2 review / 10 repair / 0 defer | 7 -> 7 | 12/12 | 0 | `6f4dfc3f5e16e9e29e2bb96ed2da771ce06895cda0e4cfafbfb47bef897bf889` |
-| `tensorflow/tensorflow` | 2 review / 8 repair / 2 defer | 2 review / 8 repair / 2 defer | 6 -> 6 | 12/12 | 0 | `bc4e3b9f8b8e64dc41a00b1213258c7e3f8844aadc36a3cd52585b9483cc2c86` |
-| `home-assistant/core` | 3 review / 6 repair / 3 defer | 3 review / 5 repair / 4 defer | 6 -> 13 | 12/12 | 0 | `02b35a0227d39fa961255682be29c778888a731edd4d909b134e1333e29df9b1` |
-| `systemd/systemd` | 5 review / 7 repair / 0 defer | 6 review / 6 repair / 0 defer | 6 -> 6 | 12/12 | 0 | `e80f78f1a4e19004b8cd14d092b26a522ec16ed4dfac2f2fa0674f898d083599` |
+## Replay-Captured Result
 
-## What Broke
+Targets: 10
+Total sampled items: 120
+Estimated review budget: 960 minutes
 
-Large language and platform repos exposed a real evaluator miss: PCF was still too bug-shaped for formal maintainer process issues.
+| Queue bucket | Count |
+| --- | ---: |
+| `review-now` | 20 |
+| `send-repair-request` | 61 |
+| `do-not-review-yet` | 39 |
 
-The initial run treated several proposals, tracking issues, and RFEs as if they needed minimal reproducer, environment, logs, or classic expected/actual bug evidence. That is wrong for large projects where `Proposal`, `LanguageChange`, `C-tracking-issue`, `RFE`, and feature-gate threads are explicit process artifacts.
+## Next Action Distribution
 
-Concrete examples:
+This is the maintainer-useful split inside and beyond the old repair bucket.
 
-| Repository | Issue | Initial routing | Final routing | What changed |
-| --- | --- | --- | --- | --- |
-| `rust-lang/rust` | `#152080` Tracking Issue for `uint_carryless_mul` | repair | review-now | API, feature-gate, steps/history, FCP, stabilization, and unresolved questions now count as process evidence. |
-| `golang/go` | `#57644` proposal: spec: sum types based on general interfaces | repair | review-now | Proposal language, examples, benefits/costs, and implementation notes now count as proposal evidence. |
-| `systemd/systemd` | `#42395` sysinstall: Add option to keep home partition | repair | review-now | RFE wording such as "would be great if" and "provided an option" now counts as requested behavior. |
-| `python/cpython` | `#150646` Decide on fate of missing C23 math.h functions | defer | repair | Feature/proposal shape is recognized, but repository context still keeps it out of review-now until related work is checked. |
-| `golang/go` | `#47487` proposal: spec: allow explicit conversion from function to 1-method interface | defer | repair | Proposal shape is recognized, but context still asks for related-work review before maintainer attention. |
-| `rust-lang/rust` | `#157180` Tracking issue for MCP 976 | defer | repair | Tracking shape is recognized, but context still shows active related pressure. |
+| Next action | Count | Maintainer meaning |
+| --- | ---: | --- |
+| `review-now` | 20 | Ready for maintainer attention. |
+| `ask-reporter-for-evidence` | 40 | Send back to the reporter for missing evidence. |
+| `check-duplicate-or-fixed-first` | 52 | Check duplicate, solved, concurrent, linked, or upstream-fixed context first. |
+| `not-actionable-yet` | 8 | Blocked, parked, stale, draft, or otherwise not actionable now. |
 
-## Fix Locked In
+## Non-Ready Sub-Actions
 
-Code changes:
+This excludes `review-now` and shows where maintainer work goes when an item is not immediately reviewable.
 
-- Added formal proposal, RFE, language-change, tracking-issue, feature-gate, FCP, and stabilization intent recognition in `src/core/evaluator.mjs`.
-- Added proposal/tracking evidence checks for use case, proposed behavior, public API, implementation notes, history, unresolved questions, and stabilization process.
-- Added requested-behavior recognition for "would be great if", "provided an option", and "option to" RFE wording.
-- Added contextual repository-reference handling for proposal ancestry phrases such as "version of", "updated for", and "variants such as" in `src/core/repository-context.mjs`.
+| Sub-action | Count | Maintainer meaning |
+| --- | ---: | --- |
+| `ask-reporter-for-evidence` | 40 | Send back to the reporter for missing evidence. |
+| `check-duplicate-or-fixed-first` | 52 | Check duplicate, solved, concurrent, linked, or upstream-fixed context first. |
+| `not-actionable-yet` | 8 | Blocked, parked, stale, draft, or otherwise not actionable now. |
+
+## Context Intelligence
+
+Repository context findings: 149
+Items with context findings: 52
+Context checked: 120/120
+Context cleared: 68
+Context unavailable: 0
+Collection errors: 0
+
+| Context label | Count |
+| --- | ---: |
+| `concurrent-work` | 10 |
+| `linked-issue-closed` | 28 |
+| `possibly-duplicate` | 21 |
+| `possibly-solved` | 34 |
+
+## Repository Replay Table
+
+| Repository | Items | Coarse split | Next actions | Context findings | Context checked | Unavailable | Errors | Capture hash | Replay proof hash |
+| --- | ---: | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
+| `python/cpython` | 12 | 0 review / 4 repair / 8 defer | `ask-reporter-for-evidence` 5<br>`check-duplicate-or-fixed-first` 7 | 12 | 12/12 | 0 | 0 | `40c8221ee09e843c` | `ab4be486ff93185b` |
+| `rust-lang/rust` | 12 | 3 review / 6 repair / 3 defer | `review-now` 3<br>`check-duplicate-or-fixed-first` 9 | 42 | 12/12 | 0 | 0 | `80437dbf33dfe3fe` | `7927f5047330f297` |
+| `golang/go` | 12 | 2 review / 3 repair / 7 defer | `review-now` 2<br>`ask-reporter-for-evidence` 4<br>`check-duplicate-or-fixed-first` 6 | 31 | 12/12 | 0 | 0 | `c66f25d30d48f627` | `b1977dab8057e9af` |
+| `nodejs/node` | 12 | 0 review / 8 repair / 4 defer | `ask-reporter-for-evidence` 2<br>`check-duplicate-or-fixed-first` 4<br>`not-actionable-yet` 6 | 6 | 12/12 | 0 | 0 | `74d1ec27644d472e` | `0f87ff4699c78c12` |
+| `kubernetes/kubernetes` | 12 | 1 review / 7 repair / 4 defer | `review-now` 1<br>`ask-reporter-for-evidence` 5<br>`check-duplicate-or-fixed-first` 5<br>`not-actionable-yet` 1 | 12 | 12/12 | 0 | 0 | `6b0904b0ffd14b31` | `62c2dbfe1f814756` |
+| `microsoft/vscode` | 12 | 2 review / 5 repair / 5 defer | `review-now` 2<br>`ask-reporter-for-evidence` 2<br>`check-duplicate-or-fixed-first` 8 | 22 | 12/12 | 0 | 0 | `d40d40511cb92bf6` | `1b5e9f4a3b9aa1af` |
+| `pytorch/pytorch` | 12 | 2 review / 10 repair / 0 defer | `review-now` 2<br>`ask-reporter-for-evidence` 7<br>`check-duplicate-or-fixed-first` 3 | 7 | 12/12 | 0 | 0 | `41f697e360240ab4` | `a2d75f01600fe1a9` |
+| `tensorflow/tensorflow` | 12 | 2 review / 8 repair / 2 defer | `review-now` 2<br>`ask-reporter-for-evidence` 6<br>`check-duplicate-or-fixed-first` 3<br>`not-actionable-yet` 1 | 6 | 12/12 | 0 | 0 | `2908b0d40f3d5d7c` | `1b450a3b743b24d7` |
+| `home-assistant/core` | 12 | 2 review / 4 repair / 6 defer | `review-now` 2<br>`ask-reporter-for-evidence` 7<br>`check-duplicate-or-fixed-first` 3 | 5 | 12/12 | 0 | 0 | `7631e3c01508dc1c` | `1d2b7baec0e2ac1e` |
+| `systemd/systemd` | 12 | 6 review / 6 repair / 0 defer | `review-now` 6<br>`ask-reporter-for-evidence` 2<br>`check-duplicate-or-fixed-first` 4 | 6 | 12/12 | 0 | 0 | `c86f8bb6684086a1` | `3a669af5c3421b1f` |
+
+## Capture Integrity
+
+| Repository | Capture SHA-256 | Replay proof SHA-256 |
+| --- | --- | --- |
+| `python/cpython` | `40c8221ee09e843c062aa7590cd692f427af504211d13e45adede61f9036bc06` | `ab4be486ff93185b7447cd5646e9a78618a0c6488ec7a0af30a9e2a7003fd61b` |
+| `rust-lang/rust` | `80437dbf33dfe3fe71899bd5177128c1e157cf017ad48035f539f8cb3cb32d8a` | `7927f5047330f2978a8dd36330aa4f4846b0b656b165c35eaa9015a8b0bb1ce9` |
+| `golang/go` | `c66f25d30d48f627dad544f56390447a3873523029d969e8d10a61019ab65ac6` | `b1977dab8057e9af3ae893b462b8cd497ca9a280c311584eaf69dedce94e66b2` |
+| `nodejs/node` | `74d1ec27644d472e7b462784512adadbdafbe1ca7257fc76ead6e8a5e070dc09` | `0f87ff4699c78c1253bd2d2720f4a791d7787480735c2c3e80beeda3280a7858` |
+| `kubernetes/kubernetes` | `6b0904b0ffd14b3154e333e28df351398e0386381d38199ee62262fd9f8c56d8` | `62c2dbfe1f814756dfbca86048311c9347f2fa14998889ed5e3d9a964bb80cd2` |
+| `microsoft/vscode` | `d40d40511cb92bf69a3a1f9f74db545799424a971a5efc3690fac67d43febf79` | `1b5e9f4a3b9aa1afa699992e42bc2d4d9cac3052126f4f332e1e3f6a476fda45` |
+| `pytorch/pytorch` | `41f697e360240ab4be2ce4d24644b8d7cb200e6fd29d1a4b43b3cd5a835c8ff8` | `a2d75f01600fe1a9206b2637d742f448ec06a4942b00c0239179f1ab06ecefcd` |
+| `tensorflow/tensorflow` | `2908b0d40f3d5d7cd75a11e50c7a08f7767d530651f8052e5634b39ea762cae5` | `1b450a3b743b24d7d9eeb5563681142ea7391f1504845a11bfb3df493711d92d` |
+| `home-assistant/core` | `7631e3c01508dc1c1f0742912b41e5f527851fb99065fad1e3c9343846348112` | `1d2b7baec0e2ac1e022b1f7e72749e1b15081bada046af4d4ed39becff3566aa` |
+| `systemd/systemd` | `c86f8bb6684086a154de75675a8b9a863f5a480db204afd6c04ae3ae17c1652a` | `3a669af5c3421b1f79ba654ebcd2d68ff6b2a9ba0166faad499fe998646555a3` |
+
+## Calibration History Locked In
+
+The earlier large-maintainer pass exposed that PCF was too bug-shaped for formal process issues. The permanent benchmark now includes large-maintainer cases for language proposals, Rust-style tracking issues, and RFE option wording, while repository context still keeps duplicate-adjacent or solved-adjacent items out of `review-now`.
 
 Regression lock-in:
 
-- `test/evaluator.test.mjs` now covers large-maintainer language proposals, Rust-style tracking issues, RFE option wording, and a thin proposal that must still fail.
-- `test/repository-context.test.mjs` now covers proposal ancestry references that should not become duplicate blockers.
-- `src/core/benchmark.mjs` now has 69 benchmark cases, including three large-maintainer process cases.
-
-## Reproduce
-
-Run a large pilot:
-
-```bash
-GH_TOKEN="<public-read token>" \
-PCF_COLLECT_REPOSITORY_CONTEXT=true \
-PCF_GITHUB_SEARCH_DELAY_MS=2500 \
-npm run pilot:public -- --repository rust-lang/rust --limit 12 --no-pulls --format markdown --write /tmp/pcf-rust-large-pilot.md
-```
-
-Run the proof gate:
-
-```bash
-npm run ci:gates
-```
+- `test/evaluator.test.mjs` covers large-maintainer language proposals, tracking issues, RFE option wording, and thin proposals that must still fail.
+- `test/repository-context.test.mjs` covers proposal ancestry references that should not become duplicate blockers.
+- `src/core/benchmark.mjs` includes large-maintainer process cases in the deterministic 69-case benchmark.
 
 ## Non-Claims
 
-- This bench does not claim target maintainer endorsement.
-- This bench does not claim PCF is correct on every sampled item.
-- This bench does not claim Linux kernel maintainers use GitHub issues.
-- This bench does not enable GitHub writes.
-- The artifact hashes verify private local outputs, not published target-maintainer briefs.
+- This bench is a read-only stress test, not target maintainer endorsement.
+- Raw capture files contain third-party issue/PR payloads and must remain private unless a maintainer consents.
+- Hashes verify private local artifacts; they do not publish the captured payloads.
+- The bench does not enable comments, labels, closures, or any other GitHub write action.

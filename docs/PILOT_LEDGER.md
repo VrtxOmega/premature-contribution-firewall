@@ -1094,7 +1094,7 @@ Fixes made:
 - Added requested-behavior recognition for "would be great if", "provided an option", and "option to".
 - Added proposal-ancestry contextual issue-reference handling.
 
-Final private pilots:
+Post-fix private pilots:
 
 - 10 sampled repositories
 - 120 sampled issues
@@ -1103,6 +1103,19 @@ Final private pilots:
 - 38 defer
 - repository context checked all 120
 - context findings: 133
+- context unavailable: 0
+- collection errors: 0
+
+Current replay-captured bench:
+
+- 10 sampled repositories
+- 120 replayed issues from private normalized captures
+- 20 review-now
+- 61 repair
+- 39 defer
+- `nextAction`: 20 review-now, 40 ask-reporter-for-evidence, 52 check-duplicate-or-fixed-first, 8 not-actionable-yet
+- repository context checked all 120
+- context findings: 149
 - context unavailable: 0
 - collection errors: 0
 
@@ -1127,19 +1140,19 @@ Verification:
 - Public outreach: none.
 - Full bench report: `docs/LARGE_MAINTAINER_BENCH.md`.
 
-Private final artifact hashes:
+Private replay capture hashes:
 
 ```text
-dfee5cfb7d3d97f74ad129f5a3c3771107069d1c1854db9397d664344ce37a5a
-380f46a41f2995f64a16b0a4409286f3aaffbb79606029e5ba98c61ed95aa17a
-3751568a64a49294ef089b6f035f6751f66fbb7b6494a247929b3dee947a03a5
-f55c5091cdeccfcd52d37af77e9467d80ab011b0a1bfe010ff43ab9d0c8e88a6
-f63095397db898b9d36795c77fc97ecf4fce7a85fcca1b024b4e4fd6bdf77906
-23283f277f25d7f7c6ca903edcc0c0f1a7fa2ba78a9428dbae146db20fdc43ba
-6f4dfc3f5e16e9e29e2bb96ed2da771ce06895cda0e4cfafbfb47bef897bf889
-bc4e3b9f8b8e64dc41a00b1213258c7e3f8844aadc36a3cd52585b9483cc2c86
-02b35a0227d39fa961255682be29c778888a731edd4d909b134e1333e29df9b1
-e80f78f1a4e19004b8cd14d092b26a522ec16ed4dfac2f2fa0674f898d083599
+40c8221ee09e843c062aa7590cd692f427af504211d13e45adede61f9036bc06
+80437dbf33dfe3fe71899bd5177128c1e157cf017ad48035f539f8cb3cb32d8a
+c66f25d30d48f627dad544f56390447a3873523029d969e8d10a61019ab65ac6
+74d1ec27644d472e7b462784512adadbdafbe1ca7257fc76ead6e8a5e070dc09
+6b0904b0ffd14b3154e333e28df351398e0386381d38199ee62262fd9f8c56d8
+d40d40511cb92bf69a3a1f9f74db545799424a971a5efc3690fac67d43febf79
+41f697e360240ab4be2ce4d24644b8d7cb200e6fd29d1a4b43b3cd5a835c8ff8
+2908b0d40f3d5d7cd75a11e50c7a08f7767d530651f8052e5634b39ea762cae5
+7631e3c01508dc1c1f0742912b41e5f527851fb99065fad1e3c9343846348112
+c86f8bb6684086a154de75675a8b9a863f5a480db204afd6c04ae3ae17c1652a
 ```
 
 ## Current Gate State
@@ -1153,7 +1166,7 @@ Current expected proof state:
 - adversarial red test: 8/8
 - maintainer demo: PASS
 - queue proof: coarse actions plus refined `nextAction` repair sub-actions
-- replay proof: private normalized capture/replay path available for live-pilot before/after comparisons
+- replay proof: private normalized capture/replay path used for the large-maintainer bench
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner
 
 ## Next Pilot Rule

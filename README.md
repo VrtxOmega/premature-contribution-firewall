@@ -119,7 +119,7 @@ The maintainer proof report is in [docs/PILOT_REPORT.md](docs/PILOT_REPORT.md). 
 
 Current pilot progression:
 
-The large-maintainer stress bench is summarized in [docs/LARGE_MAINTAINER_BENCH.md](docs/LARGE_MAINTAINER_BENCH.md). That bench adds 10 read-only large public queues, 120 final sampled issues, full repository-context collection on all 120 final samples, and a narrow fix for proposal, tracking issue, and RFE process items.
+The large-maintainer stress bench is summarized in [docs/LARGE_MAINTAINER_BENCH.md](docs/LARGE_MAINTAINER_BENCH.md). That bench now uses private replay captures across 10 read-only large public queues and 120 sampled issues. The replay-captured aggregate is 20 review-now, 61 repair, 39 defer, with 120/120 repository-context checks, 149 context findings, 0 collection errors, and a published `nextAction` split for the non-ready work.
 
 | Repository | Public status | Before | After | Lesson locked into PCF |
 | --- | --- | ---: | ---: | --- |

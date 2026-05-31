@@ -24,9 +24,9 @@ Across the 12 pilots with comparable before/after baselines, PCF changed the sam
 
 The after-only `make-all/tuya-local` pilot added another 8 sampled issues with a final split of 5 review / 2 repair / 1 defer.
 
-The large-maintainer bench added 10 private read-only pilots and 120 final sampled issues. Its initial-to-final aggregate moved from 17 review / 61 repair / 42 defer to 22 review / 60 repair / 38 defer, with repository context checked on all 120 final items and 0 collection errors.
+The large-maintainer bench added 10 private read-only pilots and 120 sampled issues. Its first calibration pass moved from 17 review / 61 repair / 42 defer to 22 review / 60 repair / 38 defer. The current replay-captured pass is 20 review / 61 repair / 39 defer, with repository context checked on all 120 replayed items, 149 context findings, and 0 collection errors.
 
-The queue now preserves that top-level split while adding `nextAction` buckets for non-ready work. This prevents `send-repair-request` from hiding different maintainer moves such as reporter evidence requests, duplicate/fixed checks, subsystem or process routing, maintainer judgment calls, and externally blocked items.
+The queue now preserves that top-level split while adding `nextAction` buckets for non-ready work. In the replay-captured large bench, the refined distribution is 20 `review-now`, 40 `ask-reporter-for-evidence`, 52 `check-duplicate-or-fixed-first`, and 8 `not-actionable-yet`. This prevents `send-repair-request` from hiding different maintainer moves such as reporter evidence requests, duplicate/fixed checks, subsystem or process routing, maintainer judgment calls, and externally blocked items.
 
 The useful signal is not that every final queue is "right." The useful signal is that live queues exposed wrong assumptions, the assumptions were fixed narrowly, and the fixes were locked into reproducible tests and benchmark cases.
 
@@ -78,7 +78,7 @@ npm run ci:gates
 | `termux/termux-app` | Private | 2 review / 7 repair / 3 defer | 4 review / 3 repair / 5 defer | Wrong-repository routing must coexist with valid crash and feature evidence. |
 | `esphome/esphome` | Private | 1 review / 4 repair / 7 defer | 4 review / 6 repair / 2 defer | YAML/log firmware reports need template-aware evidence. |
 | `yt-dlp/yt-dlp` | Private | 0 review / 6 repair / 6 defer | 4 review / 7 repair / 1 defer | Verbose CLI output, question templates, known-issues links, and signed URL tokens need special handling. |
-| Large maintainer bench | Private | 17 review / 61 repair / 42 defer | 22 review / 60 repair / 38 defer | Proposal, tracking issue, RFE, and process artifacts need non-bug evidence rules. See `docs/LARGE_MAINTAINER_BENCH.md`. |
+| Large maintainer bench | Private | 17 review / 61 repair / 42 defer | Replay-captured: 20 review / 61 repair / 39 defer | Proposal, tracking issue, RFE, process artifacts, and refined `nextAction` distribution need stable replay evidence. See `docs/LARGE_MAINTAINER_BENCH.md`. |
 
 ## Reproducible Commands
 
