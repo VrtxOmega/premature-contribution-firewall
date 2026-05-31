@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { buildMaintainerQueue } from "./queue.mjs";
 import { buildSetupGuide } from "./setup-guide.mjs";
 
@@ -101,6 +102,7 @@ export function buildPublicPilotProof({
       labels: contextLabelCounts,
       collectionErrors: normalizeErrors([...collectionErrors, ...contextErrors])
     },
+    queueMarkdown: evaluatedQueue.markdown || "",
     queue: compactQueue(evaluatedQueue),
     redTestLeads: buildRedTestLeads(items),
     nonClaims: [
@@ -110,6 +112,129 @@ export function buildPublicPilotProof({
       "The useful failures are candidates for new red tests only after a human reviews the original issue or pull request."
     ]
   };
+}
+
+export function buildMaintainerExportBundle({
+  proof = {},
+  baselineProof = null,
+  replayPayload = null,
+  replayPayloadLabel = "",
+  commands = {},
+  generatedAt = new Date().toISOString()
+} = {}) {
+  const responseDrafts = collectResponseDrafts(proof);
+  const responseDraftMarkdown = renderResponseDraftsMarkdown(responseDrafts);
+  const queueMarkdown = proof.queueMarkdown || "";
+  const beforeAfter = comparePilotProofs(baselineProof, proof);
+  const publicProof = compactProofForHash(proof);
+
+  return {
+    ok: proof.ok !== false,
+    artifact: "maintainer-export-bundle",
+    generatedAt,
+    repository: proof.repository || proof.queue?.repository || "",
+    dryRun: proof.dryRun !== false,
+    writePosture: proof.setup?.writePosture || "safe-dry-run-or-read-only",
+    hashes: {
+      proofSha256: sha256Json(publicProof),
+      queueMarkdownSha256: queueMarkdown ? sha256Text(queueMarkdown) : "",
+      responseDraftsSha256: responseDraftMarkdown ? sha256Text(responseDraftMarkdown) : "",
+      replayPayloadSha256: replayPayload ? sha256Json(replayPayload) : "",
+      replayPayloadLabel
+    },
+    commands: buildBundleCommands({ proof, commands }),
+    beforeAfter,
+    breakdown: proof.breakdown || {},
+    context: proof.context || {},
+    responseDrafts,
+    responseDraftMarkdown,
+    queueMarkdown,
+    nonClaims: [
+      ...(proof.nonClaims || []),
+      "Response drafts are copyable maintainer aids, not automatic GitHub comments.",
+      "Replay payload hashes prove which private input set was evaluated without publishing the raw payload."
+    ]
+  };
+}
+
+export function renderMaintainerExportMarkdown(bundle = {}) {
+  const hashRows = [
+    ["Proof JSON", bundle.hashes?.proofSha256 || "n/a"],
+    ["Queue markdown", bundle.hashes?.queueMarkdownSha256 || "n/a"],
+    ["Response drafts", bundle.hashes?.responseDraftsSha256 || "n/a"],
+    [bundle.hashes?.replayPayloadLabel ? `Replay payload (${bundle.hashes.replayPayloadLabel})` : "Replay payload", bundle.hashes?.replayPayloadSha256 || "not captured"]
+  ];
+  const nextActionRows = Object.entries(bundle.breakdown?.nextActionCounts || {}).map(([action, count]) => [action, String(count)]);
+  const beforeAfterRows = buildBeforeAfterRows(bundle.beforeAfter);
+  const commandLines = [
+    bundle.commands?.rerun || "",
+    bundle.commands?.capture || "",
+    bundle.commands?.replay || "",
+    bundle.commands?.baseline || ""
+  ].filter(Boolean);
+
+  return [
+    "# Premature Contribution Firewall Maintainer Export Bundle",
+    "",
+    `Generated: ${bundle.generatedAt || ""}`,
+    `Repository: ${bundle.repository || "unknown"}`,
+    "",
+    "## Safety Posture",
+    "",
+    `Dry-run: **${bundle.dryRun ? "yes" : "no"}**`,
+    `Write posture: \`${bundle.writePosture || "safe-dry-run-or-read-only"}\``,
+    "",
+    "No comments, labels, closures, merges, or other GitHub writes were made automatically.",
+    "",
+    "## Artifact Hashes",
+    "",
+    "| Artifact | SHA-256 |",
+    "| --- | --- |",
+    ...hashRows.map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`),
+    "",
+    "## Before / After Proof",
+    "",
+    bundle.beforeAfter?.supplied
+      ? `Baseline: ${bundle.beforeAfter.baselineGeneratedAt || "unknown"} -> Current: ${bundle.beforeAfter.currentGeneratedAt || bundle.generatedAt || "unknown"}`
+      : "No baseline was supplied. Re-run with `--baseline <previous-proof-or-capture.json>` to show before/after movement on the same input set.",
+    "",
+    "| Metric | Before | After | Delta |",
+    "| --- | ---: | ---: | ---: |",
+    ...beforeAfterRows.map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`),
+    "",
+    "## Current Queue Distribution",
+    "",
+    `Total sampled items: ${bundle.breakdown?.total || 0}`,
+    `Review now: ${bundle.breakdown?.reviewNow || 0}`,
+    `Send repair request: ${bundle.breakdown?.sendRepairRequest || 0}`,
+    `Do not review yet: ${bundle.breakdown?.doNotReviewYet || 0}`,
+    `Estimated review budget: ${bundle.breakdown?.reviewBudgetMinutes || 0} minutes`,
+    "",
+    "| Next Action | Count |",
+    "| --- | ---: |",
+    ...(nextActionRows.length ? nextActionRows : [["none", "0"]]).map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`),
+    "",
+    "## Response Drafts",
+    "",
+    bundle.responseDraftMarkdown || "No response drafts were generated.",
+    "",
+    "## Queue Markdown",
+    "",
+    "~~~markdown",
+    bundle.queueMarkdown || "No queue markdown was generated.",
+    "~~~",
+    "",
+    "## Rerun Commands",
+    "",
+    "```bash",
+    ...commandLines,
+    "```",
+    "",
+    "## Non-Claims",
+    "",
+    ...uniqueStrings(bundle.nonClaims || []).map((claim) => `- ${claim}`),
+    ""
+  ].join("\n");
 }
 
 export function renderPublicPilotMarkdown(proof = {}) {
@@ -202,6 +327,128 @@ export function renderPublicPilotMarkdown(proof = {}) {
     ...(proof.nonClaims || []).map((claim) => `- ${claim}`),
     ""
   ].join("\n");
+}
+
+function collectResponseDrafts(proof = {}) {
+  return (proof.queue?.items || [])
+    .filter((item) => item.responseTemplate?.body)
+    .map((item) => ({
+      item: item.number ? `${item.kind || "item"} #${item.number}` : item.id || "item",
+      id: item.id || "",
+      title: item.title || "",
+      nextAction: item.nextAction?.id || "unknown",
+      templateTitle: item.responseTemplate.title || "Response draft",
+      audience: item.responseTemplate.audience || "unknown",
+      channel: item.responseTemplate.channel || "unknown",
+      dryRun: item.responseTemplate.dryRun !== false,
+      posting: item.responseTemplate.posting || "disabled",
+      shouldPost: Boolean(item.responseTemplate.shouldPost),
+      body: item.responseTemplate.body || ""
+    }));
+}
+
+function renderResponseDraftsMarkdown(drafts = []) {
+  if (!drafts.length) return "";
+  const sections = [];
+  for (const draft of drafts) {
+    sections.push(
+      `### ${draft.item}: ${draft.templateTitle}`,
+      "",
+      `Next action: \`${draft.nextAction}\``,
+      `Audience: \`${draft.audience}\`; channel: \`${draft.channel}\`; posting: \`${draft.posting}\`; should post: \`${draft.shouldPost ? "true" : "false"}\``,
+      "",
+      "```text",
+      draft.body,
+      "```",
+      ""
+    );
+  }
+  return sections.join("\n").trim();
+}
+
+function comparePilotProofs(baselineProof, currentProof = {}) {
+  if (!baselineProof) {
+    return {
+      supplied: false,
+      metrics: {}
+    };
+  }
+  const metrics = {
+    total: metricDelta(baselineProof.breakdown?.total, currentProof.breakdown?.total),
+    reviewNow: metricDelta(baselineProof.breakdown?.reviewNow, currentProof.breakdown?.reviewNow),
+    sendRepairRequest: metricDelta(baselineProof.breakdown?.sendRepairRequest, currentProof.breakdown?.sendRepairRequest),
+    doNotReviewYet: metricDelta(baselineProof.breakdown?.doNotReviewYet, currentProof.breakdown?.doNotReviewYet),
+    contextFindings: metricDelta(baselineProof.context?.findings, currentProof.context?.findings),
+    collectionErrors: metricDelta(
+      baselineProof.context?.collectionErrors?.length || 0,
+      currentProof.context?.collectionErrors?.length || 0
+    )
+  };
+  const nextActions = uniqueStrings([
+    ...Object.keys(baselineProof.breakdown?.nextActionCounts || {}),
+    ...Object.keys(currentProof.breakdown?.nextActionCounts || {})
+  ]);
+  for (const action of nextActions) {
+    metrics[`nextAction:${action}`] = metricDelta(
+      baselineProof.breakdown?.nextActionCounts?.[action],
+      currentProof.breakdown?.nextActionCounts?.[action]
+    );
+  }
+  return {
+    supplied: true,
+    baselineGeneratedAt: baselineProof.generatedAt || "",
+    currentGeneratedAt: currentProof.generatedAt || "",
+    metrics
+  };
+}
+
+function buildBeforeAfterRows(beforeAfter = {}) {
+  if (!beforeAfter.supplied) {
+    return [
+      ["baseline", "0", "0", "0"]
+    ];
+  }
+  return Object.entries(beforeAfter.metrics || {}).map(([metric, delta]) => [
+    metric,
+    String(delta.before),
+    String(delta.after),
+    signedNumber(delta.delta)
+  ]);
+}
+
+function metricDelta(before = 0, after = 0) {
+  const normalizedBefore = Number(before || 0);
+  const normalizedAfter = Number(after || 0);
+  return {
+    before: normalizedBefore,
+    after: normalizedAfter,
+    delta: normalizedAfter - normalizedBefore
+  };
+}
+
+function buildBundleCommands({ proof = {}, commands = {} } = {}) {
+  const repository = proof.repository || "owner/repo";
+  const limit = proof.breakdown?.total || 10;
+  const safeCapturePath = commands.capturePath || `/tmp/pcf-${repository.replaceAll("/", "-")}-capture.json`;
+  return {
+    rerun: commands.rerun || proof.setup?.commands?.livePilot || `npm run pilot:public -- --repository ${repository} --limit ${limit}`,
+    capture: commands.capture || `npm run pilot:public -- --repository ${repository} --limit ${limit} --capture ${safeCapturePath}`,
+    replay: commands.replay || `npm run pilot:public:markdown -- --fixture ${safeCapturePath} --bundle /tmp/pcf-${repository.replaceAll("/", "-")}-bundle.md`,
+    baseline: commands.baseline || `npm run pilot:public -- --fixture ${safeCapturePath} --format json --write /tmp/pcf-${repository.replaceAll("/", "-")}-baseline.json`
+  };
+}
+
+function compactProofForHash(proof = {}) {
+  return {
+    artifact: proof.artifact || "",
+    generatedAt: proof.generatedAt || "",
+    repository: proof.repository || "",
+    dryRun: proof.dryRun !== false,
+    breakdown: proof.breakdown || {},
+    context: proof.context || {},
+    queue: proof.queue || {},
+    nonClaims: proof.nonClaims || []
+  };
 }
 
 export function renderPublicPilotSummary(proof = {}) {
@@ -307,6 +554,29 @@ function normalizeErrors(errors = []) {
   }));
 }
 
+function sha256Text(value = "") {
+  return createHash("sha256").update(String(value)).digest("hex");
+}
+
+function sha256Json(value = {}) {
+  return sha256Text(`${stableJson(value)}\n`);
+}
+
+function stableJson(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableJson(item)).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function signedNumber(value = 0) {
+  const numeric = Number(value || 0);
+  return numeric > 0 ? `+${numeric}` : String(numeric);
+}
+
 function countBy(items, getKey) {
   const counts = {};
   for (const item of items || []) {
@@ -323,6 +593,10 @@ function formatCounts(counts = {}) {
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([label, count]) => `${label} ${count}`)
     .join(", ");
+}
+
+function uniqueStrings(values = []) {
+  return [...new Set((values || []).map((value) => String(value || "").trim()).filter(Boolean))];
 }
 
 function escapeTableCell(value) {

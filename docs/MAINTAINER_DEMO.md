@@ -89,9 +89,12 @@ Run this only in dry-run/read-only mode:
 npm run pilot:public:markdown -- --repository owner/repo --limit 10 --write public-pilot.md
 npm run pilot:public -- --repository owner/repo --limit 10 --capture /tmp/pcf-owner-repo-capture.json
 npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --write /tmp/pcf-owner-repo-replay.md
+npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --bundle /tmp/pcf-owner-repo-export.md
 ```
 
 This artifact is for private review before approaching a maintainer. It shows the `review-now`, `send-repair-request`, and `do-not-review-yet` split, the refined `nextAction` buckets, repository-context labels, collection errors, and possible red-test leads. The replay capture is the stable input set for evaluator before/after comparisons; keep it private because it contains normalized third-party issue/PR bodies and repository-context results. For larger or repeated live pilots, set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token so GitHub search rate limits do not hide duplicate/concurrent-work context.
+
+The `--bundle` artifact is the maintainer handoff form. It packages the queue markdown, response drafts, proof hashes, replay payload hash, exact rerun commands, and optional before/after movement when you pass `--baseline previous-proof-or-capture.json`. Use the bundle for GitHub issues, README proof, or private maintainer review; keep the raw capture private unless the target maintainer consents.
 
 ## What To Say
 

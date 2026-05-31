@@ -241,6 +241,16 @@ Queue responses are shaped as:
 
 Queue actions remain the coarse compatibility values `review-now`, `send-repair-request`, and `do-not-review-yet`. `nextAction.id` refines the queue by next actor: `review-now`, `ask-reporter-for-evidence`, `check-duplicate-or-fixed-first`, `route-to-subsystem-or-process`, `needs-maintainer-decision`, or `not-actionable-yet`. Each `nextAction` also includes `owner`, `maintainerAction`, `reason`, and evidence arrays so API and CLI consumers can show who owns the next move, why PCF chose that actor, and what label/check evidence caused the route. Each queue item also carries a `responseTemplate`: a deterministic dry-run draft with `dryRun=true`, `posting=disabled`, and `shouldPost=false`. Reporter-owned lanes get a repair-request draft; maintainer-owned lanes get internal notes for review, duplicate checks, routing, decision, or parked-state handling. `nextActionGroups` gives the same contract at queue-lane level for UI grouping and dashboards. The precedence model is documented in [NEXT_ACTOR_MODEL.md](NEXT_ACTOR_MODEL.md): repository context, repository routing, wait-state labels, and maintainer-owned work are not hidden behind generic reporter-evidence requests. Live GitHub collection uses read-only API calls and a short in-memory cache; comments and labels are still controlled only by the explicit webhook write settings.
 
+For maintainer handoff, the public pilot CLI can write a single export bundle:
+
+```bash
+npm run pilot:public -- --repository owner/repo --limit 10 --capture /tmp/pcf-owner-repo-capture.json
+npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --bundle /tmp/pcf-owner-repo-export.md
+npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --baseline /tmp/pcf-owner-repo-before.json --bundle /tmp/pcf-owner-repo-after.md
+```
+
+The bundle contains queue markdown, copyable response drafts, proof/replay SHA-256 hashes, exact rerun commands, non-claims, and before/after movement when a previous proof or replay capture is supplied with `--baseline`. It does not include secret values and should not be used to publish raw third-party replay captures without consent.
+
 ## GitHub App Setup
 
 ```bash

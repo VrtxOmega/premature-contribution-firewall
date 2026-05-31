@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, isAbsolute, relative } from "node:path";
 import { buildPublicPilotProof, renderPublicPilotMarkdown, renderPublicPilotSummary } from "../src/core/pilot-proof.mjs";
+import { buildMaintainerExportBundle, renderMaintainerExportMarkdown } from "../src/core/pilot-proof.mjs";
 import { buildSetupGuide } from "../src/core/setup-guide.mjs";
 import { buildMaintainerQueue } from "../src/core/queue.mjs";
 import { loadConfig } from "../src/config.mjs";
@@ -102,6 +103,8 @@ export async function runPublicPilotCli(args = process.argv.slice(2)) {
   const repository = readOption(args, "--repository", "");
   const fixturePath = readOption(args, "--fixture", "");
   const capturePath = readOption(args, "--capture", "");
+  const bundlePath = readOption(args, "--bundle", "");
+  const baselinePath = readOption(args, "--baseline", "");
   const limit = clampNumber(readOption(args, "--limit", "10"), 10, 1, 100);
   const format = readOption(args, "--format", "summary");
   const writePath = readOption(args, "--write", "");
@@ -123,6 +126,32 @@ export async function runPublicPilotCli(args = process.argv.slice(2)) {
     includeIssues,
     upstreamRepository
   });
+
+  if (bundlePath) {
+    const replayPayload = await readReplayPayloadForHash({ fixturePath, capturePath });
+    const baselineProof = baselinePath ? await readBaselineProof(baselinePath) : null;
+    const bundle = buildMaintainerExportBundle({
+      proof: report,
+      baselineProof,
+      replayPayload: replayPayload?.payload || null,
+      replayPayloadLabel: replayPayload?.label || "",
+      commands: buildBundleCommandSet({
+        repository: report.repository || repository,
+        fixturePath,
+        capturePath,
+        bundlePath,
+        baselinePath,
+        limit,
+        upstreamRepository,
+        includePullRequests,
+        includeIssues
+      })
+    });
+    await mkdir(dirname(bundlePath), { recursive: true });
+    await writeFile(bundlePath, renderMaintainerExportMarkdown(bundle), "utf8");
+    process.stderr.write(`Wrote maintainer export bundle to ${bundlePath}\n`);
+  }
+
   const output = format === "json"
     ? `${JSON.stringify(report, null, 2)}\n`
     : format === "markdown"
@@ -179,6 +208,84 @@ export function buildReplayCapture({
 async function writeReplayCapture(capturePath, capture) {
   await mkdir(dirname(capturePath), { recursive: true });
   await writeFile(capturePath, `${JSON.stringify(capture, null, 2)}\n`, "utf8");
+}
+
+async function readReplayPayloadForHash({ fixturePath = "", capturePath = "" } = {}) {
+  const path = capturePath || fixturePath;
+  if (!path) return null;
+  try {
+    const payload = JSON.parse(await readFile(path, "utf8"));
+    return {
+      payload,
+      label: safeDisplayPath(path)
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function readBaselineProof(baselinePath) {
+  const payload = JSON.parse(await readFile(baselinePath, "utf8"));
+  if (payload.artifact === "public-repo-pilot-proof") return payload;
+  if (payload.artifact === "public-repo-pilot-replay-capture" || payload.queuePayload || Array.isArray(payload.items)) {
+    return buildPublicPilotReport({
+      fixturePath: baselinePath,
+      generatedAt: payload.generatedAt || new Date().toISOString()
+    });
+  }
+  throw new Error("--baseline must point to a public pilot JSON proof or replay capture.");
+}
+
+function buildBundleCommandSet({
+  repository = "",
+  fixturePath = "",
+  capturePath = "",
+  bundlePath = "",
+  baselinePath = "",
+  limit = 10,
+  upstreamRepository = "",
+  includePullRequests = true,
+  includeIssues = true
+} = {}) {
+  const targetRepository = normalizeRepository(repository) || "owner/repo";
+  const base = fixturePath
+    ? ["npm", "run", "pilot:public", "--", "--fixture", safeDisplayPath(fixturePath)]
+    : ["npm", "run", "pilot:public", "--", "--repository", targetRepository, "--limit", String(limit)];
+  if (!fixturePath && upstreamRepository) base.push("--upstream", upstreamRepository);
+  if (!includePullRequests) base.push("--no-pulls");
+  if (!includeIssues) base.push("--no-issues");
+
+  const captureTarget = capturePath || `/tmp/pcf-${targetRepository.replaceAll("/", "-")}-capture.json`;
+  const bundleTarget = bundlePath || `/tmp/pcf-${targetRepository.replaceAll("/", "-")}-bundle.md`;
+  const baselineTarget = baselinePath || `/tmp/pcf-${targetRepository.replaceAll("/", "-")}-baseline.json`;
+  const capture = fixturePath
+    ? ""
+    : [...base, "--capture", safeDisplayPath(captureTarget)].map(shellArg).join(" ");
+  const replayFixture = capturePath || fixturePath || captureTarget;
+
+  return {
+    rerun: [...base, "--format", "json"].map(shellArg).join(" "),
+    capture,
+    replay: ["npm", "run", "pilot:public:markdown", "--", "--fixture", safeDisplayPath(replayFixture), "--bundle", safeDisplayPath(bundleTarget)].map(shellArg).join(" "),
+    baseline: ["npm", "run", "pilot:public", "--", "--fixture", safeDisplayPath(replayFixture), "--format", "json", "--write", safeDisplayPath(baselineTarget)].map(shellArg).join(" "),
+    capturePath: safeDisplayPath(captureTarget)
+  };
+}
+
+function safeDisplayPath(path) {
+  const text = String(path || "");
+  if (!text) return "";
+  if (isAbsolute(text)) {
+    const rel = relative(process.cwd(), text);
+    if (rel && !rel.startsWith("..") && !isAbsolute(rel)) return rel;
+  }
+  return text;
+}
+
+function shellArg(value) {
+  const text = String(value ?? "");
+  if (/^[A-Za-z0-9_./:@=-]+$/.test(text)) return text;
+  return `'${text.replaceAll("'", "'\\''")}'`;
 }
 
 async function safeReadRepositoryMetadata(githubClient, owner, repo) {

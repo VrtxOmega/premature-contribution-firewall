@@ -11,7 +11,9 @@ import {
   runPublicPilotCli
 } from "../scripts/run-public-pilot.mjs";
 import {
+  buildMaintainerExportBundle,
   buildPublicPilotProof,
+  renderMaintainerExportMarkdown,
   renderPublicPilotMarkdown,
   renderPublicPilotSummary
 } from "../src/core/pilot-proof.mjs";
@@ -65,6 +67,59 @@ test("public pilot markdown is maintainer-readable and path-safe", async () => {
   assert.match(summary, /Send repair request: 1/);
   assert.match(summary, /Repair sub-actions: ask-reporter-for-evidence 1, check-duplicate-or-fixed-first 1/);
   assert.match(summary, /Context checked: 3/);
+  assert.equal(markdown.includes(localHomePrefix), false);
+  assert.equal(markdown.includes("GITHUB_TOKEN="), false);
+});
+
+test("maintainer export bundle packages queue markdown, response drafts, hashes, and before-after proof", async () => {
+  const proof = await buildPublicPilotReport({
+    fixturePath,
+    generatedAt: "2026-05-30T10:00:00Z"
+  });
+  const replayPayload = JSON.parse(await readFile(fixturePath, "utf8"));
+  const baselineProof = {
+    ...proof,
+    generatedAt: "2026-05-30T09:00:00Z",
+    breakdown: {
+      ...proof.breakdown,
+      reviewNow: 0,
+      sendRepairRequest: 2,
+      nextActionCounts: {
+        ...proof.breakdown.nextActionCounts,
+        "review-now": 0,
+        "ask-reporter-for-evidence": 2
+      }
+    }
+  };
+  const bundle = buildMaintainerExportBundle({
+    proof,
+    baselineProof,
+    replayPayload,
+    replayPayloadLabel: "fixtures/queue-sample.json",
+    commands: {
+      rerun: "npm run pilot:public -- --fixture fixtures/queue-sample.json --format json",
+      replay: "npm run pilot:public:markdown -- --fixture fixtures/queue-sample.json --bundle /tmp/pcf-bundle.md"
+    },
+    generatedAt: "2026-05-30T10:01:00Z"
+  });
+  const markdown = renderMaintainerExportMarkdown(bundle);
+
+  assert.equal(bundle.artifact, "maintainer-export-bundle");
+  assert.equal(bundle.dryRun, true);
+  assert.equal(bundle.responseDrafts.length, 3);
+  assert.equal(bundle.beforeAfter.supplied, true);
+  assert.equal(bundle.beforeAfter.metrics.reviewNow.delta, 1);
+  assert.equal(bundle.beforeAfter.metrics.sendRepairRequest.delta, -1);
+  assert.match(bundle.hashes.proofSha256, /^[a-f0-9]{64}$/);
+  assert.match(bundle.hashes.queueMarkdownSha256, /^[a-f0-9]{64}$/);
+  assert.match(bundle.hashes.responseDraftsSha256, /^[a-f0-9]{64}$/);
+  assert.match(bundle.hashes.replayPayloadSha256, /^[a-f0-9]{64}$/);
+  assert.match(markdown, /Maintainer Export Bundle/);
+  assert.match(markdown, /Before \/ After Proof/);
+  assert.match(markdown, /Response Drafts/);
+  assert.match(markdown, /Queue Markdown/);
+  assert.match(markdown, /should post: `false`/);
+  assert.match(markdown, /No comments, labels, closures, merges, or other GitHub writes were made automatically/);
   assert.equal(markdown.includes(localHomePrefix), false);
   assert.equal(markdown.includes("GITHUB_TOKEN="), false);
 });
@@ -140,6 +195,36 @@ test("public pilot CLI writes markdown artifact", async () => {
     assert.match(markdown, /Review now: 1/);
     assert.match(markdown, /No collection errors/);
     assert.equal(markdown.includes(localHomePrefix), false);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("public pilot CLI writes maintainer export bundle artifact", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "pcf-maintainer-export-"));
+  const outputPath = join(dir, "pilot.md");
+  const bundlePath = join(dir, "bundle.md");
+  try {
+    await runPublicPilotCli([
+      "--fixture",
+      fixturePath,
+      "--format",
+      "markdown",
+      "--write",
+      outputPath,
+      "--bundle",
+      bundlePath
+    ]);
+
+    const bundle = await readFile(bundlePath, "utf8");
+    assert.match(bundle, /Premature Contribution Firewall Maintainer Export Bundle/);
+    assert.match(bundle, /Artifact Hashes/);
+    assert.match(bundle, /Replay payload \(fixtures\/queue-sample\.json\)/);
+    assert.match(bundle, /Response Drafts/);
+    assert.match(bundle, /Queue Markdown/);
+    assert.match(bundle, /npm run pilot:public -- --fixture fixtures\/queue-sample\.json --format json/);
+    assert.equal(bundle.includes(localHomePrefix), false);
+    assert.equal(bundle.includes("GITHUB_TOKEN="), false);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
