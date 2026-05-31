@@ -19,6 +19,7 @@ It is not a list of endorsements. A target repository appearing here means PCF r
 | `make-all/tuya-local` | Public brief sent from PCF repo | [PCF #1](https://github.com/VrtxOmega/premature-contribution-firewall/issues/1) | n/a | 5 review / 2 repair / 1 defer | Device-support reports need product, log, and DPS evidence checks, not only classic bug-report anatomy. |
 | `floccusaddon/floccus` | Public brief sent from PCF repo | [PCF #2](https://github.com/VrtxOmega/premature-contribution-firewall/issues/2) | 0 review / 9 repair / 3 defer | 4 review / 8 repair / 0 defer | Feature requests need use-case and requested-behavior checks instead of bug-only logs/reproducer checks. |
 | `knadh/listmonk` | Private only | None | 6 review / 4 repair / 2 defer | 5 review / 6 repair / 1 defer | Current-workflow feature requests and issue-comment duplicate references both matter; external GitHub URLs must not be treated as local refs. |
+| `henrygd/beszel` | Private only | None | 5 review / 6 repair / 1 defer | 6 review / 6 repair / 0 defer | Security/SSL monitoring feature requests must not be mistaken for vulnerability reports requiring a reproducer. |
 
 ## tuya-local
 
@@ -175,13 +176,89 @@ ac00754fb5803b1e7c55749993adf03f3076ac39e741714f7a5655d8a55f7127
 8953e9687d4f6e9723e3c20a3811a6aca06c9afdfaea1c21849fa5c558a24fba
 ```
 
+## beszel
+
+Target: `henrygd/beszel`
+
+Queue shape:
+
+- hub and agent bug reports
+- Podman/container runtime behavior
+- WebSocket and SSH-pull connection reports
+- OIDC/authentication configuration
+- infrastructure monitoring feature requests
+- repository context that may point to duplicate or already-solved issues
+
+Templates inspected:
+
+- `bug_report.yml`
+- `feature_request.yml`
+- `config.yml`
+
+Initial private pilot:
+
+- 12 sampled issues
+- 5 review-now
+- 6 repair
+- 1 defer
+- repository context checked all 12
+- context findings: 14
+- items with context findings: 4
+- context unavailable: 0
+
+What PCF got wrong:
+
+- `#2038` was a complete feature request for SSL certificate expiry monitoring and SNMP monitoring, with requirements and motivation.
+- PCF treated generic security/SSL monitoring language as a vulnerability report, applied security reproducer discipline, and routed it to `do-not-review-yet`.
+
+Fixes made:
+
+- Security-claim detection now targets actual vulnerability/exploit/CVE/security-issue claims instead of any generic use of the word "security."
+- Security or SSL monitoring feature requests can remain in the feature-request path when they provide use case and requested behavior evidence.
+- Actual vulnerability reports without reproducer evidence remain blocked.
+
+Final private pilot:
+
+- 12 sampled issues
+- 6 review-now
+- 6 repair
+- 0 defer
+- repository context checked all 12
+- context findings: 14
+- items with context findings: 4
+- context unavailable: 0
+
+Notable final routing:
+
+- `#2038` moved from do-not-review-yet to review-now.
+- `#1995`, `#2041`, `#1997`, and `#2049` stayed in repair because repository context found duplicate, solved, or closed-linked issue signals.
+- `#1983` and `#2040` stayed in repair because their bug reports still need clearer expected/actual or technical-analysis evidence before immediate maintainer review.
+
+Verification:
+
+- Focused evaluator and benchmark tests passed.
+- Benchmark corpus increased to 41 cases:
+  - `feature-request-security-monitoring`
+- Current benchmark result: 41/41 passing.
+- GitHub writes to `henrygd/beszel`: none.
+- Public outreach: none.
+
+Private artifact hashes:
+
+```text
+3fec6a095baf8aa8ab2f0e4075135900b22da42a2483c43dc36e1a7f6974d758
+5f935b087bf993cd87b74c899de5882ed042c18b3f603541544043b64d4c7bf4
+85c76e130caf2f1dcea1d61e0587548831557451daa4c203ed4924f861944cea
+8f2d2bcc2d3c0e6194b61678254ebe5b0c9a62fe8c6e8e1a732a86bd064d0b6a
+```
+
 ## Current Gate State
 
 The pilot ledger should be updated whenever a real pilot changes PCF behavior.
 
 Current expected proof state:
 
-- benchmark: 40/40
+- benchmark: 41/41
 - adversarial red test: 8/8
 - maintainer demo: PASS
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner

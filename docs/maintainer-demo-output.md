@@ -1,12 +1,12 @@
 # Premature Contribution Firewall Maintainer Demo
 
-Generated: 2026-05-31T00:07:51.443Z
+Generated: 2026-05-31T00:33:04.458Z
 
 Verdict: **PASS**
 
 ## Claims This Demo Proves
 
-- 40/40 deterministic benchmark cases pass.
+- 41/41 deterministic benchmark cases pass.
 - 8/8 adversarial red-test cases pass.
 - Maintainer queue sorts 3 supplied GitHub items with repository and upstream context.
 - Feedback calibration attaches 2 matching local candidate signal(s) to future queue output.
@@ -35,7 +35,7 @@ npm run demo:maintainer -- --fail-on-regression
 
 | Surface | Result | Count | Note |
 | --- | --- | --- | --- |
-| Benchmark | PASS | 40/40 | Deterministic fixture corpus |
+| Benchmark | PASS | 41/41 | Deterministic fixture corpus |
 | Adversarial red test | PASS | 8/8 | Breakage residue corpus |
 | Maintainer queue | PASS | 3 items | 3 context findings |
 | Feedback calibration | PASS | 2 match(es) | 1 candidate fixture(s) |

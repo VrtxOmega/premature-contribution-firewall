@@ -32,7 +32,7 @@ const SIGNALS = {
   aiDisclosure: /\b(ai|llm|chatgpt|copilot|claude|gemini|generated)\b/i,
   humanAccountability: /\b(tested|verified|reviewed|reproduced|i understand|manual|locally)\b/i,
   dependencyJustification: /\b(dependenc(?:y|ies)|package|lockfile|upgrade|security update|npm install|npm audit|vulnerability)\b/i,
-  securityClaim: /\b(security|vulnerability|cve|exploit|rce|xss|csrf|injection|overflow)\b/i,
+  securityClaim: /\b(vulnerability|cve|exploit|rce|xss|csrf|injection|overflow)\b|\bsecurity\s+(?:vulnerability|issue|bug|flaw|risk|report|advisory|incident|hole)\b/i,
   negatedVerification: /\b(?:did\s+not|didn't|do\s+not|don't|was\s+not|wasn't|were\s+not|weren't|never|not)\s+(?:personally\s+)?(?:run|execute|test|verify|check)\b|\b(?:tests?|verification|ci|checks?)\s+(?:were\s+)?(?:not|never)\s+(?:run|executed|performed|checked)\b/i,
   supportedNoTestsReason: /\b(?:not applicable|docs only|documentation only|no code change|copy only|comment only|manual verification only|no runtime behavior)\b/i,
   generatedJustification: /\b(?:generated|dist|bundle|minified|vendor(?:ed)?|checked[- ]in artifact|built artifact)\b[\s\S]{0,120}\b(?:required|necessary|because|reason|release|snapshot|reproducible|source)\b/i,

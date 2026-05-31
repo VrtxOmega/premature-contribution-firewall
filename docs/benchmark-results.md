@@ -5,14 +5,14 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 ## Summary
 
 - Version: 2026.05.30
-- Cases: 40/40 passing
+- Cases: 41/41 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
 - standard-pr: 9/9 passing
 - tool-use: 2/2 passing
-- issue: 9/9 passing
+- issue: 10/10 passing
 - repo-policy: 3/3 passing
 - repo-context: 4/4 passing
 - kernel-grade: 7/7 passing
@@ -38,6 +38,7 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 | PASS | issue | device-support-issue | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | feature-request-ready | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | feature-request-current-workflow | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
+| PASS | issue | feature-request-security-monitoring | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | feature-request-thin | low-review-value | low-review-value | 45 | `needs-clear-summary`, `needs-context`, `needs-use-case`, `duplicate-search-needed` |
 | PASS | issue | unready-issue | low-review-value | low-review-value | 0 | `needs-clear-summary`, `needs-context`, `needs-reproducer`, `needs-expected-actual` |
 | PASS | issue | security-no-reproducer-issue | low-review-value | low-review-value | 8 | `needs-context`, `needs-reproducer`, `needs-expected-actual`, `needs-environment` |

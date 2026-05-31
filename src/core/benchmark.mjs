@@ -114,6 +114,13 @@ export const BENCHMARK_CASES = [
     expect: { status: "ready-for-maintainer", minScore: 90, labels: ["ready-for-maintainer"], absentLabels: ["needs-use-case"], repoContext: true }
   },
   {
+    id: "feature-request-security-monitoring",
+    category: "issue",
+    name: "Feature request for security monitoring is not a vulnerability report",
+    input: featureRequestSecurityMonitoringIssue(),
+    expect: { status: "ready-for-maintainer", minScore: 90, labels: ["ready-for-maintainer"], absentLabels: ["security-claim-needs-reproducer", "needs-reproducer", "needs-logs"], repoContext: true }
+  },
+  {
     id: "feature-request-thin",
     category: "issue",
     name: "Thin feature request without user problem",
@@ -724,6 +731,40 @@ function featureRequestCurrentWorkflowIssue() {
     repositoryContext: {
       source: "github-api",
       repository: "knadh/listmonk",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function featureRequestSecurityMonitoringIssue() {
+  return {
+    kind: "issue",
+    title: "[Feature]: Add SSL certificate expiry and SNMP monitoring",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "### Welcome!",
+      "",
+      "- [x] I have searched open and closed feature requests.",
+      "- [x] This is a feature request, not a bug report or support question.",
+      "",
+      "### Component",
+      "",
+      "Hub",
+      "",
+      "### Description",
+      "",
+      "I propose adding SSL certificate expiry monitoring and SNMP device monitoring to improve system observability.",
+      "The SSL monitor should let users enter target domains or IPs, alert thresholds, and notifications before certificates expire.",
+      "The SNMP monitor should support v2c and v3, connection details, authentication settings, and custom metric OIDs.",
+      "",
+      "### Motivation / Use Case",
+      "",
+      "This would help prevent service outages caused by certificate expiration and would let a homelab monitor switches and routers from the same dashboard."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "henrygd/beszel",
       issues: [],
       pullRequests: []
     }

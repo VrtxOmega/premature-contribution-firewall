@@ -194,6 +194,48 @@ test("feature request with current workflow and expected behavior counts as use-
   assert.equal(result.labels.includes("needs-use-case"), false);
 });
 
+test("security monitoring feature request is not treated as a vulnerability report", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "[Feature]: Add SSL certificate expiry and SNMP monitoring",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "### Welcome!",
+      "",
+      "- [x] I have searched open and closed feature requests.",
+      "- [x] This is a feature request, not a bug report or support question.",
+      "",
+      "### Component",
+      "",
+      "Hub",
+      "",
+      "### Description",
+      "",
+      "I propose adding SSL certificate expiry monitoring and SNMP device monitoring to improve system observability.",
+      "The SSL monitor should allow target domains or IPs, alert thresholds, and notifications before certificates expire.",
+      "The SNMP monitor should support v2c and v3, connection details, authentication settings, and custom metric OIDs.",
+      "",
+      "### Motivation / Use Case",
+      "",
+      "This would help prevent service outages caused by certificate expiration and would let a homelab monitor switches and routers from the same dashboard."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "henrygd/beszel",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.ok(result.labels.includes("ready-for-maintainer"));
+  assert.equal(result.labels.includes("security-claim-needs-reproducer"), false);
+  assert.equal(result.labels.includes("needs-reproducer"), false);
+  assert.equal(result.labels.includes("needs-logs"), false);
+  assert.ok(result.checks.some((check) => check.id === "feature-use-case" && check.status === "pass"));
+  assert.ok(result.checks.some((check) => check.id === "feature-solution" && check.status === "pass"));
+});
+
 test("markdown report includes status, labels, repairs, and marker", async () => {
   const result = evaluateContribution(await fixture("pr-ready"));
   const markdown = renderMarkdownReport(result);
