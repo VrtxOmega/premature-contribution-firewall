@@ -1,0 +1,36 @@
+{
+  "name": "PCF upstream contribution radar",
+  "defaults": {
+    "limit": 10,
+    "includeIssues": true,
+    "includePullRequests": false,
+    "contributorPreflight": true
+  },
+  "repositories": [
+    {
+      "repository": "docker/cli",
+      "priority": "high",
+      "reason": "Small, reviewable CLI issues can be valuable when current upstream still reproduces and no PR owns the issue."
+    },
+    {
+      "repository": "python/cpython",
+      "priority": "high",
+      "reason": "High-impact runtime and stdlib issues, but contribution policy and current-main reproduction must be gated carefully."
+    },
+    {
+      "repository": "rust-lang/rust",
+      "priority": "high",
+      "reason": "Large language/toolchain queue where tracking/proposal/process labels must be separated from fixable defects."
+    },
+    {
+      "repository": "kubernetes/kubernetes",
+      "priority": "high",
+      "reason": "Important infrastructure queue with ownership, SIG routing, and duplicate/current-work risk."
+    },
+    {
+      "repository": "microsoft/vscode",
+      "priority": "medium",
+      "reason": "Large desktop/tooling queue with high duplicate risk; useful for spotting narrow, unowned, reproducible bugs."
+    }
+  ]
+}

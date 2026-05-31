@@ -524,11 +524,14 @@ npm run pilot:public -- --repository owner/repo --limit 10 --capture /tmp/pcf-ow
 npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --write /tmp/pcf-owner-repo-replay.md
 npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --bundle /tmp/pcf-owner-repo-export.md
 npm run pilot:scout -- --repository owner/repo --limit 10 --write /tmp/pcf-owner-repo-scout.md
+npm run pilot:watch -- --config config/watchlist.json --write /tmp/pcf-watchlist.md
 ```
 
 The public pilot artifact leads with `review-now` versus `send-repair-request`, breaks non-ready work into `nextAction` buckets, preserves repository-context findings such as duplicates, concurrent work, and upstream fixes, and records collection errors. `--capture` writes the normalized queue payload that PCF actually evaluated so future before/after comparisons can replay the same input with `--fixture` instead of depending on a live queue that may have changed. Captures include third-party issue/PR bodies and repository-context results; keep them private and do not commit them without maintainer consent. Set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token for larger pilots or repeated search-heavy runs; the guide reports only whether a token is configured and never returns the token value. PCF spaces GitHub search calls with `PCF_GITHUB_SEARCH_DELAY_MS` so multi-repo pilots do not collapse into secondary rate-limit noise.
 
 `npm run pilot:scout` is the contributor-scouting path. It runs the issue queue only, keeps the read-only/no-write posture, and adds `--contributor-preflight` so each `review-now` issue candidate is checked for exact open PR ownership signals such as an open PR body that references `#123`. A blocked result means another PR path needs inspection before cloning or coding. A candidate result is not permission to code; contribution policy and current-upstream behavior still need separate gates.
+
+`npm run pilot:watch` runs that same scout path across a curated watchlist and produces one contribution-radar report. It is documented in [docs/WATCHLIST.md](docs/WATCHLIST.md). Watchlist mode does not search all of GitHub, clone repositories, write patches, open pull requests, or contact maintainers.
 
 `--bundle` writes a maintainer export bundle: queue markdown, copyable response drafts, SHA-256 hashes for the proof surfaces and replay payload, exact rerun/replay commands, non-claims, and optional before/after movement when paired with `--baseline previous-proof-or-capture.json`. The bundle is designed for a GitHub issue, README, or private maintainer handoff without publishing raw replay captures.
 

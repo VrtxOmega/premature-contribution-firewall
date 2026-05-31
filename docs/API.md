@@ -248,11 +248,14 @@ npm run pilot:public -- --repository owner/repo --limit 10 --capture /tmp/pcf-ow
 npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --bundle /tmp/pcf-owner-repo-export.md
 npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --baseline /tmp/pcf-owner-repo-before.json --bundle /tmp/pcf-owner-repo-after.md
 npm run pilot:scout -- --repository owner/repo --limit 10 --write /tmp/pcf-owner-repo-scout.md
+npm run pilot:watch -- --config config/watchlist.json --write /tmp/pcf-watchlist.md
 ```
 
 The bundle contains queue markdown, copyable response drafts, proof/replay SHA-256 hashes, exact rerun commands, non-claims, and before/after movement when a previous proof or replay capture is supplied with `--baseline`. It does not include secret values and should not be used to publish raw third-party replay captures without consent.
 
 For contributor scouting, `npm run pilot:scout` is shorthand for a read-only issue queue plus `--contributor-preflight`. The preflight only runs on `review-now` issue candidates. It checks for exact open PR ownership signals, including open PR bodies or titles that reference the candidate issue number. The output adds a `contributorPreflight` object with `blocked`, `candidate`, and `unchecked` counts. A `candidate` result means no exact open PR overlap was found by this gate; it does not replace contribution policy checks, current-upstream behavior verification, or maintainer judgment.
+
+For repeated scouting, `npm run pilot:watch` reads [config/watchlist.json](../config/watchlist.json), runs the issue-only scout path for each enabled repository, and emits a single `pcf-watchlist-report` artifact with repository summaries and candidate rows. It is a curated radar, not repository discovery. It never clones repositories, writes patches, opens pull requests, posts comments, applies labels, or contacts maintainers.
 
 ## GitHub App Setup
 
