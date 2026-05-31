@@ -1163,7 +1163,7 @@ Current expected proof state:
 
 - unit/integration tests: 132/132
 - benchmark: 69/69
-- adversarial red test: 8/8
+- adversarial red test: 10/10
 - maintainer demo: PASS
 - queue proof: coarse actions plus refined `nextAction` repair sub-actions
 - replay proof: private normalized capture/replay path used for the large-maintainer bench

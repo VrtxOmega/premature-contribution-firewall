@@ -11,6 +11,7 @@ import {
   renderMaintainerDemoMarkdown,
   renderMaintainerDemoSummary
 } from "../scripts/run-maintainer-demo.mjs";
+import { ADVERSARIAL_CASES } from "../src/core/adversary.mjs";
 import { BENCHMARK_CASES } from "../src/core/benchmark.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -18,6 +19,7 @@ const scriptPath = fileURLToPath(new URL("../scripts/run-maintainer-demo.mjs", i
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const localHomePrefix = ["/", "home", "/"].join("");
 const expectedBenchmarkCases = BENCHMARK_CASES.length;
+const expectedAdversarialCases = ADVERSARIAL_CASES.length;
 
 test("maintainer demo report covers all proof surfaces", async () => {
   const report = await buildMaintainerDemoReport({
@@ -28,9 +30,9 @@ test("maintainer demo report covers all proof surfaces", async () => {
   assert.equal(report.verdict, "PASS");
   assert.equal(report.proof.benchmark.passed, expectedBenchmarkCases);
   assert.equal(report.proof.benchmark.failed, 0);
-  assert.equal(report.proof.adversarialRedTest.passed, 8);
+  assert.equal(report.proof.adversarialRedTest.passed, expectedAdversarialCases);
   assert.equal(report.proof.adversarialRedTest.failed, 0);
-  assert.equal(report.proof.adversarialRedTest.residue.length, 8);
+  assert.equal(report.proof.adversarialRedTest.residue.length, expectedAdversarialCases);
   assert.equal(report.proof.maintainerQueue.total, 3);
   assert.equal(report.proof.maintainerQueue.ready, 1);
   assert.equal(report.proof.maintainerQueue.needsRepair, 1);
@@ -76,7 +78,7 @@ test("maintainer demo CLI emits JSON and honors fail-on-regression", async () =>
 
   assert.equal(report.ok, true);
   assert.equal(report.proof.benchmark.total, expectedBenchmarkCases);
-  assert.equal(report.proof.adversarialRedTest.total, 8);
+  assert.equal(report.proof.adversarialRedTest.total, expectedAdversarialCases);
   assert.equal(report.proof.feedbackCalibration.matches, 2);
   assert.equal(report.proof.feedbackCandidate.replayFailed, 0);
 });

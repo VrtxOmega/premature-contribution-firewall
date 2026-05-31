@@ -36,7 +36,7 @@ The useful signal is not that every final queue is "right." The useful signal is
 | --- | ---: | --- |
 | Unit and integration tests | 132/132 | Core evaluator, GitHub queue, API, feedback, setup, and context behavior stay green together. |
 | Maintainer benchmark | 69/69 | The permanent corpus captures the real breakage classes discovered so far. |
-| Adversarial red test | 8/8 | Known bad inputs still fail closed. |
+| Adversarial red test | 10/10 | Known bad inputs and queue-explanation failures still fail closed. |
 | Maintainer demo | PASS | The repo can produce the public proof bundle in one repeatable command. |
 | GitHub Actions | PASS | The same gates run remotely on pushes and pull requests. |
 

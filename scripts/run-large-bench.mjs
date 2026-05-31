@@ -256,6 +256,8 @@ export function renderLargeBenchMarkdown(result = {}) {
     code(action),
     String(count)
   ]);
+  const duplicateCheckCount = aggregate.nextActionCounts?.["check-duplicate-or-fixed-first"] || 0;
+  const waitStateCount = aggregate.nextActionCounts?.["not-actionable-yet"] || 0;
   const hashRows = (result.repositories || []).map((row) => [
     code(row.repository),
     code(row.captureHash),
@@ -357,6 +359,15 @@ export function renderLargeBenchMarkdown(result = {}) {
     "- `test/evaluator.test.mjs` covers large-maintainer language proposals, tracking issues, RFE option wording, and thin proposals that must still fail.",
     "- `test/repository-context.test.mjs` covers proposal ancestry references that should not become duplicate blockers.",
     "- `src/core/benchmark.mjs` includes large-maintainer process cases in the deterministic 69-case benchmark.",
+    "",
+    "## Replay Residue Mined",
+    "",
+    `This replay contained ${duplicateCheckCount} duplicate/fixed/context checks and ${waitStateCount} not-actionable wait-state items. Those buckets were mined for red-test leads without committing raw issue bodies.`,
+    "",
+    "The useful residue was a queue-explanation failure mode: mixed labels could select the right `nextAction` while explaining it with the wrong label family. That now has synthetic adversarial coverage:",
+    "",
+    "- `next-action-context-reason-priority`: context actions must explain themselves with repository-context labels, not reporter-evidence labels.",
+    "- `next-action-wait-state-reason-priority`: wait-state actions must explain themselves with blocked/parked labels, not reporter-evidence labels.",
     "",
     "## Non-Claims",
     "",

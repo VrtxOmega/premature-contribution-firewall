@@ -341,7 +341,6 @@ export function classifyNextAction(evaluation = {}, { coarseAction = "" } = {}) 
     .map((check) => check.label)
     .filter(Boolean);
   const allLabels = new Set([...labels, ...checkLabels]);
-  const reason = reasonFromLabels(allLabels);
 
   if (allLabels.has("feedback-calibration-needed")) {
     return nextAction("needs-maintainer-decision", "Maintainer feedback conflicts with the current heuristic result.");
@@ -350,16 +349,16 @@ export function classifyNextAction(evaluation = {}, { coarseAction = "" } = {}) 
     return nextAction("review-now");
   }
   if (hasAny(allLabels, CONTEXT_NEXT_ACTION_LABELS)) {
-    return nextAction("check-duplicate-or-fixed-first", reason || "Repository context found related work that should be checked first.");
+    return nextAction("check-duplicate-or-fixed-first", reasonFromLabels(allLabels, CONTEXT_NEXT_ACTION_LABELS, "Repository context label") || "Repository context found related work that should be checked first.");
   }
   if (hasAny(allLabels, ROUTE_NEXT_ACTION_LABELS)) {
-    return nextAction("route-to-subsystem-or-process", reason || "Repository process or ownership should route this before normal review.");
+    return nextAction("route-to-subsystem-or-process", reasonFromLabels(allLabels, ROUTE_NEXT_ACTION_LABELS, "Routing or process label") || "Repository process or ownership should route this before normal review.");
   }
   if (hasAny(allLabels, NOT_ACTIONABLE_NEXT_ACTION_LABELS)) {
-    return nextAction("not-actionable-yet", reason || "Repository state says this is blocked or already parked.");
+    return nextAction("not-actionable-yet", reasonFromLabels(allLabels, NOT_ACTIONABLE_NEXT_ACTION_LABELS, "Blocked or parked label") || "Repository state says this is blocked or already parked.");
   }
   if (hasAny(allLabels, REPORTER_EVIDENCE_NEXT_ACTION_LABELS)) {
-    return nextAction("ask-reporter-for-evidence", reason || "The submitter needs to provide missing evidence before review.");
+    return nextAction("ask-reporter-for-evidence", reasonFromLabels(allLabels, REPORTER_EVIDENCE_NEXT_ACTION_LABELS, "Reporter evidence label") || "The submitter needs to provide missing evidence before review.");
   }
   if (evaluation.status === "low-review-value") {
     return nextAction("not-actionable-yet", "The item is below the threshold for useful maintainer action.");
@@ -382,12 +381,9 @@ function hasAny(labels, candidates) {
   return false;
 }
 
-function reasonFromLabels(labels) {
+function reasonFromLabels(labels, candidates, prefix) {
   for (const label of labels) {
-    if (CONTEXT_NEXT_ACTION_LABELS.has(label)) return `Repository context label: ${label}.`;
-    if (ROUTE_NEXT_ACTION_LABELS.has(label)) return `Routing or process label: ${label}.`;
-    if (NOT_ACTIONABLE_NEXT_ACTION_LABELS.has(label)) return `Blocked or parked label: ${label}.`;
-    if (REPORTER_EVIDENCE_NEXT_ACTION_LABELS.has(label)) return `Reporter evidence label: ${label}.`;
+    if (candidates.has(label)) return `${prefix}: ${label}.`;
   }
   return "";
 }

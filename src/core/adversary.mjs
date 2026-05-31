@@ -1,6 +1,7 @@
 import { evaluateBatch } from "./api.mjs";
 import { evaluateContribution } from "./evaluator.mjs";
 import { parsePatchSubmission } from "./patch.mjs";
+import { classifyNextAction } from "./queue.mjs";
 
 const READY_CHECK = [{ name: "ci", conclusion: "success" }];
 const SKIPPED_CHECKS = [
@@ -77,6 +78,40 @@ export const ADVERSARIAL_CASES = [
     residue: "Initial probe already held; kept as a canary that empty patch text remains low-review-value.",
     patchText: "",
     expect: { status: "low-review-value", labels: ["needs-context", "needs-dco-signoff"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "next-action-context-reason-priority",
+    category: "queue-explanation",
+    attack: "Combines reporter-evidence and repository-context labels so the queue routes to a context check but can explain itself as a reporter-evidence request.",
+    residue: "Large-bench replay residue showed `check-duplicate-or-fixed-first` items whose reason could say `Reporter evidence label: duplicate-search-needed`, forcing maintainers to re-triage the triage.",
+    nextActionInput: {
+      status: "needs-repair",
+      labels: ["duplicate-search-needed", "possibly-solved", "linked-issue-closed"],
+      checks: []
+    },
+    coarseAction: "send-repair-request",
+    expect: {
+      status: "check-duplicate-or-fixed-first",
+      reasonIncludes: "Repository context label: possibly-solved",
+      reasonExcludes: "Reporter evidence label"
+    }
+  },
+  {
+    id: "next-action-wait-state-reason-priority",
+    category: "queue-explanation",
+    attack: "Combines missing-evidence labels with a maintainer-pending state so a parked item can be explained as if the reporter is the next actor.",
+    residue: "Large-bench replay residue showed `not-actionable-yet` items whose reason could cite reporter evidence instead of the maintainer-pending state.",
+    nextActionInput: {
+      status: "needs-repair",
+      labels: ["needs-technical-analysis", "maintainer-pending-clarification"],
+      checks: []
+    },
+    coarseAction: "send-repair-request",
+    expect: {
+      status: "not-actionable-yet",
+      reasonIncludes: "Blocked or parked label: maintainer-pending-clarification",
+      reasonExcludes: "Reporter evidence label"
+    }
   }
 ];
 
@@ -166,6 +201,19 @@ export function renderAdversaryMarkdown(adversaryResult = runAdversary()) {
 
 function evaluateRedCase(testCase) {
   if (testCase.apiCall === "evaluateBatch") return evaluateBatch(testCase.payload);
+  if (testCase.nextActionInput) {
+    const action = classifyNextAction(testCase.nextActionInput, { coarseAction: testCase.coarseAction || "" });
+    return {
+      status: action.id,
+      score: null,
+      labels: [],
+      profile: null,
+      ok: true,
+      error: action.reason || "",
+      reason: action.reason || "",
+      evaluation: { nextAction: action }
+    };
+  }
   const input = testCase.patchText !== undefined ? parsePatchSubmission(testCase.patchText) : deepClone(testCase.input);
   const result = evaluateContribution(input, { profile: input.profile });
   return {
@@ -186,6 +234,12 @@ function compareExpectation(expect, result) {
   if (expect.errorIncludes && !String(result.error || "").includes(expect.errorIncludes)) {
     failures.push(`error expected to include ${expect.errorIncludes}, got ${result.error || ""}`);
   }
+  if (expect.reasonIncludes && !String(result.reason || result.error || "").includes(expect.reasonIncludes)) {
+    failures.push(`reason expected to include ${expect.reasonIncludes}, got ${result.reason || result.error || ""}`);
+  }
+  if (expect.reasonExcludes && String(result.reason || result.error || "").includes(expect.reasonExcludes)) {
+    failures.push(`reason expected not to include ${expect.reasonExcludes}, got ${result.reason || result.error || ""}`);
+  }
   for (const label of expect.labels || []) {
     if (!result.labels?.includes(label)) failures.push(`missing label ${label}`);
   }
@@ -201,7 +255,9 @@ function publicExpectation(expect) {
     ok: expect.ok === undefined ? "" : String(expect.ok),
     labels: expect.labels || [],
     absentLabels: expect.absentLabels || [],
-    errorIncludes: expect.errorIncludes || ""
+    errorIncludes: expect.errorIncludes || "",
+    reasonIncludes: expect.reasonIncludes || "",
+    reasonExcludes: expect.reasonExcludes || ""
   };
 }
 

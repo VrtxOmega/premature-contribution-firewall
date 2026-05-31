@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
   buildMaintainerQueue,
+  classifyNextAction,
   evaluateQueueItem,
   formatMaintainerQueueMarkdown
 } from "../src/core/queue.mjs";
@@ -141,6 +142,33 @@ test("queue repair sub-actions distinguish reporter, context, routing, maintaine
   assert.equal(queue.summary.repairSubActions["ask-reporter-for-evidence"], 1);
   assert.equal(queue.summary.repairSubActions["route-to-subsystem-or-process"], 1);
   assert.equal(queue.summary.repairSubActions["not-actionable-yet"], 1);
+});
+
+test("queue nextAction reasons match the selected action family", () => {
+  const contextFirst = classifyNextAction({
+    status: "needs-repair",
+    labels: ["duplicate-search-needed", "possibly-solved", "linked-issue-closed"],
+    checks: []
+  }, { coarseAction: "send-repair-request" });
+  const parkedFirst = classifyNextAction({
+    status: "needs-repair",
+    labels: ["needs-technical-analysis", "maintainer-pending-clarification"],
+    checks: []
+  }, { coarseAction: "send-repair-request" });
+  const routeFirst = classifyNextAction({
+    status: "low-review-value",
+    labels: ["needs-reproducer", "wrong-repository"],
+    checks: []
+  }, { coarseAction: "do-not-review-yet" });
+
+  assert.equal(contextFirst.id, "check-duplicate-or-fixed-first");
+  assert.match(contextFirst.reason, /Repository context label: possibly-solved/);
+  assert.doesNotMatch(contextFirst.reason, /Reporter evidence label/);
+  assert.equal(parkedFirst.id, "not-actionable-yet");
+  assert.match(parkedFirst.reason, /Blocked or parked label: maintainer-pending-clarification/);
+  assert.doesNotMatch(parkedFirst.reason, /Reporter evidence label/);
+  assert.equal(routeFirst.id, "route-to-subsystem-or-process");
+  assert.match(routeFirst.reason, /Routing or process label: wrong-repository/);
 });
 
 test("queue markdown is README-ready", async () => {

@@ -23,7 +23,7 @@ Expected result:
 - Repository hygiene verification passes.
 - Unit tests pass.
 - Benchmark stays at 46/46 or the documented case count increases with reviewed expectations.
-- Adversarial red test stays at 8/8 or grows with preserved breakage residue.
+- Adversarial red test stays at 10/10 or grows with preserved breakage residue.
 - Maintainer demo reports `PASS`.
 - CI workflow verification reports all required gates present and forbidden write posture absent.
 - `docs/maintainer-demo-output.md` is regenerated from the demo command, not hand-edited.
