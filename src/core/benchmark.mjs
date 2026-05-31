@@ -240,6 +240,34 @@ export const BENCHMARK_CASES = [
     expect: { status: "needs-repair", labels: ["maintainer-pending-clarification"], absentLabels: ["ready-for-maintainer"], repoContext: true }
   },
   {
+    id: "verbose-cli-bug-template",
+    category: "issue",
+    name: "Complete verbose CLI output counts as reviewable bug evidence",
+    input: verboseCliBugTemplateIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-reproducer", "needs-expected-actual", "needs-technical-analysis", "duplicate-search-needed"], repoContext: true }
+  },
+  {
+    id: "question-template-signed-url-token",
+    category: "issue",
+    name: "Question templates and signed media URL tokens are not feature or secret false positives",
+    input: questionTemplateSignedUrlTokenIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-feature-solution", "needs-reproducer", "secrets-risk"], repoContext: true }
+  },
+  {
+    id: "output-format-feature-solution",
+    category: "issue",
+    name: "Output-format feature requests describe the requested behavior",
+    input: outputFormatFeatureRequestIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-feature-solution", "duplicate-search-needed"], repoContext: true }
+  },
+  {
+    id: "contextual-known-issues-refs",
+    category: "issue",
+    name: "Known-issues and diagnostic issue links are context, not duplicate blockers",
+    input: contextualKnownIssuesReferenceIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["possibly-duplicate", "possibly-solved", "linked-issue-closed"], repoContext: true, contextFindings: 0 }
+  },
+  {
     id: "maintainer-approved-issue-label",
     category: "issue",
     name: "Maintainer-approved issue label preserves review-now routing",
@@ -1656,6 +1684,165 @@ function staleMaintainerLabelIssue() {
       source: "github-api",
       repository: "esphome/esphome",
       issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function verboseCliBugTemplateIssue() {
+  return {
+    kind: "issue",
+    title: "[Pornhub] 502 Bad Gateway While Downloading",
+    labels: [{ name: "site-bug" }, { name: "triage" }],
+    body: [
+      "### Checklist",
+      "",
+      "- [x] I'm reporting that yt-dlp is broken on a **supported** site",
+      "- [x] I've verified that I have **updated yt-dlp to nightly or master**",
+      "- [x] I've searched [known issues](https://github.com/yt-dlp/yt-dlp/issues/3766), the FAQ, and the bugtracker for similar issues **including closed ones**. DO NOT post duplicates",
+      "",
+      "### Provide a description that is worded well enough to be understood",
+      "",
+      "While downloading, yt-dlp shows a series of 502 Bad Gateway errors and eventually fails. Some downloads finish with missing fragments and are unplayable.",
+      "",
+      "### Provide verbose output that clearly demonstrates the problem",
+      "",
+      "- [x] Run **your** yt-dlp command with **-vU** flag added (`yt-dlp -vU <your command line>`)",
+      "- [x] Copy the WHOLE output (starting with `[debug] Command-line config`) and insert it below",
+      "",
+      "### Complete Verbose Output",
+      "",
+      "```shell",
+      "[debug] Command-line config: ['--impersonate', 'chrome', '-vU', 'https://www.example.com/view_video.php?viewkey=abc123']",
+      "[debug] Encodings: locale cp1252, fs utf-8, pref cp1252, out utf-8, error utf-8, screen utf-8",
+      "[debug] yt-dlp version nightly@2026.05.25.234532 from yt-dlp/yt-dlp-nightly-builds [acf8ab7a6] (pip)",
+      "[debug] Python 3.13.0 (CPython AMD64 64bit) - Windows-11-10.0.26200-SP0",
+      "[debug] Loaded 1864 extractors",
+      "[download] Got error: HTTP Error 502: Bad Gateway. Giving up after 10 retries",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "yt-dlp/yt-dlp",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function questionTemplateSignedUrlTokenIssue() {
+  return {
+    kind: "issue",
+    title: "[Twitch] Obtaining clip display_id from id alone",
+    labels: [{ name: "question" }],
+    body: [
+      "### Checklist",
+      "",
+      "- [x] I'm asking a question and **not** reporting a bug or requesting a feature",
+      "- [x] I've searched known issues, the FAQ, and the bugtracker for similar questions **including closed ones**. DO NOT post duplicates",
+      "",
+      "### Please make sure the question is worded well enough to be understood",
+      "",
+      "When downloading a clip from Twitch, yt-dlp appends the video filename with the numeric clip id. Is it possible to use the id alone to obtain a clip's display_id?",
+      "",
+      "### Provide verbose output that clearly demonstrates the problem",
+      "",
+      "- [x] Run **your** yt-dlp command with **-vU** flag added (`yt-dlp -vU <your command line>`)",
+      "- [x] Copy the WHOLE output (starting with `[debug] Command-line config`) and insert it below",
+      "",
+      "### Complete Verbose Output",
+      "",
+      "```shell",
+      "[debug] Command-line config: ['https://clips.twitch.tv/FaintLightGullWholeWheat', '-vU']",
+      "[debug] yt-dlp version stable@2026.03.17 from yt-dlp/yt-dlp [04d6974f5] (win_exe)",
+      "[debug] Python 3.10.11 (CPython AMD64 64bit) - Windows-10-10.0.26100-SP0",
+      "[debug] Invoking http downloader on \"https://example.cloudfront.net/index.mp4?sig=abc123&token=%7B%22authorization%22%3A%7B%22forbidden%22%3Afalse%7D%7D\"",
+      "[download] Destination: Example [396245304].mp4",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "yt-dlp/yt-dlp",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function outputFormatFeatureRequestIssue() {
+  return {
+    kind: "issue",
+    title: "Output/convert metadata to Jellyfin/Emby/Plex-compatible .nfo files",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "### Checklist",
+      "",
+      "- [x] I'm requesting a feature unrelated to a specific site",
+      "- [x] I've looked through the README",
+      "- [x] I've searched the bugtracker for similar requests **including closed ones**. DO NOT post duplicates",
+      "",
+      "### Provide a description that is worded well enough to be understood",
+      "",
+      "In addition to outputting .json information files, I am requesting a feature to also output to .nfo files that are compatible with frontends such as Jellyfin, Emby, and Plex.",
+      "",
+      "This could be accomplished by parsing and converting .json files to .nfo or outputting natively to .nfo, as is done with .json.",
+      "",
+      "Projects exist to convert yt-dlp .json files to .nfo but are not actively maintained. Given the variety of implementations, there is clearly demand for outputting metadata to .nfo files."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "yt-dlp/yt-dlp",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function contextualKnownIssuesReferenceIssue() {
+  return {
+    kind: "issue",
+    number: 16834,
+    title: "[Pornhub] 502 Bad Gateway While Downloading",
+    labels: [{ name: "site-bug" }, { name: "triage" }],
+    body: [
+      "### Checklist",
+      "",
+      "- [x] I've searched [known issues](https://github.com/yt-dlp/yt-dlp/issues/3766), the FAQ, and the bugtracker for similar issues including closed ones. DO NOT post duplicates",
+      "",
+      "### Provide a description that is worded well enough to be understood",
+      "",
+      "Downloads fail with HTTP Error 502.",
+      "",
+      "### Complete Verbose Output",
+      "",
+      "```shell",
+      "[debug] Command-line config: ['-vU', 'https://example.com/video']",
+      "[debug] yt-dlp version nightly@2026.05.25.234532 from yt-dlp/yt-dlp-nightly-builds",
+      "Some web client formats have been skipped. See https://github.com/yt-dlp/yt-dlp/issues/12482 for more details",
+      "[download] Got error: HTTP Error 502: Bad Gateway",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "yt-dlp/yt-dlp",
+      issues: [
+        {
+          number: 3766,
+          title: "KNOWN ISSUES/FAQ",
+          body: "Known issues, FAQ, and fixed by notes for common reports.",
+          state: "open",
+          labels: ["discussion/announcement"],
+          htmlUrl: "https://github.com/yt-dlp/yt-dlp/issues/3766"
+        },
+        {
+          number: 12482,
+          title: "[youtube] `web` only has SABR formats",
+          body: "YouTube web client SABR tracking issue.",
+          state: "open",
+          labels: ["site-bug", "site:youtube"],
+          htmlUrl: "https://github.com/yt-dlp/yt-dlp/issues/12482"
+        }
+      ],
       pullRequests: []
     }
   };

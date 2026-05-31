@@ -28,6 +28,7 @@ It is not a list of endorsements. A target repository appearing here means PCF r
 | `advplyr/audiobookshelf` | Private only | None | 3 review / 7 repair / 2 defer | 6 review / 6 repair / 0 defer | Enhancement templates and "What happened?" bug templates need project-specific section recognition while duplicate context stays active. |
 | `termux/termux-app` | Private only | None | 2 review / 7 repair / 3 defer | 4 review / 3 repair / 5 defer | App-only repositories need wrong-repository routing for package/dependency reports, while nested crash environment and feature sections still count as reviewable evidence. |
 | `esphome/esphome` | Private only | None | 1 review / 4 repair / 7 defer | 4 review / 6 repair / 2 defer | YAML/log firmware reports need template-aware evidence, placeholder secrets should not block review, and stale labels keep old complete reports out of review-now. |
+| `yt-dlp/yt-dlp` | Private only | None | 0 review / 6 repair / 6 defer | 4 review / 7 repair / 1 defer | High-volume CLI queues need checked known-issues search recognition, complete verbose-output evidence, contextual issue-link handling, question-template routing, and signed media URL token tolerance. |
 
 ## tuya-local
 
@@ -948,13 +949,105 @@ cff27f37bbdf88f39607e2ba173f25c2d35350f381a5edf85419828022303399
 20f4782b610790d48fcbba849c9bb0323d5b3394c32440cd6c5fc0984d615a2c
 ```
 
+## yt-dlp
+
+Target: `yt-dlp/yt-dlp`
+
+Queue shape:
+
+- very high-volume site-support and core bug reports
+- mandatory complete verbose CLI output
+- strict nightly/master update and duplicate-search checklist
+- site bugs, site requests, site feature requests, core feature requests, and questions
+- many issue bodies containing references to known issues, FAQ entries, debug-output issue links, and signed media URLs
+- heavy open issue and PR backlog
+
+Templates inspected:
+
+- `1_broken_site.yml`
+- `2_site_support_request.yml`
+- `3_site_feature_request.yml`
+- `4_bug_report.yml`
+- `5_feature_request.yml`
+- `6_question.yml`
+- `config.yml`
+
+Initial private pilot:
+
+- 12 sampled issues
+- 0 review-now
+- 6 repair
+- 6 defer
+- repository context checked all 12
+- context findings: 37
+- items with context findings: 12
+- context unavailable: 0
+
+What PCF got wrong:
+
+- Checked yt-dlp checklist language such as "searched known issues, the FAQ, and the bugtracker" did not count as duplicate-search evidence.
+- Known-issues and FAQ links such as `#3766` were treated as duplicate or solved blockers instead of contextual checklist links.
+- Canned debug-output links such as "See #12482 for more details" were treated as local duplicate blockers.
+- Complete verbose CLI output starting with `[debug] Command-line config` was not enough evidence for first-triage bug reports.
+- Question-template issues were misread as feature requests because the template contains the negated phrase "not reporting a bug or requesting a feature."
+- Signed media URL query parameters such as `token=` in verbose output were treated as leaked credentials.
+- Output-format feature requests such as `.nfo` export were not recognized as describing the requested behavior.
+
+Fixes made:
+
+- Added duplicate-search recognition for checked known-issues, FAQ, bugtracker, similar-request/question, "including closed ones", and "DO NOT post duplicates" template language.
+- Added complete verbose CLI evidence for reports with a meaningful description plus `[debug] Command-line config` and version/environment output.
+- Added question-template routing so clear questions with supporting context do not get feature-request repair prompts.
+- Excluded URL query-string `token=` parameters from generic secret leakage detection while keeping normal token/password assignments guarded.
+- Expanded feature-solution and use-case recognition for output/convert/export/generate behavior and media-server/front-end compatibility language.
+- Treated known-issues, FAQ, "for more details", similar/prior/related issue, and separate-issue references as contextual direct references rather than duplicate blockers unless the text explicitly says duplicate/fixed/closed.
+
+Final private pilot:
+
+- 12 sampled issues
+- 4 review-now
+- 7 repair
+- 1 defer
+- repository context checked all 12
+- context findings: 14
+- items with context findings: 7
+- context unavailable: 0
+
+Notable final routing:
+
+- `#16841`, `#16837`, `#16840`, and `#16834` moved to review-now after PCF learned yt-dlp's verbose-output and question/feature template shapes.
+- `#15583`, `#16257`, `#16676`, `#16826`, `#16835`, `#16836`, and `#15274` stayed in repair because repository context still surfaced similar, solved, or concurrent-work signals.
+- `#16833` stayed do-not-review-yet because it remained a weak/incomplete report after contextual false positives were removed.
+- Repository context false positives dropped from 37 findings on all 12 sampled issues to 14 findings on 7 sampled issues.
+
+Verification:
+
+- Focused evaluator, repository-context, and benchmark tests passed.
+- Benchmark corpus increased to 66 cases:
+  - `verbose-cli-bug-template`
+  - `question-template-signed-url-token`
+  - `output-format-feature-solution`
+  - `contextual-known-issues-refs`
+- Current benchmark result: 66/66 passing.
+- GitHub writes to `yt-dlp/yt-dlp`: none.
+- Public outreach: none.
+
+Private artifact hashes:
+
+```text
+d7c8d5858c45fee48e15d100e2756f35b187b64651bd60ae1cc95c24d7624240
+f326c005ca3f1bad927164a0a500546bbec4629dce7925ee1238ea193a34dc6e
+4fdffaffd94ee5faf1b9eb694c33d3565fd7b7b5c41f71c7ecd27ccb5291d0ec
+9ce0b80e63c809ffeb1227da82882a36768dd0629b640c8b01f872fcd7e9d043
+```
+
 ## Current Gate State
 
 The pilot ledger should be updated whenever a real pilot changes PCF behavior.
 
 Current expected proof state:
 
-- benchmark: 62/62
+- benchmark: 66/66
 - adversarial red test: 8/8
 - maintainer demo: PASS
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner

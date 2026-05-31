@@ -923,6 +923,130 @@ test("stale maintainer label prevents complete issues from re-entering review-no
   assert.equal(result.labels.includes("ready-for-maintainer"), false);
 });
 
+test("checked known-issues search and complete verbose CLI output count as bug evidence", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "[Pornhub] 502 Bad Gateway While Downloading",
+    labels: [{ name: "site-bug" }, { name: "triage" }],
+    body: [
+      "### Checklist",
+      "",
+      "- [x] I'm reporting that yt-dlp is broken on a **supported** site",
+      "- [x] I've verified that I have **updated yt-dlp to nightly or master**",
+      "- [x] I've searched [known issues](https://github.com/yt-dlp/yt-dlp/issues/3766), the FAQ, and the bugtracker for similar issues **including closed ones**. DO NOT post duplicates",
+      "",
+      "### Provide a description that is worded well enough to be understood",
+      "",
+      "While downloading, yt-dlp shows a series of 502 Bad Gateway errors and eventually fails. Some downloads finish with missing fragments and are unplayable.",
+      "",
+      "### Provide verbose output that clearly demonstrates the problem",
+      "",
+      "- [x] Run **your** yt-dlp command with **-vU** flag added (`yt-dlp -vU <your command line>`)",
+      "- [x] Copy the WHOLE output (starting with `[debug] Command-line config`) and insert it below",
+      "",
+      "### Complete Verbose Output",
+      "",
+      "```shell",
+      "[debug] Command-line config: ['--impersonate', 'chrome', '-vU', 'https://www.example.com/view_video.php?viewkey=abc123']",
+      "[debug] Encodings: locale cp1252, fs utf-8, pref cp1252, out utf-8, error utf-8, screen utf-8",
+      "[debug] yt-dlp version nightly@2026.05.25.234532 from yt-dlp/yt-dlp-nightly-builds [acf8ab7a6] (pip)",
+      "[debug] Python 3.13.0 (CPython AMD64 64bit) - Windows-11-10.0.26200-SP0",
+      "[debug] Loaded 1864 extractors",
+      "[download] Got error: HTTP Error 502: Bad Gateway. Giving up after 10 retries",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "yt-dlp/yt-dlp",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-reproducer"), false);
+  assert.equal(result.labels.includes("needs-expected-actual"), false);
+  assert.equal(result.labels.includes("needs-technical-analysis"), false);
+  assert.equal(result.labels.includes("duplicate-search-needed"), false);
+});
+
+test("question templates are not treated as feature requests or secret leaks from signed media URLs", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "[Twitch] Obtaining clip display_id from id alone",
+    labels: [{ name: "question" }],
+    body: [
+      "### Checklist",
+      "",
+      "- [x] I'm asking a question and **not** reporting a bug or requesting a feature",
+      "- [x] I've searched known issues, the FAQ, and the bugtracker for similar questions **including closed ones**. DO NOT post duplicates",
+      "",
+      "### Please make sure the question is worded well enough to be understood",
+      "",
+      "When downloading a clip from Twitch, yt-dlp appends the video filename with the numeric clip id. Is it possible to use the id alone to obtain a clip's display_id?",
+      "",
+      "### Provide verbose output that clearly demonstrates the problem",
+      "",
+      "- [x] Run **your** yt-dlp command with **-vU** flag added (`yt-dlp -vU <your command line>`)",
+      "- [x] Copy the WHOLE output (starting with `[debug] Command-line config`) and insert it below",
+      "",
+      "### Complete Verbose Output",
+      "",
+      "```shell",
+      "[debug] Command-line config: ['https://clips.twitch.tv/FaintLightGullWholeWheat', '-vU']",
+      "[debug] yt-dlp version stable@2026.03.17 from yt-dlp/yt-dlp [04d6974f5] (win_exe)",
+      "[debug] Python 3.10.11 (CPython AMD64 64bit) - Windows-10-10.0.26100-SP0",
+      "[debug] Invoking http downloader on \"https://example.cloudfront.net/index.mp4?sig=abc123&token=%7B%22authorization%22%3A%7B%22forbidden%22%3Afalse%7D%7D\"",
+      "[download] Destination: Example [396245304].mp4",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "yt-dlp/yt-dlp",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-feature-solution"), false);
+  assert.equal(result.labels.includes("needs-reproducer"), false);
+  assert.equal(result.labels.includes("secrets-risk"), false);
+});
+
+test("output-format feature requests count explicit output behavior as the solution", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "Output/convert metadata to Jellyfin/Emby/Plex-compatible .nfo files",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "### Checklist",
+      "",
+      "- [x] I'm requesting a feature unrelated to a specific site",
+      "- [x] I've looked through the README",
+      "- [x] I've searched the bugtracker for similar requests **including closed ones**. DO NOT post duplicates",
+      "",
+      "### Provide a description that is worded well enough to be understood",
+      "",
+      "In addition to outputting .json information files, I am requesting a feature to also output to .nfo files that are compatible with frontends such as Jellyfin, Emby, and Plex.",
+      "",
+      "This could be accomplished by parsing and converting .json files to .nfo or outputting natively to .nfo, as is done with .json.",
+      "",
+      "Projects exist to convert yt-dlp .json files to .nfo but are not actively maintained. Given the variety of implementations, there is clearly demand for outputting metadata to .nfo files."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "yt-dlp/yt-dlp",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-feature-solution"), false);
+  assert.equal(result.labels.includes("duplicate-search-needed"), false);
+});
+
 test("structured bug template with uncertain reproduction still needs repair", () => {
   const result = evaluateContribution({
     kind: "issue",

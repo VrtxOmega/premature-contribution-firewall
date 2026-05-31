@@ -168,6 +168,81 @@ test("contextual open tracking references do not become duplicate blockers", () 
   assert.equal(result.repositoryContext.similarOpenIssues.length, 0);
 });
 
+test("known-issues checklist references do not become duplicate blockers", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    number: 16834,
+    title: "[Pornhub] 502 Bad Gateway While Downloading",
+    labels: [{ name: "site-bug" }],
+    body: [
+      "- [x] I've searched [known issues](https://github.com/yt-dlp/yt-dlp/issues/3766), the FAQ, and the bugtracker for similar issues including closed ones. DO NOT post duplicates",
+      "",
+      "### Provide a description that is worded well enough to be understood",
+      "Downloads fail with HTTP Error 502.",
+      "",
+      "### Complete Verbose Output",
+      "```shell",
+      "[debug] Command-line config: ['-vU', 'https://example.com/video']",
+      "[debug] yt-dlp version nightly@2026.05.25.234532 from yt-dlp/yt-dlp-nightly-builds",
+      "[download] Got error: HTTP Error 502: Bad Gateway",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      repository: "yt-dlp/yt-dlp",
+      issues: [
+        {
+          number: 3766,
+          title: "KNOWN ISSUES/FAQ",
+          body: "Known issues, FAQ, and fixed by notes for common reports.",
+          state: "open",
+          labels: ["discussion/announcement"],
+          htmlUrl: "https://github.com/yt-dlp/yt-dlp/issues/3766"
+        }
+      ]
+    }
+  });
+
+  assert.equal(result.labels.includes("possibly-duplicate"), false);
+  assert.equal(result.labels.includes("possibly-solved"), false);
+  assert.equal(result.repositoryContext.findings.length, 0);
+});
+
+test("diagnostic for-more-details issue references do not become duplicate blockers", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    number: 16837,
+    title: "Output/convert metadata to .nfo files",
+    labels: [{ name: "enhancement" }],
+    body: [
+      "### Provide a description that is worded well enough to be understood",
+      "I am requesting a feature to output metadata to .nfo files for media servers.",
+      "",
+      "### Complete Verbose Output",
+      "```shell",
+      "[debug] Command-line config: ['-vU', 'https://www.youtube.com/watch?v=aqz-KE-bpKQ']",
+      "[debug] yt-dlp version stable@2026.03.17 from yt-dlp/yt-dlp",
+      "Some web client formats have been skipped. See https://github.com/yt-dlp/yt-dlp/issues/12482 for more details",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      repository: "yt-dlp/yt-dlp",
+      issues: [
+        {
+          number: 12482,
+          title: "[youtube] `web` only has SABR formats",
+          body: "YouTube web client SABR tracking issue.",
+          state: "open",
+          labels: ["site-bug", "site:youtube"],
+          htmlUrl: "https://github.com/yt-dlp/yt-dlp/issues/12482"
+        }
+      ]
+    }
+  });
+
+  assert.equal(result.labels.includes("possibly-duplicate"), false);
+  assert.equal(result.repositoryContext.similarOpenIssues.length, 0);
+});
+
 test("comment-supplied issue refs surface open linked duplicates", () => {
   const result = evaluateContribution({
     kind: "issue",

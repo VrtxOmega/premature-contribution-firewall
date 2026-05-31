@@ -351,8 +351,8 @@ function extractContextualIssueRefs(text, repository = "") {
   if (!refs.size) return new Set();
   const contextual = new Set();
   const source = String(text || "");
-  const disqualifier = /\b(?:duplicate of|duplicates|same as|fixed by|fix(?:e[sd])?\s+#|close[sd]?\s+#|resolve[sd]?\s+#)\b/i;
-  const contextualSignal = /\b(?:follow-?up|followup|reported in|discussion|tracked|broader|covers|covered by|supersedes|split from|continuation)\b/i;
+  const disqualifier = /\b(?:duplicate of|duplicates\s+(?:#|https?:\/\/github\.com)|same as|fixed by|fix(?:e[sd])?\s+#|close[sd]?\s+#|resolve[sd]?\s+#)\b/i;
+  const contextualSignal = /\b(?:follow-?up|followup|reported (?:in|on)|discussion|tracked|broader|covers|covered by|supersedes|split from|continuation|known issues?|faq|for more details|see also|similar issue|related issue|prior issue|previous issue|separate issue)\b/i;
 
   for (const ref of refs) {
     const refPattern = new RegExp(`#${escapeRegExp(ref)}\\b|(?:issues|pull)/${escapeRegExp(ref)}\\b|github\\.com/[^\\s]+/(?:issues|pull)/${escapeRegExp(ref)}\\b`, "gi");

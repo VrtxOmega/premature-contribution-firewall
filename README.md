@@ -60,7 +60,7 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Promotes selected runnable feedback drafts into a separate local candidate corpus and replays that corpus against the current evaluator before anything is folded into the permanent benchmark.
 - Builds an auditable feedback calibration profile from local corrections and promoted candidates, then attaches close matches to future evaluations and queue items without hiding the base heuristic status or score.
 - Evaluates plain-text patch or mbox submissions with `evaluate-patch`, defaulting to `kernel-grade` discipline for email-style review.
-- Ships a deterministic maintainer benchmark corpus with 62 reproducible cases across PRs, issues, feature requests, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
+- Ships a deterministic maintainer benchmark corpus with 66 reproducible cases across PRs, issues, feature requests, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
 - Ships a separate adversarial red-test corpus that preserves breakage residue for negated verification, suspicious paths, secret evasion, generated artifact churn, skipped-only CI, prompt-injection text, malformed batch input, and empty patch bodies.
 - Exposes callable API endpoints for single, patch, batch, spec, and benchmark evaluation.
 - Includes a stricter `kernel-grade` profile for projects that want Linux-kernel-style patch discipline: concise subsystem subjects, human DCO sign-off, Fixes/stable discipline, maintainer routing, build/test evidence, review-budget control, and transparent tool provenance.
@@ -99,7 +99,7 @@ npm run benchmark:write
 
 Current generated results live in [`docs/benchmark-results.md`](docs/benchmark-results.md):
 
-- 62/62 benchmark cases passing
+- 66/66 benchmark cases passing
 - standard PR readiness
 - issue triage readiness
 - repository policy enforcement
@@ -133,6 +133,7 @@ Current pilot progression:
 | `advplyr/audiobookshelf` | Private only | 3 review / 7 repair / 2 defer | 6 review / 6 repair / 0 defer | Enhancement templates and "What happened?" bug templates need project-specific section recognition while duplicate context stays active. |
 | `termux/termux-app` | Private only | 2 review / 7 repair / 3 defer | 4 review / 3 repair / 5 defer | App-only repos need wrong-repository routing for package/dependency reports, while nested crash environment and Termux feature sections still count as reviewable evidence. |
 | `esphome/esphome` | Private only | 1 review / 4 repair / 7 defer | 4 review / 6 repair / 2 defer | YAML/log firmware reports need template-aware evidence, placeholder secrets should not block review, and stale labels keep old complete reports out of review-now. |
+| `yt-dlp/yt-dlp` | Private only | 0 review / 6 repair / 6 defer | 4 review / 7 repair / 1 defer | High-volume CLI queues need checked known-issues search recognition, complete verbose-output evidence, contextual issue-link handling, question-template routing, and signed media URL token tolerance. |
 
 ## Adversarial Red Test
 

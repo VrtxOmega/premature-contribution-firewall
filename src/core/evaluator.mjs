@@ -25,7 +25,7 @@ const SIGNALS = {
   noTestsReason: /\b(no tests?|not applicable|docs only|documentation only|manual verification only)\b/i,
   repro: /\b(steps to reproduce|repro(?:duce|duction)?|expected|actual|before|after)\b/i,
   expectedActual: /\bexpected\b[\s\S]*\bactual\b|\bactual\b[\s\S]*\bexpected\b/i,
-  duplicateSearch: /\b(duplicate|searched existing|searched issues|already fixed|current main|latest main|not a duplicate)\b/i,
+  duplicateSearch: /\b(duplicate|searched existing|searched (?:the )?(?:issue tracker|bugtracker|known issues|faq|open and closed|similar (?:issues|requests|questions)|issues)|already fixed|current main|latest main|not a duplicate|do not post duplicates|including closed ones)\b/i,
   version: /\b(version|commit|sha|main|release|v?\d{4}\.\d+(?:\.\d+)?|v\d+\.\d+|node\s+\d+|python\s+\d+|os:|environment)\b/i,
   logs: /```|stack trace|traceback|journal|log output|error output|exception|panic/i,
   rootCause: /\b(root cause|cause[ds]?|because|bisect|regression|culprit|patch|proposed fix|able to fix|workaround|analysis)\b/i,
@@ -50,7 +50,7 @@ const SECRET_PATTERNS = [
   /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/,
   /\bAIza[0-9A-Za-z_-]{30,}\b/,
   /\bsk-[A-Za-z0-9]{20,}\b/,
-  /\b(?:api[_-]?key|token|secret|password|access[_-]?key)\s*[:=]\s*['"]?(?![$!{<])[^'"\s]{12,}['"]?/i
+  /(?<![?&])\b(?:api[_-]?key|token|secret|password|access[_-]?key)\s*[:=]\s*['"]?(?![$!{<])[^'"\s]{12,}['"]?/i
 ];
 
 const STATUS_COPY = {
@@ -446,21 +446,21 @@ export function evaluateIssue(input, options = {}) {
   const repositoryTriage = analyzeRepositoryContext(input);
   const issueEvidence = analyzeIssueEvidence(input, { title, body });
   const maintainerTriage = analyzeMaintainerTriage(input.labels, input.authorAssociation);
-  const featureRequest = issueEvidence.featureRequestIntent && !issueEvidence.deviceSupportIntent && !securityClaim;
+  const featureRequest = issueEvidence.featureRequestIntent && !issueEvidence.deviceSupportIntent && !issueEvidence.questionIntent && !securityClaim;
   const repositoryContextCleared = repositoryTriage.hasContext && repositoryTriage.checkStatus === "pass";
   const hasReproductionSignal = SIGNALS.repro.test(body) && !issueEvidence.hasUncertainReproduction;
   const hasReproducer = featureRequest
     ? issueEvidence.hasFeatureUseCase
-    : hasReproductionSignal || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete || issueEvidence.configLogBugReportComplete || issueEvidence.rootCauseCrashEvidence;
+    : hasReproductionSignal || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete || issueEvidence.configLogBugReportComplete || issueEvidence.verboseCliBugReportComplete || issueEvidence.rootCauseCrashEvidence || issueEvidence.questionComplete;
   const hasExpectedActual = featureRequest
     ? issueEvidence.hasFeatureSolution
-    : issueEvidence.hasBugBehaviorEvidence || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete || issueEvidence.configLogBugReportComplete;
+    : issueEvidence.hasBugBehaviorEvidence || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete || issueEvidence.configLogBugReportComplete || issueEvidence.verboseCliBugReportComplete || issueEvidence.questionComplete;
   const hasEnvironment = featureRequest || SIGNALS.version.test(body) || issueEvidence.hasDeviceIdentity || issueEvidence.hasStructuredEnvironment;
   const hasLogEvidence = featureRequest || SIGNALS.logs.test(body) || issueEvidence.hasDeviceTelemetry || issueEvidence.structuredBugReportComplete;
   const hasDuplicateSearch = SIGNALS.duplicateSearch.test(body) || repositoryContextCleared;
   const hasTechnicalAnalysis = featureRequest
     ? issueEvidence.featureRequestComplete || issueEvidence.hasFeatureScope
-    : SIGNALS.rootCause.test(body) || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete;
+    : SIGNALS.rootCause.test(body) || issueEvidence.deviceSupportComplete || issueEvidence.structuredBugReportComplete || issueEvidence.verboseCliBugReportComplete || issueEvidence.questionComplete;
 
   addCheck(checks, labels, {
     id: "title",
@@ -499,6 +499,10 @@ export function evaluateIssue(input, options = {}) {
           ? "Structured bug report includes concrete steps, expected behavior, and environment."
           : issueEvidence.configLogBugReportComplete
             ? "Structured config/log bug report includes environment, component, YAML, and diagnostic output."
+            : issueEvidence.verboseCliBugReportComplete
+              ? "CLI report includes a complete verbose command log with version and environment details."
+              : issueEvidence.questionComplete
+                ? "Question includes a clear prompt and supporting context."
             : issueEvidence.rootCauseCrashEvidence
               ? "Crash report includes root-cause analysis and diagnostic stack evidence."
         : "No clear steps to reproduce, expected behavior, or actual behavior found."
@@ -524,6 +528,10 @@ export function evaluateIssue(input, options = {}) {
         ? "Structured bug template includes observed issue and expected behavior."
         : issueEvidence.configLogBugReportComplete
           ? "Project bug template includes problem, component, config, logs, and environment evidence."
+          : issueEvidence.verboseCliBugReportComplete
+            ? "Complete verbose output demonstrates the command, environment, and observed failure."
+            : issueEvidence.questionComplete
+              ? "Question template supplies the concrete question and supporting diagnostic context."
         : "Expected and actual behavior should be explicit."
   });
 
@@ -592,6 +600,10 @@ export function evaluateIssue(input, options = {}) {
         ? "Includes concrete product/DPS mapping evidence that gives maintainers review material."
       : issueEvidence.structuredBugReportComplete
         ? "Structured report narrows the problem enough for initial maintainer triage."
+        : issueEvidence.verboseCliBugReportComplete
+          ? "Complete verbose CLI output gives maintainers command, version, environment, and failure details."
+          : issueEvidence.questionComplete
+            ? "Question has enough context for maintainer triage."
         : "A root-cause hypothesis or patch would reduce maintainer load."
   });
 
@@ -688,6 +700,8 @@ export function evaluateIssue(input, options = {}) {
   if (SIGNALS.logs.test(body)) strengths.push("Includes logs or concrete error output.");
   if (issueEvidence.deviceSupportComplete) strengths.push("Includes device identity, local telemetry, and DPS mapping evidence.");
   if (issueEvidence.structuredBugReportComplete) strengths.push("Completes the bug template with steps, expected behavior, and environment details.");
+  if (issueEvidence.verboseCliBugReportComplete) strengths.push("Includes complete verbose CLI output with command, version, environment, and failure details.");
+  if (issueEvidence.questionComplete) strengths.push("Includes a clear question with supporting context.");
   if (featureRequest && issueEvidence.hasFeatureUseCase) strengths.push("Describes a concrete feature use case.");
   if (featureRequest && issueEvidence.hasFeatureSolution) strengths.push("Describes the requested feature behavior.");
   if (maintainerTriage.state === "approved") strengths.push("Repository labels indicate this has already been accepted for maintainer attention.");
@@ -724,8 +738,11 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
   const labels = normalizeLabels(input.labels || []);
   const labelText = labels.join(" ");
   const text = `${title}\n${body}\n${labelText}`;
+  const questionIntent = /\bquestion\b/i.test(labelText)
+    || /\bi'?m asking a question\b/i.test(body)
+    || /\bnot reporting a bug or requesting a feature\b/i.test(body);
   const deviceSupportIntent = /\b(request support|device support|new device|product id|product name|dps information|local dps|device matches)\b/i.test(text);
-  const featureRequestIntent = /\[feature\]|\b(feature request|feature description|enhancement|describe the feature|describe the solution|solution you'd like|alternatives you've considered|related to a problem|use case|requesting|add the ability|support for)\b/i.test(text);
+  const featureRequestIntent = !questionIntent && /\[feature\]|\b(feature request|feature description|enhancement|describe the feature|describe the solution|solution you'd like|alternatives you've considered|related to a problem|use case|requesting|add the ability|support for)\b/i.test(text);
   const hasProductId = /###\s*product\s+id\s*\n+\s*[a-z0-9][a-z0-9_-]{5,}/i.test(body)
     || /\bproduct_?id\b[\s:=]+["']?[a-z0-9][a-z0-9_-]{5,}/i.test(body);
   const hasProductName = /###\s*product\s+name\s*\n+\s*[^\n#][^\n]{1,}/i.test(body)
@@ -738,12 +755,12 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
   const featureFuture = markdownSection(body, /future implementation|current implementation|acceptance criteria|alternatives|additional information/i);
   const hasFeatureUseCase = featureRequestIntent && (
     hasMeaningfulSection(featureWhy) ||
-    /\b(use case|workflow|problem|frustrated|current approach|current workflow|currently|need to|want to|so that|because|when i|i expect)\b/i.test(body)
+    /\b(use case|workflow|problem|frustrated|current approach|current workflow|currently|need to|want to|so that|because|when i|i expect|compatible with|frontends?|demand)\b/i.test(body)
     || /describe the feature you'd like to request/i.test(body)
   );
   const hasFeatureSolution = featureRequestIntent && (
     hasMeaningfulSection(featureDescription) ||
-    /\b(describe the solution|solution you'd like|requested behavior|add (?:a|an|the)?|allow(?:s|ing)?|support(?:s|ing)?|setting|should|would like)\b/i.test(body)
+    /\b(describe the solution|solution you'd like|requested behavior|add (?:a|an|the)?|allow(?:s|ing)?|support(?:s|ing)?|output(?:ting)?|convert(?:ing)?|generate|export|setting|should|would like)\b/i.test(body)
   );
   const hasFeatureScope = featureRequestIntent && (
     hasMeaningfulSection(featureFuture, { minLength: 2 }) ||
@@ -752,9 +769,13 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
   );
   const configSection = markdownSection(body, /yaml config|configuration|config/i);
   const logsSection = markdownSection(body, /anything in the logs that might be useful for us|logs?|log output|error output/i);
+  const verboseOutputSection = markdownSection(body, /complete verbose output|verbose output/i);
   const componentSection = markdownSection(body, /component causing the issue|component|platform causing the issue/i);
   const hasStructuredConfig = hasMeaningfulSection(configSection);
   const hasStructuredLogs = hasMeaningfulSection(logsSection);
+  const hasCompleteVerboseOutput = hasMeaningfulSection(verboseOutputSection)
+    && /\[debug\]\s+Command-line config\b/i.test(verboseOutputSection)
+    && /\[debug\]\s+(?:yt-dlp version|Python|Encodings|System config)\b/i.test(verboseOutputSection);
   const hasStructuredComponent = hasMeaningfulSection(componentSection, { minLength: 2 });
   const hasExplicitExpectedActual = SIGNALS.expectedActual.test(body);
   const hasExpectedSignal = /\b(expected|should|should be able|intended|healthy|reachable|worked(?:\s+just\s+fine)?|prior to|previously)\b/i.test(body);
@@ -768,7 +789,8 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     && SIGNALS.rootCause.test(body)
     && SIGNALS.logs.test(body)
     && /\b(?:crash(?:es|ed|-loops?)?|reboots?|panic|null(?:ptr| pointer)?|deref(?:erence)?|backtrace|stack trace)\b/i.test(body);
-  const issueDescription = markdownSection(body, /the problem|problem description|describe (?:your|the) issue|describe the bug|what is not working as documented|what happened/i);
+  const issueDescription = markdownSection(body, /the problem|problem description|describe (?:your|the) issue|describe the bug|what is not working as documented|what happened|provide a description that is worded well enough to be understood/i);
+  const questionSection = markdownSection(body, /please make sure the question is worded well enough to be understood|question/i);
   const explicitStepsToReproduce = markdownSection(body, /steps to reproduce(?: (?:the )?(?:issue|behavior)\.?)?|reproduction|how can we reproduce it/i);
   const stepsToReproduce = explicitStepsToReproduce || (hasEmbeddedReproductionSteps(issueDescription) ? issueDescription : "");
   const expectedBehavior = markdownSection(body, /expected behaviou?r|what behaviou?r do you expect|what did you expect to happen|what is the expected behaviou?r/i);
@@ -812,7 +834,16 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     && hasStructuredComponent
     && hasStructuredConfig
     && hasStructuredLogs;
+  const verboseCliBugReportComplete = !featureRequestIntent
+    && !questionIntent
+    && hasStructuredIssueDescription
+    && hasCompleteVerboseOutput;
+  const questionComplete = questionIntent
+    && hasMeaningfulSection(questionSection)
+    && (hasCompleteVerboseOutput || body.length >= 320);
   return {
+    questionIntent,
+    questionComplete,
     deviceSupportIntent,
     hasDeviceIdentity,
     hasDeviceTelemetry,
@@ -825,6 +856,7 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     hasExplicitExpectedActual,
     hasBugBehaviorEvidence,
     rootCauseCrashEvidence,
+    verboseCliBugReportComplete,
     hasUncertainReproduction,
     hasStructuredEnvironment,
     structuredBugReportComplete,
