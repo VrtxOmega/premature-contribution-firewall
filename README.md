@@ -11,6 +11,19 @@ Is this contribution reviewable, reproducible, scoped, tested, and worth human a
 
 The output is a maintainer queue, not a vibe score: labels, repair checklists, repository-context findings, benchmark proof, adversarial residue, and dry-run guardrails before any write action touches GitHub.
 
+## Status
+
+PCF is a public v0.1.0 pilot. The recommended adoption path is still manual and read-only: run the GitHub Action with `workflow_dispatch`, download one markdown queue artifact, and decide whether the artifact is useful before enabling anything else.
+
+Current public state:
+
+- Published release: [v0.1.0 read-only maintainer queue pilot](docs/RELEASE_POST_V0_1_0.md).
+- Canonical output sample: [maintainer export bundle from PCF's own public queue](docs/MAINTAINER_EXPORT_SAMPLE.md).
+- Build history: [36-hour idea-to-v0.1.0 evidence capsule](docs/BUILD_ARC_36_HOURS.md).
+- Real-world usage so far: author-run read-only shadow pilots against public queues, with two public briefs in this repo and private replay captures for calibration.
+- Not currently a hosted service, Marketplace App, or write-enabled bot.
+- No target repository or maintainer listed in the pilot ledger is an endorsement.
+
 ## 30-Second Maintainer View
 
 A messy queue turns into a short action list:
@@ -68,6 +81,21 @@ jobs:
 ```
 
 See [docs/GITHUB_ACTION.md](docs/GITHUB_ACTION.md) for inputs, upstream-repo context, and the safety contract.
+
+## Feedback Loop
+
+PCF is not only a static rule set. When a maintainer says PCF was too harsh, too lenient, or missed duplicate/upstream/concurrent context, the correction can become a local evidence case file.
+
+The loop is deliberate:
+
+1. Record maintainer feedback against a queue item.
+2. Export a regression-candidate fixture when the original payload is available.
+3. Promote selected runnable candidates into a separate local candidate corpus.
+4. Replay and compare that candidate corpus before accepting evaluator changes.
+5. Build a feedback calibration profile from local corrections and promoted candidates.
+6. Attach matching calibration evidence to future queue items without hiding the original score or status.
+
+Feedback candidates do not automatically enter the permanent benchmark. A human has to review the case and expectation first.
 
 ## What Maintainers Get
 
