@@ -57,6 +57,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - `docs/maintainer-demo-output.md`
 - `docs/API.md`
 - `docs/GITHUB_ACTION.md`
+- `docs/RELEASE_POST_V0_1_0.md`
 - `docs/NEXT_ACTOR_MODEL.md`
 - `docs/MAINTAINER_DEMO.md`
 - `CONTRIBUTING.md`

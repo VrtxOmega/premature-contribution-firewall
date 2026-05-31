@@ -30,6 +30,8 @@ Each queue item also includes a dry-run response draft. Reporter-owned lanes get
 
 Canonical sample: [PCF maintainer export bundle from this repo's own public queue](docs/MAINTAINER_EXPORT_SAMPLE.md).
 
+Release post: [v0.1.0 read-only maintainer queue pilot](docs/RELEASE_POST_V0_1_0.md).
+
 ## GitHub Action Dry-Run
 
 The lowest-friction pilot is a read-only workflow artifact. It does not require a GitHub App and does not comment, label, close, merge, or write to issues or pull requests.
