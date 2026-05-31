@@ -115,7 +115,7 @@ The benchmark is deterministic. It asserts expected outcomes over a public synth
 
 Synthetic fixtures are not enough. PCF's live-pilot rule is: when a real repository exposes a wrong assumption, preserve the evidence, fix the narrow evaluator behavior, and lock the lesson into tests, benchmark cases, red-test residue, or replayable feedback candidates.
 
-The calibration method is documented in [docs/REAL_WORLD_CALIBRATION.md](docs/REAL_WORLD_CALIBRATION.md). The running ledger of pilot repositories, findings, fixes, artifact hashes, and public/private status lives in [docs/PILOT_LEDGER.md](docs/PILOT_LEDGER.md). Future read-only pilot candidates are tracked in [docs/PILOT_TARGETS.md](docs/PILOT_TARGETS.md).
+The maintainer proof report is in [docs/PILOT_REPORT.md](docs/PILOT_REPORT.md). The calibration method is documented in [docs/REAL_WORLD_CALIBRATION.md](docs/REAL_WORLD_CALIBRATION.md). The running ledger of pilot repositories, findings, fixes, artifact hashes, and public/private status lives in [docs/PILOT_LEDGER.md](docs/PILOT_LEDGER.md). Future read-only pilot candidates are tracked in [docs/PILOT_TARGETS.md](docs/PILOT_TARGETS.md).
 
 Current pilot progression:
 

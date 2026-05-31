@@ -4,6 +4,8 @@ This ledger tracks real repository shadow pilots, the evidence they produced, an
 
 It is not a list of endorsements. A target repository appearing here means PCF ran a read-only pilot against public GitHub data and used the result to evaluate its own behavior.
 
+For the maintainer-facing summary, queue movement totals, proof state, and reproducible commands, see [PILOT_REPORT.md](PILOT_REPORT.md).
+
 ## Rules
 
 - Keep pilots read-only unless a maintainer explicitly opts in.
