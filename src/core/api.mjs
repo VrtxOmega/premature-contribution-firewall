@@ -202,6 +202,11 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
             reasons: "short explanation strings used in API, CLI, and UI"
           }
         },
+        responseTemplate: {
+          behavior: "dry-run maintainer response draft generated from nextAction evidence; never posted automatically",
+          fields: "id, title, audience, channel, dryRun, posting, shouldPost, summary, body, checklist, evidence",
+          safety: "dryRun is true, shouldPost is false, posting is disabled unless a deployment owner separately enables write flows outside the queue contract"
+        },
         nextActionGroups: "queue-level lane summaries with counts, owner, maintainerAction, reviewBudgetMinutes, and itemIds"
       },
       githubSetup: {

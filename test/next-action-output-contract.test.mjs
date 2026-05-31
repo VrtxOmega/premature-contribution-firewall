@@ -28,6 +28,10 @@ test("queue nextAction contract exposes actor, maintainer move, and evidence", a
     assert.ok(Array.isArray(item.nextAction.evidence.checks));
     assert.ok(Array.isArray(item.nextAction.evidence.reasons));
     assert.ok(item.nextAction.evidence.reasons.length >= 1);
+    assert.equal(item.responseTemplate.dryRun, true);
+    assert.equal(item.responseTemplate.shouldPost, false);
+    assert.equal(item.responseTemplate.posting, "disabled");
+    assert.match(item.responseTemplate.body, /PCF dry-run/);
   }
 
   const duplicate = queue.items.find((item) => item.nextAction.id === "check-duplicate-or-fixed-first");
@@ -63,12 +67,15 @@ test("replay capture preserves the public nextAction output contract", async () 
     assert.equal(replayContract["pr-context-duplicate"].nextAction.maintainerAction, "Check related, solved, concurrent, or upstream-fixed work before fresh review.");
     assert.ok(replayContract["pr-context-duplicate"].nextAction.evidence.labels.includes("possibly-duplicate"));
     assert.ok(replayContract["pr-context-duplicate"].nextAction.evidence.labels.includes("possibly-upstream-fixed"));
+    assert.equal(replayContract["pr-context-duplicate"].responseTemplate.dryRun, true);
+    assert.match(replayContract["pr-context-duplicate"].responseTemplate.body, /check related or already-fixed work/);
 
     assert.equal(replayContract["issue-low-evidence"].nextAction.id, "ask-reporter-for-evidence");
     assert.equal(replayContract["issue-low-evidence"].nextAction.owner, "reporter");
     assert.equal(replayContract["issue-low-evidence"].nextAction.maintainerAction, "Send a focused repair request to the submitter.");
     assert.ok(replayContract["issue-low-evidence"].nextAction.evidence.labels.includes("needs-clear-summary"));
     assert.ok(replayContract["issue-low-evidence"].nextAction.evidence.labels.includes("needs-reproducer"));
+    assert.equal(replayContract["issue-low-evidence"].responseTemplate.channel, "github-comment-draft");
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -81,10 +88,15 @@ test("browser queue surface exposes why-label explanations", async () => {
   assert.match(app, /queue-explainer/);
   assert.match(app, /Why PCF routed this here/);
   assert.match(app, /function renderQueueExplainer/);
+  assert.match(app, /function renderQueueResponseTemplate/);
+  assert.match(app, /Copy Draft/);
+  assert.match(app, /queue-response-template/);
   assert.match(app, /Next actor:/);
   assert.match(app, /Route reason:/);
   assert.match(app, /Labels driving route:/);
   assert.match(app, /Repository context:/);
   assert.match(styles, /\.queue-explainer/);
   assert.match(styles, /\.queue-explainer-list/);
+  assert.match(styles, /\.queue-response-template/);
+  assert.match(styles, /\.queue-template-head/);
 });

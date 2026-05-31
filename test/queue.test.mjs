@@ -150,6 +150,70 @@ test("queue repair sub-actions distinguish reporter, context, routing, maintaine
   assert.equal(queue.summary.repairSubActions["not-actionable-yet"], 1);
 });
 
+test("queue response templates are dry-run drafts for every next-action lane", async () => {
+  const fixture = JSON.parse(await readFile(new URL("../fixtures/queue-sample.json", import.meta.url), "utf8"));
+  const calibration = buildFeedbackCalibration({
+    repository: "VrtxOmega/premature-contribution-firewall-demo",
+    feedbackEntries: [
+      {
+        id: "decision-needed",
+        repository: "VrtxOmega/premature-contribution-firewall-demo",
+        item: {
+          kind: "pull_request",
+          number: 12,
+          title: "webhook: reject oversized payload bodies",
+          repository: "VrtxOmega/premature-contribution-firewall-demo",
+          status: "ready-for-maintainer",
+          labels: ["ready-for-maintainer"]
+        },
+        verdict: "too-lenient",
+        expectedStatus: "needs-repair",
+        note: "Maintainer wants to decide this exception."
+      }
+    ]
+  });
+  const queue = buildMaintainerQueue({
+    repository: "VrtxOmega/premature-contribution-firewall-demo",
+    items: [
+      readyPr(),
+      fixture.items[0],
+      fixture.items[1],
+      fixture.items[2],
+      wrongRepositoryIssue(),
+      backlogIssue()
+    ],
+    feedbackCalibration: calibration
+  }, { now: "2026-05-30T00:00:00Z" });
+  const byAction = Object.fromEntries(queue.items.map((item) => [item.nextAction.id, item]));
+
+  for (const expected of [
+    "review-now",
+    "ask-reporter-for-evidence",
+    "check-duplicate-or-fixed-first",
+    "route-to-subsystem-or-process",
+    "needs-maintainer-decision",
+    "not-actionable-yet"
+  ]) {
+    const template = byAction[expected]?.responseTemplate;
+    assert.ok(template, `missing response template for ${expected}`);
+    assert.equal(template.id, expected);
+    assert.equal(template.dryRun, true);
+    assert.equal(template.shouldPost, false);
+    assert.equal(template.posting, "disabled");
+    assert.match(template.body, /PCF dry-run/);
+    assert.match(template.body, /No comments, labels, closures, merges, or other GitHub writes were made automatically/);
+  }
+
+  assert.equal(byAction["ask-reporter-for-evidence"].responseTemplate.audience, "reporter");
+  assert.equal(byAction["ask-reporter-for-evidence"].responseTemplate.channel, "github-comment-draft");
+  assert.match(byAction["ask-reporter-for-evidence"].responseTemplate.body, /Please add or clarify/);
+  assert.match(byAction["check-duplicate-or-fixed-first"].responseTemplate.body, /check related or already-fixed work/);
+  assert.match(byAction["route-to-subsystem-or-process"].responseTemplate.body, /route this through project process/);
+  assert.match(byAction["needs-maintainer-decision"].responseTemplate.body, /maintainer judgment is needed/);
+  assert.match(byAction["not-actionable-yet"].responseTemplate.body, /stay out of active review/);
+  assert.ok(queue.nextActionGroups.every((group) => group.responseTemplate?.dryRun === true));
+});
+
 test("queue nextAction reasons match the selected action family", () => {
   const contextFirst = classifyNextAction({
     status: "needs-repair",
@@ -197,8 +261,39 @@ test("queue markdown is README-ready", async () => {
   assert.match(markdown, /Next action: check-duplicate-or-fixed-first/);
   assert.match(markdown, /Next action lanes:/);
   assert.match(markdown, /next maintainer move: Check related/);
+  assert.match(markdown, /Response draft:/);
+  assert.match(markdown, /Duplicate or fixed-first check/);
+  assert.match(markdown, /No comments, labels, closures, merges, or other GitHub writes were made automatically/);
   assert.match(markdown, /webhook: include labels in dry-run response/);
 });
+
+function readyPr() {
+  return {
+    id: "review-now-ready",
+    kind: "pull_request",
+    repository: "owner/repo",
+    number: 99,
+    title: "queue: show response drafts",
+    body: [
+      "Fixes #98.",
+      "",
+      "Problem: maintainers need dry-run response drafts.",
+      "Change: expose copyable response templates.",
+      "Verification: npm test passed locally.",
+      "Risk: low because this only adds dry-run output."
+    ].join("\n"),
+    changedFiles: 1,
+    additions: 18,
+    deletions: 2,
+    files: [{ filename: "src/core/queue.mjs", additions: 18, deletions: 2 }],
+    checks: [{ name: "test", conclusion: "success" }],
+    repositoryContext: {
+      repository: "owner/repo",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
 
 function wrongRepositoryIssue() {
   return {

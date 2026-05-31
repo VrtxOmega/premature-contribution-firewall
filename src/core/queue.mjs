@@ -61,6 +61,45 @@ export const NEXT_ACTIONS = {
   }
 };
 
+const RESPONSE_TEMPLATES = {
+  "review-now": {
+    title: "Review-now maintainer note",
+    audience: "maintainer",
+    channel: "maintainer-note",
+    summary: "Internal note for work that can enter normal review."
+  },
+  "ask-reporter-for-evidence": {
+    title: "Reporter repair request",
+    audience: "reporter",
+    channel: "github-comment-draft",
+    summary: "Comment draft asking the submitter for the missing evidence PCF found."
+  },
+  "check-duplicate-or-fixed-first": {
+    title: "Duplicate or fixed-first check",
+    audience: "maintainer",
+    channel: "maintainer-note",
+    summary: "Internal note for checking related, solved, concurrent, or upstream-fixed work before fresh review."
+  },
+  "route-to-subsystem-or-process": {
+    title: "Routing and process note",
+    audience: "maintainer/process",
+    channel: "maintainer-note",
+    summary: "Internal note for routing the item through the right owner, repository, subsystem, or contribution process."
+  },
+  "needs-maintainer-decision": {
+    title: "Maintainer decision note",
+    audience: "maintainer",
+    channel: "maintainer-note",
+    summary: "Internal note for judgment calls that PCF cannot safely reduce to a reporter request."
+  },
+  "not-actionable-yet": {
+    title: "Parked or blocked note",
+    audience: "maintainer",
+    channel: "maintainer-note",
+    summary: "Internal note for work that should stay out of active review until external state changes."
+  }
+};
+
 const STATUS_ORDER = {
   "ready-for-maintainer": 0,
   "needs-repair": 1,
@@ -187,7 +226,7 @@ export function evaluateQueueItem(rawItem = {}, { index = 0, profile = "", feedb
   const action = STATUS_ACTIONS[evaluation.status] || "inspect";
   const nextAction = classifyNextAction(evaluation, { coarseAction: action });
 
-  return {
+  const item = {
     id,
     index,
     kind: evaluation.kind,
@@ -213,6 +252,8 @@ export function evaluateQueueItem(rawItem = {}, { index = 0, profile = "", feedb
     fixtureInput: buildFixtureInput(input),
     evaluation
   };
+  item.responseTemplate = buildResponseTemplate(item);
+  return item;
 }
 
 export function normalizeQueueInput(rawItem = {}) {
@@ -282,7 +323,9 @@ export function formatMaintainerQueueMarkdown(queue = {}) {
       `- Feedback calibration: ${item.calibration?.active ? item.calibration.summary : "none"}`,
       `- Review budget: ${item.reviewBudget?.minutes ?? "n/a"} minutes`,
       "- Reasons:",
-      reasons
+      reasons,
+      "- Response draft:",
+      ...formatResponseTemplateMarkdown(item.responseTemplate)
     );
   }
 
@@ -355,9 +398,245 @@ function buildNextActionGroups(items = []) {
         order: action.order,
         count: groupItems.length,
         reviewBudgetMinutes: groupItems.reduce((total, item) => total + (item.reviewBudget?.minutes || 0), 0),
-        itemIds: groupItems.map((item) => item.id)
+        itemIds: groupItems.map((item) => item.id),
+        responseTemplate: buildLaneResponseTemplate(action, groupItems)
       };
     });
+}
+
+export function buildResponseTemplate(item = {}) {
+  const nextAction = item.nextAction || NEXT_ACTIONS["needs-maintainer-decision"];
+  const id = nextAction.id || "needs-maintainer-decision";
+  const template = RESPONSE_TEMPLATES[id] || RESPONSE_TEMPLATES["needs-maintainer-decision"];
+  const checklist = buildResponseChecklist(item, nextAction);
+  const evidence = buildResponseEvidence(item, nextAction);
+  const body = renderResponseBody(id, { item, nextAction, template, checklist, evidence });
+
+  return {
+    id,
+    title: template.title,
+    audience: template.audience,
+    channel: template.channel,
+    dryRun: true,
+    posting: "disabled",
+    shouldPost: false,
+    summary: template.summary,
+    body,
+    checklist,
+    evidence
+  };
+}
+
+function buildLaneResponseTemplate(action = {}, items = []) {
+  const template = RESPONSE_TEMPLATES[action.id] || RESPONSE_TEMPLATES["needs-maintainer-decision"];
+  const itemRefs = items.slice(0, 6).map((item) => itemReference(item));
+  const bodyLines = [
+    `PCF dry-run lane: ${action.title || action.id}.`,
+    "",
+    `Items in lane: ${items.length}.`,
+    `Owner: ${action.owner || action.target || "unknown"}.`,
+    `Suggested maintainer move: ${action.maintainerAction || action.summary || "Inspect this lane."}`,
+    itemRefs.length ? `Items: ${itemRefs.join(", ")}.` : "Items: none in the current queue.",
+    "",
+    "Use the item-level draft before copying anything into GitHub.",
+    "No comments, labels, closures, merges, or other GitHub writes were made automatically."
+  ];
+
+  return {
+    id: action.id || "unknown",
+    title: `${template.title} lane summary`,
+    audience: template.audience,
+    channel: "lane-summary",
+    dryRun: true,
+    posting: "disabled",
+    shouldPost: false,
+    summary: template.summary,
+    body: bodyLines.join("\n"),
+    checklist: itemRefs,
+    evidence: {
+      itemIds: items.map((item) => item.id),
+      labels: uniqueStrings(items.flatMap((item) => item.nextAction?.evidence?.labels || [])),
+      reasons: uniqueStrings(items.flatMap((item) => item.nextAction?.evidence?.reasons || []))
+    }
+  };
+}
+
+function buildResponseChecklist(item = {}, nextAction = {}) {
+  const id = nextAction.id || "";
+  const reasonItems = (item.topReasons || [])
+    .slice(0, 4)
+    .map((reason) => `${reason.title}: ${reason.reason}`.trim());
+  const labelItems = (nextAction.evidence?.labels || [])
+    .slice(0, 4)
+    .map((label) => `Route label: ${label}`);
+
+  if (id === "ask-reporter-for-evidence") {
+    return uniqueStrings(reasonItems.length ? reasonItems : [
+      ...labelItems,
+      "Add the missing reproduction, evidence, verification, or scope details before maintainer review."
+    ]).slice(0, 5);
+  }
+  if (id === "check-duplicate-or-fixed-first") {
+    return uniqueStrings([
+      item.contextSummary && item.contextSummary !== "No repository context supplied." ? item.contextSummary : "",
+      ...labelItems,
+      "Check linked, duplicate, concurrent, solved, and upstream-fixed work before fresh review."
+    ]).slice(0, 5);
+  }
+  if (id === "route-to-subsystem-or-process") {
+    return uniqueStrings([
+      ...labelItems,
+      ...reasonItems,
+      "Route through the repository owner, subsystem, template, or process before normal review."
+    ]).slice(0, 5);
+  }
+  if (id === "needs-maintainer-decision") {
+    return uniqueStrings([
+      ...labelItems,
+      ...reasonItems,
+      "Maintainer judgment is required before asking the reporter for more work."
+    ]).slice(0, 5);
+  }
+  if (id === "not-actionable-yet") {
+    return uniqueStrings([
+      ...labelItems,
+      ...reasonItems,
+      "Keep this out of active review until the external blocker changes."
+    ]).slice(0, 5);
+  }
+  return uniqueStrings([
+    item.contextSummary && item.contextSummary !== "No repository context supplied." ? item.contextSummary : "",
+    ...labelItems,
+    ...reasonItems,
+    "Start normal maintainer review."
+  ]).slice(0, 5);
+}
+
+function buildResponseEvidence(item = {}, nextAction = {}) {
+  return {
+    labels: uniqueStrings([...(item.labels || []), ...(nextAction.evidence?.labels || [])]).slice(0, 8),
+    checks: Array.isArray(nextAction.evidence?.checks) ? nextAction.evidence.checks.slice(0, 6) : [],
+    reasons: uniqueStrings(nextAction.evidence?.reasons || []).slice(0, 6),
+    topReasons: (item.topReasons || []).slice(0, 4).map((reason) => ({
+      id: reason.id || "",
+      title: reason.title || "",
+      status: reason.status || "",
+      label: reason.label || "",
+      reason: reason.reason || ""
+    })),
+    contextSummary: item.contextSummary || "",
+    calibrationSummary: item.calibration?.active ? item.calibration.summary : ""
+  };
+}
+
+function renderResponseBody(id, { item, nextAction, checklist }) {
+  const ref = itemReference(item);
+  const title = item.title || "Untitled";
+  const contextLine = item.contextSummary && item.contextSummary !== "No repository context supplied."
+    ? `Repository context: ${item.contextSummary}`
+    : "";
+  const evidenceLine = evidenceLabelsLine(nextAction);
+  const checklistLines = checklist.length
+    ? checklist.map((entry) => `- ${entry}`)
+    : ["- No additional evidence line was generated."];
+  const dryRunLines = [
+    "",
+    "PCF dry-run note: No comments, labels, closures, merges, or other GitHub writes were made automatically."
+  ];
+
+  if (id === "ask-reporter-for-evidence") {
+    return [
+      `PCF dry-run triage for ${ref}: this needs repair before maintainer review.`,
+      "",
+      "Please add or clarify the missing evidence below:",
+      ...checklistLines,
+      "",
+      "Once this is updated, a maintainer can review the issue without reconstructing the reproducer, evidence, or scope from scratch.",
+      ...dryRunLines
+    ].join("\n");
+  }
+  if (id === "check-duplicate-or-fixed-first") {
+    return [
+      `PCF dry-run triage for ${ref}: check related or already-fixed work before fresh review.`,
+      "",
+      `Item: ${title}`,
+      contextLine,
+      evidenceLine,
+      "",
+      "Suggested maintainer move:",
+      ...checklistLines,
+      "",
+      "After that check, close/link as duplicate, ask for version verification, or move it into normal review if the context signal is wrong.",
+      ...dryRunLines
+    ].filter(Boolean).join("\n");
+  }
+  if (id === "route-to-subsystem-or-process") {
+    return [
+      `PCF dry-run triage for ${ref}: route this through project process before normal review.`,
+      "",
+      `Item: ${title}`,
+      evidenceLine,
+      "",
+      "Suggested maintainer move:",
+      ...checklistLines,
+      "",
+      "Use the repository's ownership, subsystem, issue-template, or contribution policy before asking for generic evidence.",
+      ...dryRunLines
+    ].filter(Boolean).join("\n");
+  }
+  if (id === "needs-maintainer-decision") {
+    return [
+      `PCF dry-run triage for ${ref}: maintainer judgment is needed.`,
+      "",
+      `Item: ${title}`,
+      evidenceLine,
+      contextLine,
+      "",
+      "Suggested maintainer move:",
+      ...checklistLines,
+      "",
+      "Do not send a generic repair request until a maintainer decides which path is actually useful.",
+      ...dryRunLines
+    ].filter(Boolean).join("\n");
+  }
+  if (id === "not-actionable-yet") {
+    return [
+      `PCF dry-run triage for ${ref}: this should stay out of active review for now.`,
+      "",
+      `Item: ${title}`,
+      evidenceLine,
+      "",
+      "Suggested maintainer move:",
+      ...checklistLines,
+      "",
+      "Revisit only when the external state changes or a maintainer explicitly reopens the lane.",
+      ...dryRunLines
+    ].filter(Boolean).join("\n");
+  }
+  return [
+    `PCF dry-run triage for ${ref}: ready for maintainer review.`,
+    "",
+    `Item: ${title}`,
+    evidenceLine,
+    contextLine,
+    "",
+    "Suggested maintainer move:",
+    ...checklistLines,
+    "",
+    "Start normal review. PCF found no higher-priority repair, routing, duplicate, or wait-state blocker.",
+    ...dryRunLines
+  ].filter(Boolean).join("\n");
+}
+
+function evidenceLabelsLine(nextAction = {}) {
+  const labels = nextAction.evidence?.labels || [];
+  return labels.length ? `Route evidence: ${labels.join(", ")}.` : "";
+}
+
+function itemReference(item = {}) {
+  const kind = item.kind || "item";
+  const number = item.number ? `#${item.number}` : item.id || "";
+  return [kind, number].filter(Boolean).join(" ");
 }
 
 function publicQueueCalibration(calibration) {
@@ -551,6 +830,15 @@ function formatNextAction(nextAction) {
   const evidence = nextAction.evidence?.labels?.length ? ` Evidence: ${nextAction.evidence.labels.join(", ")}.` : "";
   const action = nextAction.maintainerAction ? ` Next: ${nextAction.maintainerAction}` : "";
   return `${nextAction.id} (${nextAction.target || "unknown"}) - ${nextAction.reason || nextAction.summary || ""}${action}${evidence}`.trim();
+}
+
+function formatResponseTemplateMarkdown(template = {}) {
+  if (!template.body) return ["  > No response draft generated."];
+  const header = `  > ${template.title || "Response draft"} (${template.audience || "unknown"}, ${template.channel || "unknown"}, dry-run).`;
+  const body = String(template.body)
+    .split("\n")
+    .map((line) => `  > ${line}`);
+  return [header, ...body];
 }
 
 function formatCountLines(counts = {}) {

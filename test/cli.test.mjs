@@ -65,6 +65,8 @@ test("CLI prints maintainer queue next-action lanes", async () => {
   assert.match(stdout, /Check duplicate or fixed first: 1 item\(s\), owner maintainer/);
   assert.match(stdout, /Ask reporter: 1 item\(s\), owner reporter/);
   assert.match(stdout, /next: Send a focused repair request to the submitter/);
+  assert.match(stdout, /response draft: Reporter repair request \(reporter, dry-run\)/);
+  assert.match(stdout, /No comments, labels, closures, merges, or other GitHub writes were made automatically/);
 });
 
 test("CLI emits queue JSON with enriched nextAction contract", async () => {
@@ -78,6 +80,9 @@ test("CLI emits queue JSON with enriched nextAction contract", async () => {
   assert.equal(data.items[0].nextAction.owner, "maintainer");
   assert.ok(Array.isArray(data.items[1].nextAction.evidence.labels));
   assert.ok(data.items[1].nextAction.maintainerAction.includes("Check related"));
+  assert.equal(data.items[1].responseTemplate.dryRun, true);
+  assert.equal(data.items[1].responseTemplate.shouldPost, false);
+  assert.match(data.items[1].responseTemplate.body, /check related or already-fixed work/);
 });
 
 test("CLI emits guided setup JSON without secret values", async () => {

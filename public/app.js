@@ -1025,6 +1025,16 @@ function renderQueueItem(item) {
       <summary>Why PCF routed this here</summary>
       <ul class="plain-list queue-explainer-list"></ul>
     </details>
+    <div class="queue-response-template">
+      <div class="queue-template-head">
+        <div>
+          <strong></strong>
+          <span></span>
+        </div>
+        <button type="button">Copy Draft</button>
+      </div>
+      <pre></pre>
+    </div>
     <p class="queue-context"></p>
     <div class="queue-feedback">
       <div class="feedback-controls">
@@ -1104,6 +1114,7 @@ function renderQueueItem(item) {
     : "Next action: unknown";
   renderNextActionEvidence(article.querySelector(".queue-next-evidence"), nextAction);
   renderQueueExplainer(article.querySelector(".queue-explainer-list"), item, nextAction);
+  renderQueueResponseTemplate(article.querySelector(".queue-response-template"), item.responseTemplate);
   article.querySelector(".queue-context").textContent = `Context: ${item.contextSummary || "none"}`;
   if (item.calibration?.active) {
     const calibration = document.createElement("p");
@@ -1157,6 +1168,25 @@ function renderQueueExplainer(node, item = {}, nextAction = {}) {
   ].filter(Boolean);
 
   renderList(node, explanation.length ? explanation : ["No route explanation available."]);
+}
+
+function renderQueueResponseTemplate(node, template = {}) {
+  if (!template?.body) {
+    node.hidden = true;
+    return;
+  }
+  node.hidden = false;
+  node.querySelector("strong").textContent = template.title || "Dry-run response draft";
+  node.querySelector("span").textContent = `${template.audience || "unknown"} · ${template.channel || "unknown"} · ${template.posting || "disabled"}`;
+  node.querySelector("pre").textContent = template.body;
+  const button = node.querySelector("button");
+  button.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(template.body);
+    button.textContent = "Copied";
+    setTimeout(() => {
+      button.textContent = "Copy Draft";
+    }, 1200);
+  });
 }
 
 async function submitQueueFeedback(item, { article, verdict, expectedSelect }) {

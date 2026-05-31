@@ -243,6 +243,7 @@ function compactQueueItem(item = {}) {
     status: item.status || "",
     action: item.action || "",
     nextAction: item.nextAction || { id: "unknown", target: "", summary: "", reason: "" },
+    responseTemplate: compactResponseTemplate(item.responseTemplate),
     score: item.score || 0,
     labels: item.labels || [],
     contextLabels,
@@ -256,6 +257,22 @@ function compactQueueItem(item = {}) {
       label: reason.label || "",
       reason: reason.reason || ""
     }))
+  };
+}
+
+function compactResponseTemplate(template = {}) {
+  if (!template?.body) return null;
+  return {
+    id: template.id || "",
+    title: template.title || "",
+    audience: template.audience || "",
+    channel: template.channel || "",
+    dryRun: template.dryRun !== false,
+    posting: template.posting || "disabled",
+    shouldPost: Boolean(template.shouldPost),
+    summary: template.summary || "",
+    body: template.body || "",
+    checklist: Array.isArray(template.checklist) ? template.checklist.slice(0, 6) : []
   };
 }
 

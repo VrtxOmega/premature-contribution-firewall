@@ -120,6 +120,12 @@ function printQueuePretty(queue) {
     console.log(`  owner: ${item.nextAction?.owner || item.nextAction?.target || "unknown"}`);
     console.log(`  next: ${item.nextAction?.maintainerAction || item.nextAction?.summary || ""}`);
     console.log(`  reason: ${item.nextAction?.reason || "none"}`);
+    if (item.responseTemplate?.body) {
+      console.log(`  response draft: ${item.responseTemplate.title} (${item.responseTemplate.audience}, dry-run)`);
+      for (const line of item.responseTemplate.body.split("\n")) {
+        console.log(`    ${line}`);
+      }
+    }
   }
 }
 

@@ -28,6 +28,23 @@ Each queue item carries the same public contract:
 
 Queue responses also include `nextActionGroups`: one lane summary per exported action, with counts, item ids, owner, target, maintainer action copy, and review-budget totals. The browser UI and CLI use the same shape as the API.
 
+## Response Templates
+
+Each queue item also carries `responseTemplate`. This is a deterministic dry-run draft generated from the same `nextAction` evidence, top reasons, labels, repository-context summary, and calibration state. It is not an auto-comment command.
+
+The response template contract is:
+
+- `title`: human-readable draft type, such as reporter repair request or duplicate check note.
+- `audience`: who the draft is for, usually `reporter`, `maintainer`, or `maintainer/process`.
+- `channel`: `github-comment-draft` for reporter repair requests, `maintainer-note` for internal maintainer actions, or `lane-summary` for group-level summaries.
+- `dryRun`: always `true` for queue-generated drafts.
+- `posting`: `disabled`.
+- `shouldPost`: always `false`.
+- `body`: the copyable draft text.
+- `checklist` and `evidence`: the facts used to build the draft.
+
+Reporter-owned lanes get copyable repair-request drafts. Maintainer-owned lanes get internal notes for review-now, duplicate/fixed-first, process routing, decision, or parked-state handling. These drafts are meant to reduce maintainer typing and preserve the evidence trail; they do not mutate GitHub unless a deployment owner separately enables and reviews a write path.
+
 ## Coarse Buckets
 
 PCF keeps the older coarse actions for compatibility:

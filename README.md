@@ -26,6 +26,8 @@ A messy queue turns into a short action list:
 
 Each queue item includes the route reason, next actor, maintainer action, top labels/checks, repository-context summary, and feedback controls for turning wrong calls into replayable evidence.
 
+Each queue item also includes a dry-run response draft. Reporter-owned lanes get a copyable repair-request draft; maintainer-owned lanes get an internal note for duplicate checks, routing, decision, or parked-state handling. PCF still does not post those drafts automatically.
+
 ## GitHub Action Dry-Run
 
 The lowest-friction pilot is a read-only workflow artifact. It does not require a GitHub App and does not comment, label, close, merge, or write to issues or pull requests.
@@ -412,7 +414,7 @@ Each item also includes a `nextAction` object that explains who can usefully act
 
 The rule of thumb is that higher-cost maintainer-side signals beat generic reporter evidence: context lookup, repository routing, wait-state labels, and maintainer-owned work should not be hidden behind "please add logs."
 
-The response includes per-item top reasons, labels, repository-context summaries, review-budget estimates, sub-action counts, the full underlying evaluation, lane groups, and markdown suitable for a maintainer report. GitHub queue collection is dry-run/read-only; comment and label writes still require explicit webhook write configuration.
+The response includes per-item top reasons, labels, repository-context summaries, review-budget estimates, sub-action counts, dry-run response drafts, the full underlying evaluation, lane groups, and markdown suitable for a maintainer report. GitHub queue collection is dry-run/read-only; comment and label writes still require explicit webhook write configuration.
 
 What a maintainer sees:
 
@@ -451,6 +453,15 @@ What a maintainer sees:
         "evidence": {
           "labels": ["possibly-duplicate", "concurrent-work", "possibly-upstream-fixed"]
         }
+      },
+      "responseTemplate": {
+        "title": "Duplicate or fixed-first check",
+        "audience": "maintainer",
+        "channel": "maintainer-note",
+        "dryRun": true,
+        "posting": "disabled",
+        "shouldPost": false,
+        "body": "PCF dry-run triage for pull_request #13: check related or already-fixed work before fresh review..."
       }
     }
   ]
