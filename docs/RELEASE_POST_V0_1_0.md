@@ -103,3 +103,5 @@ Remote run: [PCF Verification 26716892269](https://github.com/VrtxOmega/prematur
 - PCF does not enable GitHub comments, labels, closures, merges, or other writes by default.
 
 The point of v0.1.0 is simple: give maintainers a safe way to compress a messy queue into a reviewable action map, then let them decide whether the map is useful.
+
+For the build-history evidence capsule behind this release, see [docs/BUILD_ARC_36_HOURS.md](https://github.com/VrtxOmega/premature-contribution-firewall/blob/main/docs/BUILD_ARC_36_HOURS.md).

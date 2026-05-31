@@ -32,6 +32,8 @@ Canonical sample: [PCF maintainer export bundle from this repo's own public queu
 
 Release post: [v0.1.0 read-only maintainer queue pilot](docs/RELEASE_POST_V0_1_0.md).
 
+Build arc: [36-hour idea-to-v0.1.0 evidence capsule](docs/BUILD_ARC_36_HOURS.md).
+
 ## GitHub Action Dry-Run
 
 The lowest-friction pilot is a read-only workflow artifact. It does not require a GitHub App and does not comment, label, close, merge, or write to issues or pull requests.

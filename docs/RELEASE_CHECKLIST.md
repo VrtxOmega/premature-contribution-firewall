@@ -56,6 +56,7 @@ It should upload regenerated proof artifacts after those gates pass, not before.
 - `docs/adversarial-red-team-results.md`
 - `docs/maintainer-demo-output.md`
 - `docs/API.md`
+- `docs/BUILD_ARC_36_HOURS.md`
 - `docs/GITHUB_ACTION.md`
 - `docs/RELEASE_POST_V0_1_0.md`
 - `docs/NEXT_ACTOR_MODEL.md`
