@@ -732,7 +732,8 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     || (hasExpectedSignal && hasObservedFailureSignal && (SIGNALS.repro.test(body) || SIGNALS.logs.test(body) || SIGNALS.rootCause.test(body)))
   );
   const issueDescription = markdownSection(body, /describe (?:your|the) issue|describe the bug/i);
-  const stepsToReproduce = markdownSection(body, /steps to reproduce|reproduction/i);
+  const explicitStepsToReproduce = markdownSection(body, /steps to reproduce|reproduction/i);
+  const stepsToReproduce = explicitStepsToReproduce || (hasEmbeddedReproductionSteps(issueDescription) ? issueDescription : "");
   const expectedBehavior = markdownSection(body, /expected behaviou?r/i);
   const hasStructuredIssueDescription = hasMeaningfulSection(issueDescription);
   const hasUncertainReproduction = /\b(?:idk|i don't know|i do not know|not sure|unsure|unknown|no idea|can't reproduce|cannot reproduce|hard to reproduce)\b/i.test(stepsToReproduce);
@@ -743,7 +744,12 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
     markdownSection(body, /android version/i),
     markdownSection(body, /app version/i),
     markdownSection(body, /jellyfin version/i),
-    markdownSection(body, /player/i)
+    markdownSection(body, /player/i),
+    markdownSection(body, /(?:free)?tube version/i),
+    markdownSection(body, /operating system version/i),
+    markdownSection(body, /installation method/i),
+    markdownSection(body, /primary api used/i),
+    markdownSection(body, /last known working/i)
   ].some((section) => hasMeaningfulSection(section, { minLength: 2 }));
   const structuredBugReportComplete = !featureRequestIntent
     && hasStructuredIssueDescription
@@ -770,7 +776,7 @@ function analyzeIssueEvidence(input = {}, { title = "", body = "" } = {}) {
 
 function markdownSection(body = "", headingPattern) {
   const source = headingPattern instanceof RegExp ? headingPattern.source : String(headingPattern);
-  const sectionPattern = new RegExp(`^#{2,6}\\s*(?:${source})\\s*\\n([\\s\\S]*?)(?=^#{2,6}\\s+|\\s*$)`, "im");
+  const sectionPattern = new RegExp(`^#{2,6}\\s*(?:${source})\\s*\\n([\\s\\S]*?)(?=^#{2,6}\\s+|(?![\\s\\S]))`, "im");
   const match = sectionPattern.exec(body);
   return match ? match[1].trim() : "";
 }
@@ -783,12 +789,17 @@ function hasMeaningfulSection(section = "", { minLength = 8 } = {}) {
   return cleaned.length >= minLength && /[a-z0-9]/i.test(cleaned);
 }
 
+function hasEmbeddedReproductionSteps(section = "") {
+  const numberedSteps = String(section).match(/^\s*\d+\.\s+\S.+$/gm) || [];
+  return numberedSteps.length >= 2;
+}
+
 function analyzeMaintainerTriage(labels = [], authorAssociation = "") {
   const normalized = normalizeLabels(labels).map((label) => label.trim()).filter(Boolean);
   const labelText = normalized.join(" ");
   const backlog = /\b(?:status[/: -]?)?(?:icebox|backlog|deferred|later|someday|parking lot)\b/i.test(labelText);
   const pendingClarification = /\b(?:status[/: -]?)?(?:pending[ _-]?clarification|needs?[ _-]?info|waiting[ _-]?for[ _-]?(?:reporter|response|author)|more[ _-]?info)\b/i.test(labelText);
-  const approved = /\b(?:status[/: -]?)?(?:approved|accepted|confirmed|ready[ _-]?(?:for[ _-]?)?(?:implementation|review)?)\b/i.test(labelText);
+  const approved = /\b(?:status[/: -]?)?(?:approved|accepted|confirmed|reproduced|ready[ _-]?(?:for[ _-]?)?(?:implementation|review)?)\b/i.test(labelText);
   const authored = isMaintainerAuthorAssociation(authorAssociation);
 
   if (pendingClarification) {

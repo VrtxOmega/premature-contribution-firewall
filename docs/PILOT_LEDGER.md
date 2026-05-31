@@ -23,6 +23,7 @@ It is not a list of endorsements. A target repository appearing here means PCF r
 | `karakeep-app/karakeep` | Private only | None | 2 review / 8 repair / 2 defer | 6 review / 3 repair / 3 defer | Maintainer triage labels, bug-template failure output, and AI/LLM product language need separate handling. |
 | `keymapperorg/KeyMapper` | Private only | None | 0 review / 5 repair / 7 defer | 5 review / 3 repair / 4 defer | Maintainer-authored internal issues should not get contributor repair prompts unless context or safety conflicts exist. |
 | `jarnedemeulemeester/findroid` | Private only | None | 2 review / 6 repair / 4 defer | 7 review / 0 repair / 5 defer | Complete Android/media bug templates need first-triage credit without requiring logs/root-cause analysis, while uncertain repros stay out of review-now. |
+| `FreeTubeApp/FreeTube` | Private only | None | 1 review / 10 repair / 1 defer | 3 review / 8 repair / 1 defer | Bug-template reproduction steps may be embedded in description sections, and `U: reproduced` is maintainer validation unless repository context conflicts. |
 
 ## tuya-local
 
@@ -528,13 +529,102 @@ c7dadd6171aaae5ee33bd8469b1131a22966a3a84e851ee4ed465e770f8bc94c
 5a979ba1343931d7023b34f64f4e3998ea93b080fe3f60aef5f20e7246b95692
 ```
 
+## FreeTube
+
+Target: `FreeTubeApp/FreeTube`
+
+Live metadata at pilot start:
+
+- stars: 21,085
+- forks: 1,424
+- open issues: 302
+- open pull requests: 15
+- default branch: `development`
+- last pushed: 2026-05-29T22:13:41Z
+
+Queue shape:
+
+- YouTube SABR/content-loading failures
+- Wayland/Electron desktop behavior
+- feature requests with strict one-feature templates
+- old but still active issues with current comments
+- maintainer labels such as `U: reproduced`
+- duplicate/solved/concurrent work signals around provider breakage
+
+Templates inspected:
+
+- `bug_report.yaml`
+- `feature_request.yaml`
+- `config.yml`
+
+Initial private pilot:
+
+- 12 sampled issues
+- 1 review-now
+- 10 repair
+- 1 defer
+- repository context checked all 12
+- context findings: 18
+- items with context findings: 5
+- context unavailable: 0
+
+What PCF got wrong:
+
+- `#9187` completed FreeTube's bug template and included numbered reproduction steps, expected behavior, desktop environment, upstream Electron/Chromium links, and a workaround, but PCF missed it because the steps lived inside `Describe the bug` instead of a separate `Steps to reproduce` heading.
+- `#5915` carried FreeTube's `U: reproduced` label and had corroborating current comments, but PCF treated it like an unconfirmed public report and asked for soft log/root-cause repair.
+- The markdown section parser was stopping at the first blank line in a section, causing multi-paragraph issue-template fields to be under-read.
+
+Fixes made:
+
+- Fixed markdown section extraction so issue-template sections can span blank lines until the next heading.
+- Added detection for numbered reproduction steps embedded inside a bug description section.
+- Added desktop app environment headings such as FreeTube version, operating system version, installation method, and primary API to structured bug-template evidence.
+- Treated `reproduced` labels as maintainer-approved triage signals while preserving repository-context conflicts.
+
+Final private pilot:
+
+- 12 sampled issues
+- 3 review-now
+- 8 repair
+- 1 defer
+- repository context checked all 12
+- context findings: 18
+- items with context findings: 5
+- context unavailable: 0
+
+Notable final routing:
+
+- `#9187`, `#9127`, and `#5915` routed to review-now.
+- `#9021`, `#7690`, `#3221`, and `#9066` stayed in repair because duplicate, solved, closed-linked, or concurrent-work context still needs a maintainer call.
+- `#6206`, `#9190`, and `#9080` stayed in repair because they still need current repro/log/detail or maintainer confirmation.
+- `#450` stayed do-not-review-yet as an old thin IPv6 feature request.
+
+Verification:
+
+- Focused evaluator tests passed.
+- Benchmark corpus increased to 51 cases:
+  - `combined-description-repro-steps`
+  - `maintainer-reproduced-issue-label`
+- Current benchmark result: 51/51 passing.
+- GitHub writes to `FreeTubeApp/FreeTube`: none.
+- Public outreach: none.
+
+Private artifact hashes:
+
+```text
+b0a98108c9ff2b7976b1d35ea89abf068ba2efa0a8834fc995a1cafd6d9c0028
+89ed512c91c75ba8cb1967d59135b9605c798ccb23262d82ecd90bf0e8d2ef41
+b25d4a38d040679b9fdbde086dfc36e017e348dba4340c9e3796fda30570798c
+fd40f3e1147399fba8e08c27d9e7250a8d2fcb3188ec404efffe3660fa31a0d2
+```
+
 ## Current Gate State
 
 The pilot ledger should be updated whenever a real pilot changes PCF behavior.
 
 Current expected proof state:
 
-- benchmark: 49/49
+- benchmark: 51/51
 - adversarial red test: 8/8
 - maintainer demo: PASS
 - GitHub write posture: dry-run/read-only unless explicitly enabled by the repository owner

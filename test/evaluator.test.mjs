@@ -330,6 +330,112 @@ test("complete structured Android media bug template is reviewable without paste
   assert.ok(result.strengths.some((item) => item.includes("bug template")));
 });
 
+test("bug template with numbered steps inside description is reviewable", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "[Bug]: 'Minimize to Tray' does not work with Wayland",
+    labels: [{ name: "bug" }, { name: "B: usability" }],
+    body: [
+      "### Guidelines",
+      "",
+      "- [x] I have encountered this bug in the latest release.",
+      "- [x] I have encountered this bug in the official downloads.",
+      "- [x] I have searched the issue tracker for open and closed issues.",
+      "- [x] I have searched the documentation.",
+      "- [x] This issue contains only one bug.",
+      "",
+      "### Describe the bug",
+      "",
+      "1. Enable \"Minimize to system tray\" setting.",
+      "2. Minimize window.",
+      "3. The window is not minimized to tray.",
+      "",
+      "### Expected Behavior",
+      "",
+      "Window should be minimized to tray.",
+      "",
+      "### Issue Labels",
+      "",
+      "usability issue",
+      "",
+      "### FreeTube Version",
+      "",
+      "v0.24.0-beta",
+      "",
+      "### Operating System Version",
+      "",
+      "Bazzite 44 NVIDIA Edition (Wayland)",
+      "",
+      "### Installation Method",
+      "",
+      "Flathub",
+      "",
+      "### Primary API used",
+      "",
+      "Local API",
+      "",
+      "### Additional Information",
+      "",
+      "If I add --ozone-platform=x11 to FreeTube's Electron args, the minimize event is correctly triggered and the tray icon works."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "FreeTubeApp/FreeTube",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("needs-logs"), false);
+  assert.equal(result.labels.includes("needs-technical-analysis"), false);
+  assert.ok(result.checks.some((check) => check.id === "reproducer" && check.status === "pass"));
+});
+
+test("reproduced maintainer label can route a confirmed bug without soft prompts", () => {
+  const result = evaluateContribution({
+    kind: "issue",
+    title: "[Bug]: Proxy-settings do not work at launch of FreeTube",
+    labels: [{ name: "bug" }, { name: "U: reproduced" }],
+    body: [
+      "### Describe the bug",
+      "",
+      "The proxy works during the current session, but after closing and launching FreeTube again the existing proxy settings are ignored.",
+      "",
+      "### Expected Behavior",
+      "",
+      "FreeTube should use the configured proxy at launch.",
+      "",
+      "### FreeTube Version",
+      "",
+      "v0.21.3 Beta",
+      "",
+      "### Operating System Version",
+      "",
+      "Windows 11 Pro 23H2",
+      "",
+      "### Installation Method",
+      "",
+      "Chocolatey",
+      "",
+      "### Primary API used",
+      "",
+      "Local API"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "FreeTubeApp/FreeTube",
+      issues: [],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.ok(result.labels.includes("maintainer-approved"));
+  assert.equal(result.labels.includes("needs-logs"), false);
+  assert.equal(result.repairSteps.some((step) => /logs|root-cause|reproduce/i.test(step)), false);
+});
+
 test("structured bug template with uncertain reproduction still needs repair", () => {
   const result = evaluateContribution({
     kind: "issue",

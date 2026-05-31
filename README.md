@@ -60,7 +60,7 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Promotes selected runnable feedback drafts into a separate local candidate corpus and replays that corpus against the current evaluator before anything is folded into the permanent benchmark.
 - Builds an auditable feedback calibration profile from local corrections and promoted candidates, then attaches close matches to future evaluations and queue items without hiding the base heuristic status or score.
 - Evaluates plain-text patch or mbox submissions with `evaluate-patch`, defaulting to `kernel-grade` discipline for email-style review.
-- Ships a deterministic maintainer benchmark corpus with 49 reproducible cases across PRs, issues, feature requests, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
+- Ships a deterministic maintainer benchmark corpus with 51 reproducible cases across PRs, issues, feature requests, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
 - Ships a separate adversarial red-test corpus that preserves breakage residue for negated verification, suspicious paths, secret evasion, generated artifact churn, skipped-only CI, prompt-injection text, malformed batch input, and empty patch bodies.
 - Exposes callable API endpoints for single, patch, batch, spec, and benchmark evaluation.
 - Includes a stricter `kernel-grade` profile for projects that want Linux-kernel-style patch discipline: concise subsystem subjects, human DCO sign-off, Fixes/stable discipline, maintainer routing, build/test evidence, review-budget control, and transparent tool provenance.
@@ -99,7 +99,7 @@ npm run benchmark:write
 
 Current generated results live in [`docs/benchmark-results.md`](docs/benchmark-results.md):
 
-- 49/49 benchmark cases passing
+- 51/51 benchmark cases passing
 - standard PR readiness
 - issue triage readiness
 - repository policy enforcement
@@ -128,6 +128,7 @@ Current pilot progression:
 | `karakeep-app/karakeep` | Private only | 2 review / 8 repair / 2 defer | 6 review / 3 repair / 3 defer | Maintainer triage labels, bug-template failure output, and AI/LLM domain language need distinct handling. |
 | `keymapperorg/KeyMapper` | Private only | 0 review / 5 repair / 7 defer | 5 review / 3 repair / 4 defer | Maintainer-authored internal issues should not get contributor repair prompts unless context or safety conflicts exist. |
 | `jarnedemeulemeester/findroid` | Private only | 2 review / 6 repair / 4 defer | 7 review / 0 repair / 5 defer | Complete Android/media bug templates should not need logs or root-cause analysis for first triage, but uncertain repros stay out of review-now. |
+| `FreeTubeApp/FreeTube` | Private only | 1 review / 10 repair / 1 defer | 3 review / 8 repair / 1 defer | Bug-template repro steps can live inside description sections, and `U: reproduced` is maintainer validation unless repo context conflicts. |
 
 ## Adversarial Red Test
 

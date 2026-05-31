@@ -149,6 +149,20 @@ export const BENCHMARK_CASES = [
     expect: { status: "low-review-value", labels: ["needs-reproducer"], absentLabels: ["ready-for-maintainer"], repoContext: true }
   },
   {
+    id: "combined-description-repro-steps",
+    category: "issue",
+    name: "Bug template with numbered repro steps inside the description",
+    input: combinedDescriptionReproStepsIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["ready-for-maintainer"], absentLabels: ["needs-logs", "needs-technical-analysis"], repoContext: true }
+  },
+  {
+    id: "maintainer-reproduced-issue-label",
+    category: "issue",
+    name: "Maintainer reproduced label routes confirmed issue without soft prompts",
+    input: maintainerReproducedIssue(),
+    expect: { status: "ready-for-maintainer", labels: ["maintainer-approved", "ready-for-maintainer"], absentLabels: ["needs-logs"], repoContext: true }
+  },
+  {
     id: "maintainer-approved-issue-label",
     category: "issue",
     name: "Maintainer-approved issue label preserves review-now routing",
@@ -993,6 +1007,102 @@ function structuredBugUncertainReproIssue() {
     repositoryContext: {
       source: "github-api",
       repository: "jarnedemeulemeester/findroid",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function combinedDescriptionReproStepsIssue() {
+  return {
+    kind: "issue",
+    title: "[Bug]: 'Minimize to Tray' does not work with Wayland",
+    labels: [{ name: "bug" }, { name: "B: usability" }],
+    body: [
+      "### Guidelines",
+      "",
+      "- [x] I have encountered this bug in the latest release.",
+      "- [x] I have encountered this bug in the official downloads.",
+      "- [x] I have searched the issue tracker for open and closed issues.",
+      "- [x] I have searched the documentation.",
+      "- [x] This issue contains only one bug.",
+      "",
+      "### Describe the bug",
+      "",
+      "1. Enable \"Minimize to system tray\" setting.",
+      "2. Minimize window.",
+      "3. The window is not minimized to tray.",
+      "",
+      "### Expected Behavior",
+      "",
+      "Window should be minimized to tray.",
+      "",
+      "### Issue Labels",
+      "",
+      "usability issue",
+      "",
+      "### FreeTube Version",
+      "",
+      "v0.24.0-beta",
+      "",
+      "### Operating System Version",
+      "",
+      "Bazzite 44 NVIDIA Edition (Wayland)",
+      "",
+      "### Installation Method",
+      "",
+      "Flathub",
+      "",
+      "### Primary API used",
+      "",
+      "Local API",
+      "",
+      "### Additional Information",
+      "",
+      "If I add --ozone-platform=x11 to FreeTube's Electron args, the minimize event is correctly triggered and the tray icon works."
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "FreeTubeApp/FreeTube",
+      issues: [],
+      pullRequests: []
+    }
+  };
+}
+
+function maintainerReproducedIssue() {
+  return {
+    kind: "issue",
+    title: "[Bug]: Proxy-settings do not work at launch of FreeTube",
+    labels: [{ name: "bug" }, { name: "U: reproduced" }],
+    body: [
+      "### Describe the bug",
+      "",
+      "The proxy works during the current session, but after closing and launching FreeTube again the existing proxy settings are ignored.",
+      "",
+      "### Expected Behavior",
+      "",
+      "FreeTube should use the configured proxy at launch.",
+      "",
+      "### FreeTube Version",
+      "",
+      "v0.21.3 Beta",
+      "",
+      "### Operating System Version",
+      "",
+      "Windows 11 Pro 23H2",
+      "",
+      "### Installation Method",
+      "",
+      "Chocolatey",
+      "",
+      "### Primary API used",
+      "",
+      "Local API"
+    ].join("\n"),
+    repositoryContext: {
+      source: "github-api",
+      repository: "FreeTubeApp/FreeTube",
       issues: [],
       pullRequests: []
     }
