@@ -3,6 +3,8 @@
 [![PCF Verification](https://github.com/VrtxOmega/premature-contribution-firewall/actions/workflows/pcf-verification.yml/badge.svg)](https://github.com/VrtxOmega/premature-contribution-firewall/actions/workflows/pcf-verification.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+![Premature Contribution Firewall preflight: drive-by PR vs scoped fix](docs/images/pcf-hero.jpeg)
+
 Premature Contribution Firewall is a review-readiness firewall for maintainers drowning in public GitHub issues, pull requests, patches, and patch series.
 
 It does not try to detect whether a contribution was written by AI. That is a bad maintainer primitive. PCF asks the question maintainers can actually act on:
@@ -10,6 +12,8 @@ It does not try to detect whether a contribution was written by AI. That is a ba
 Is this contribution reviewable, reproducible, scoped, tested, and worth human attention?
 
 The output is a maintainer queue, not a vibe score: labels, repair checklists, repository-context findings, benchmark proof, adversarial residue, and dry-run guardrails before any write action touches GitHub.
+
+![PCF maintainer queue: review-now, duplicate-check, and reporter-repair lanes](docs/images/pcf-maintainer-queue.jpeg)
 
 ## Status
 
@@ -155,6 +159,7 @@ Feedback candidates do not automatically enter the permanent benchmark. A human 
 - A deterministic benchmark and adversarial red-test corpus that can be rerun in CI.
 - A local feedback calibration loop that turns maintainer corrections into candidate regression fixtures and attaches matching evidence to future triage.
 - Dry-run-first GitHub posture with HMAC webhook verification and explicit setup/readiness reporting.
+- Optional shielded maintainer stack with high-assurance behavioral context, vouch parsing, issue-form checks, and deterministic duplicate assist. See [docs/SHIELDED_POSTURE.md](docs/SHIELDED_POSTURE.md) and [docs/MAINTAINER_STACK.md](docs/MAINTAINER_STACK.md).
 
 ## Maintainer Pain Map
 
@@ -195,8 +200,8 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Promotes selected runnable feedback drafts into a separate local candidate corpus and replays that corpus against the current evaluator before anything is folded into the permanent benchmark.
 - Builds an auditable feedback calibration profile from local corrections and promoted candidates, then attaches close matches to future evaluations and queue items without hiding the base heuristic status or score.
 - Evaluates plain-text patch or mbox submissions with `evaluate-patch`, defaulting to `kernel-grade` discipline for email-style review.
-- Ships a deterministic maintainer benchmark corpus with 69 reproducible cases across PRs, issues, feature requests, large-maintainer process issues, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
-- Ships a separate adversarial red-test corpus that preserves breakage residue for negated verification, suspicious paths, secret evasion, generated artifact churn, skipped-only CI, prompt-injection text, malformed batch input, and empty patch bodies.
+- Ships a deterministic maintainer benchmark corpus with 77 reproducible cases across PRs, issues, feature requests, large-maintainer process issues, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
+- Ships a separate adversarial red-test corpus with 15 cases that preserve breakage residue for negated verification, suspicious paths, secret evasion, generated artifact churn, skipped-only CI, prompt-injection text, duplicate/context laundering, malformed batch input, and empty patch bodies.
 - Exposes callable API endpoints for single, patch, batch, spec, and benchmark evaluation.
 - Includes a stricter `kernel-grade` profile for projects that want Linux-kernel-style patch discipline: concise subsystem subjects, human DCO sign-off, Fixes/stable discipline, maintainer routing, build/test evidence, review-budget control, and transparent tool provenance.
 
@@ -234,7 +239,7 @@ npm run benchmark:write
 
 Current generated results live in [`docs/benchmark-results.md`](docs/benchmark-results.md):
 
-- 69/69 benchmark cases passing
+- 77/77 benchmark cases passing
 - standard PR readiness
 - issue triage readiness
 - repository policy enforcement
@@ -285,7 +290,7 @@ npm run redtest:write
 
 Current generated results live in [`docs/adversarial-red-team-results.md`](docs/adversarial-red-team-results.md):
 
-- 11/11 adversarial cases passing
+- 15/15 adversarial cases passing
 - negated test/verification claims no longer count as proof
 - suspicious repository paths are blocked before docs-only logic can bless them
 - AWS-style secret material is caught
