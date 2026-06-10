@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { ADVERSARIAL_CASES, renderAdversaryMarkdown, runAdversary } from "../src/core/adversary.mjs";
 
 test("adversarial corpus preserves concrete red-team residue", () => {
-  assert.ok(ADVERSARIAL_CASES.length >= 8);
+  assert.ok(ADVERSARIAL_CASES.length >= 14);
   const ids = new Set(ADVERSARIAL_CASES.map((item) => item.id));
   for (const id of [
     "negated-tests-pr",
@@ -16,7 +16,11 @@ test("adversarial corpus preserves concrete red-team residue", () => {
     "empty-patch-text",
     "next-action-context-reason-priority",
     "next-action-wait-state-reason-priority",
-    "next-action-maintainer-owned-reporter-suppression"
+    "next-action-maintainer-owned-reporter-suppression",
+    "duplicate-recurrence-followup-laundering",
+    "merged-pr-replay-laundering",
+    "title-copy-open-issue-laundering",
+    "repo-context-error-masking"
   ]) {
     assert.ok(ids.has(id), `missing adversarial case ${id}`);
   }

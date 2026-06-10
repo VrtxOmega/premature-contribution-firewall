@@ -47,6 +47,14 @@ inputs:
     description: "Review profile for the PR gate: standard or kernel-grade. Only used in pr-gate mode."
     required: false
     default: ""
+  shielded:
+    description: "Enable shielded maintainer stack posture with dry-run enforced. Applies to queue and pr-gate modes."
+    required: false
+    default: "false"
+  assurance-level:
+    description: "Maintainer stack assurance level: standard or high. Defaults to high when shielded is true."
+    required: false
+    default: ""
 
 outputs:
   artifact-path:
@@ -94,11 +102,16 @@ runs:
         INPUT_MODE: ${{ inputs.mode }}
         INPUT_FAIL_ON: ${{ inputs.fail-on }}
         INPUT_PROFILE: ${{ inputs.profile }}
+        INPUT_SHIELDED: ${{ inputs.shielded }}
+        INPUT_ASSURANCE_LEVEL: ${{ inputs.assurance-level }}
         GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
         PCF_DRY_RUN: "true"
         PCF_POST_COMMENTS: "false"
         PCF_APPLY_LABELS: "false"
         PCF_COLLECT_REPOSITORY_CONTEXT: "true"
+        PCF_SHIELDED: ${{ inputs.shielded }}
+        PCF_ASSURANCE_LEVEL: ${{ inputs.assurance-level }}
+        PCF_MAINTAINER_STACK: ${{ inputs.shielded }}
       run: |
         set -euo pipefail
 

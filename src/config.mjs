@@ -26,7 +26,10 @@ export function loadConfig(cwd = process.cwd(), env = process.env) {
     githubAppId: env.GITHUB_APP_ID || "",
     githubPrivateKeyPath: env.GITHUB_PRIVATE_KEY_PATH || "",
     githubToken: env.GITHUB_TOKEN || env.GH_TOKEN || "",
-    githubApiBase: env.GITHUB_API_BASE || "https://api.github.com"
+    githubApiBase: env.GITHUB_API_BASE || "https://api.github.com",
+    shielded: env.PCF_SHIELDED === "true",
+    assuranceLevel: String(env.PCF_ASSURANCE_LEVEL || "").toLowerCase() || "standard",
+    maintainerStack: env.PCF_MAINTAINER_STACK === "true" || env.PCF_SHIELDED === "true"
   };
 }
 

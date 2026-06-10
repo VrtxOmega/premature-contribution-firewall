@@ -1,0 +1,42 @@
+name: PCF shielded maintainer stack
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  shielded-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run PCF shielded PR gate
+        uses: VrtxOmega/premature-contribution-firewall@v0.1.1
+        with:
+          mode: pr-gate
+          shielded: "true"
+          assurance-level: high
+          fail-on: needs-repair
+          github-token: ${{ github.token }}
+
+  shielded-queue:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run PCF shielded queue
+        uses: VrtxOmega/premature-contribution-firewall@v0.1.1
+        with:
+          mode: queue
+          shielded: "true"
+          assurance-level: high
+          output: pcf-shielded-queue.md
+          github-token: ${{ github.token }}
+
+      - name: Upload shielded queue artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pcf-shielded-queue
+          path: pcf-shielded-queue.md

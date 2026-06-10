@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 import { BENCHMARK_CASES, renderBenchmarkMarkdown, runBenchmark } from "../src/core/benchmark.mjs";
 
 test("benchmark corpus is broad enough to be useful", () => {
-  assert.ok(BENCHMARK_CASES.length >= 30);
+  assert.ok(BENCHMARK_CASES.length >= 70);
   const categories = new Set(BENCHMARK_CASES.map((item) => item.category));
   for (const category of ["standard-pr", "issue", "repo-policy", "repo-context", "kernel-grade", "patch-series", "tool-use", "review-budget"]) {
     assert.ok(categories.has(category), `missing category ${category}`);
   }
+  const repoContextCases = BENCHMARK_CASES.filter((item) => item.category === "repo-context");
+  assert.ok(repoContextCases.length >= 12, `expected at least 12 repo-context cases, got ${repoContextCases.length}`);
 });
 
 test("benchmark expectations pass deterministically", () => {

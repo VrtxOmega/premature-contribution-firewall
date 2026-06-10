@@ -4,8 +4,8 @@ This red-test corpus captures hostile or malformed submissions that previously e
 
 ## Summary
 
-- Version: 2026.05.30
-- Cases: 11/11 passing
+- Version: 2026.06.10
+- Cases: 15/15 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
@@ -20,6 +20,8 @@ This red-test corpus captures hostile or malformed submissions that previously e
 - patch-parser: 1/1 passing
 - queue-explanation: 2/2 passing
 - queue-actor: 1/1 passing
+- duplicate-evasion: 3/3 passing
+- context-evasion: 1/1 passing
 
 ## Cases
 
@@ -36,3 +38,7 @@ This red-test corpus captures hostile or malformed submissions that previously e
 | PASS | queue-explanation | next-action-context-reason-priority | check-duplicate-or-fixed-first | check-duplicate-or-fixed-first | n/a | Repository context label: possibly-solved. | Large-bench replay residue showed `check-duplicate-or-fixed-first` items whose reason could say `Reporter evidence label: duplicate-search-needed`, forcing maintainers to re-triage the triage. |
 | PASS | queue-explanation | next-action-wait-state-reason-priority | not-actionable-yet | not-actionable-yet | n/a | Blocked or parked label: maintainer-pending-clarification. | Large-bench replay residue showed `not-actionable-yet` items whose reason could cite reporter evidence instead of the maintainer-pending state. |
 | PASS | queue-actor | next-action-maintainer-owned-reporter-suppression | needs-maintainer-decision | needs-maintainer-decision | n/a | Maintainer-owned label: maintainer-authored. | Large-bench ask-reporter residue included a maintainer-authored issue that still routed to `ask-reporter-for-evidence`, misidentifying the next actor. |
+| PASS | duplicate-evasion | duplicate-recurrence-followup-laundering | needs-repair | needs-repair | 56 | `needs-context`, `needs-environment`, `needs-logs`, `duplicate-search-needed` | Initial probe ignored duplicate recurrence because contextual follow-up references suppressed the open linked issue. |
+| PASS | duplicate-evasion | merged-pr-replay-laundering | needs-repair | needs-repair | 82 | `possibly-solved`, `needs-repair` | Initial probe passed as ready-for-maintainer because merged local pull requests were not compared against new submissions. |
+| PASS | duplicate-evasion | title-copy-open-issue-laundering | needs-repair | needs-repair | 71 | `needs-context`, `duplicate-search-needed`, `needs-technical-analysis`, `possibly-duplicate` | Initial probe passed as ready-for-maintainer because title similarity against open issues was not enforced when no explicit reference was supplied. |
+| PASS | context-evasion | repo-context-error-masking | needs-repair | needs-repair | 71 | `needs-context`, `duplicate-search-needed`, `needs-technical-analysis`, `repo-context-unavailable` | Initial probe omitted `repo-context-unavailable`, letting maintainers assume duplicate and upstream checks had actually run. |

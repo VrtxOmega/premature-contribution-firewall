@@ -5,7 +5,7 @@ const READY_CHECK = [{ name: "maintainer-check", conclusion: "success" }];
 const FAILED_CHECK = [{ name: "maintainer-check", conclusion: "failure" }];
 const EXAMPLE_GITHUB_TOKEN = ["ghp", "example_secret_should_not_ship"].join("_");
 
-export const BENCHMARK_VERSION = "2026.05.30";
+export const BENCHMARK_VERSION = "2026.06.10";
 
 export const BENCHMARK_CASES = [
   {
@@ -399,6 +399,62 @@ export const BENCHMARK_CASES = [
     name: "Upstream already fixed similar work",
     input: repoContextPr({ mode: "upstream-fixed" }),
     expect: { status: "needs-repair", labels: ["possibly-upstream-fixed"], repoContext: true, contextFindings: 1 }
+  },
+  {
+    id: "repo-context-linked-closed-explicit-duplicate",
+    category: "repo-context",
+    name: "Explicit duplicate declaration against a closed linked issue",
+    input: explicitDuplicateClosedIssue(),
+    expect: { status: "needs-repair", labels: ["linked-issue-closed", "possibly-solved"], repoContext: true, contextFindings: 1 }
+  },
+  {
+    id: "repo-context-title-similarity-closed",
+    category: "repo-context",
+    name: "Title similarity against a closed issue without an explicit reference",
+    input: titleSimilarityClosedIssue(),
+    expect: { status: "needs-repair", labels: ["possibly-solved"], repoContext: true, contextFindings: 1 }
+  },
+  {
+    id: "repo-context-upstream-release-fix",
+    category: "repo-context",
+    name: "Upstream release notes already mention the same failure mode",
+    input: upstreamReleaseFixIssue(),
+    expect: { status: "needs-repair", labels: ["possibly-upstream-fixed"], repoContext: true, contextFindings: 1 }
+  },
+  {
+    id: "repo-context-merged-local-pr",
+    category: "repo-context",
+    name: "Similar merged local pull request already landed the same work",
+    input: mergedLocalPullRequestIssue(),
+    expect: { status: "needs-repair", labels: ["possibly-solved"], repoContext: true, contextFindings: 1 }
+  },
+  {
+    id: "repo-context-draft-concurrent-pr",
+    category: "repo-context",
+    name: "Draft concurrent pull request overlaps touched files",
+    input: draftConcurrentPullRequestIssue(),
+    expect: { status: "needs-repair", labels: ["concurrent-work"], repoContext: true, contextFindings: 1 }
+  },
+  {
+    id: "repo-context-collection-failed",
+    category: "repo-context",
+    name: "Repository context collection failure is surfaced instead of silently passing",
+    input: repositoryContextCollectionFailedIssue(),
+    expect: { status: "needs-repair", labels: ["repo-context-unavailable"], repoContext: true }
+  },
+  {
+    id: "repo-context-duplicate-recurrence-followup",
+    category: "repo-context",
+    name: "Follow-up language cannot hide a same-bug recurrence against an open issue",
+    input: duplicateRecurrenceFollowUpIssue(),
+    expect: { status: "needs-repair", labels: ["possibly-duplicate"], repoContext: true, contextFindings: 1 }
+  },
+  {
+    id: "repo-context-explicit-duplicate-open",
+    category: "repo-context",
+    name: "Explicit duplicate declaration against an open issue",
+    input: explicitDuplicateOpenIssue(),
+    expect: { status: "low-review-value", labels: ["possibly-duplicate"], repoContext: true, contextFindings: 1 }
   },
   {
     id: "kernel-ready-pr",
@@ -2096,6 +2152,236 @@ function policyPr({ ready, ownerRouteOnly = false }) {
       { path: "package.json", content: "{\"scripts\":{\"test\":\"node --test\",\"check\":\"node --check src/core/evaluator.mjs\"}}" }
     ],
     authorAssociation: ownerRouteOnly ? "MEMBER" : "CONTRIBUTOR"
+  };
+}
+
+function explicitDuplicateClosedIssue() {
+  return {
+    kind: "issue",
+    number: 99,
+    title: "Webhook dry-run response omits would-post labels",
+    body: [
+      "Duplicate of #42.",
+      "Same bug still happens on current main.",
+      "Expected: dry-run JSON includes labels.",
+      "Actual: labels are omitted."
+    ].join("\n"),
+    repositoryContext: {
+      repository: "VrtxOmega/premature-contribution-firewall",
+      issues: [
+        {
+          number: 42,
+          title: "Dry-run response omits would-post labels",
+          body: "Fixed by #55 and released in 0.1.1.",
+          state: "closed",
+          labels: ["fixed"],
+          htmlUrl: "https://github.example/issues/42"
+        }
+      ]
+    }
+  };
+}
+
+function titleSimilarityClosedIssue() {
+  return {
+    kind: "issue",
+    title: "Dry-run webhook response omits would-post labels",
+    body: [
+      "Steps to reproduce:",
+      "1. Start current main.",
+      "2. Send a pull_request webhook with PCF_DRY_RUN=true.",
+      "Expected: response includes labels.",
+      "Actual: response omits labels.",
+      "Environment: Node 22 on Linux.",
+      "Logs:",
+      "```",
+      "dry-run labels missing",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      repository: "VrtxOmega/premature-contribution-firewall",
+      issues: [
+        {
+          number: 1,
+          title: "Dry-run webhook response omits would-post labels",
+          body: "Closed after maintainer verified the fix in 0.1.1.",
+          state: "closed",
+          labels: ["fixed"],
+          htmlUrl: "https://github.example/issues/1"
+        }
+      ]
+    }
+  };
+}
+
+function upstreamReleaseFixIssue() {
+  return {
+    kind: "issue",
+    title: "Crash on empty patch body",
+    body: [
+      "Steps to reproduce:",
+      "1. Submit an empty patch through evaluate-patch.",
+      "Expected: parser returns a repair checklist.",
+      "Actual: process crashes.",
+      "Environment: Node 22.",
+      "Logs:",
+      "```",
+      "TypeError: cannot read properties of undefined",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      repository: "VrtxOmega/premature-contribution-firewall",
+      upstream: {
+        repository: "upstream/premature-contribution-firewall",
+        releases: [
+          {
+            tagName: "v1.2.0",
+            title: "v1.2.0",
+            body: "Fixed crash on empty patch body in #500.",
+            state: "published"
+          }
+        ]
+      }
+    }
+  };
+}
+
+function mergedLocalPullRequestIssue() {
+  return {
+    kind: "pull_request",
+    title: "webhook: include labels in dry-run response",
+    body: [
+      "Fixes #41.",
+      "Problem: dry-run webhook responses omit the labels that would be applied.",
+      "Change: return the maintainer labels beside the comment preview.",
+      "Risk: low because this changes dry-run JSON only.",
+      "Verification: npm test passed locally."
+    ].join("\n"),
+    files: [
+      { filename: "src/github/templates.mjs", additions: 25, deletions: 4 }
+    ],
+    checks: READY_CHECK,
+    repositoryContext: {
+      repository: "VrtxOmega/premature-contribution-firewall",
+      pullRequests: [
+        {
+          number: 88,
+          title: "webhook: include labels in dry-run response",
+          body: "Merged fix for dry-run labels.",
+          state: "merged",
+          files: ["src/github/templates.mjs"],
+          htmlUrl: "https://github.example/pull/88"
+        }
+      ]
+    }
+  };
+}
+
+function draftConcurrentPullRequestIssue() {
+  return {
+    kind: "pull_request",
+    title: "webhook: expose dry-run label preview",
+    body: [
+      "Fixes #41.",
+      "Problem: dry-run webhook responses omit the labels that would be applied.",
+      "Change: return the maintainer labels beside the comment preview.",
+      "Risk: low because this changes dry-run JSON only.",
+      "Verification: npm test passed locally."
+    ].join("\n"),
+    files: [
+      { filename: "src/github/templates.mjs", additions: 25, deletions: 4 }
+    ],
+    checks: READY_CHECK,
+    repositoryContext: {
+      repository: "VrtxOmega/premature-contribution-firewall",
+      pullRequests: [
+        {
+          number: 77,
+          title: "webhook: expose dry-run label preview",
+          body: "Draft attempt at label preview output.",
+          state: "open",
+          draft: true,
+          files: ["src/github/templates.mjs"],
+          htmlUrl: "https://github.example/pull/77"
+        }
+      ]
+    }
+  };
+}
+
+function repositoryContextCollectionFailedIssue() {
+  return {
+    kind: "issue",
+    title: "Queue export omits nextAction counts",
+    body: [
+      "Steps to reproduce:",
+      "1. Run the maintainer queue against a saved fixture.",
+      "Expected: summary includes nextAction counts.",
+      "Actual: counts are missing.",
+      "Environment: Node 22.",
+      "Logs:",
+      "```",
+      "summary.nextActions is undefined",
+      "```"
+    ].join("\n"),
+    repositoryContext: {
+      hasContext: true,
+      source: "github-search",
+      repository: "VrtxOmega/premature-contribution-firewall",
+      error: "GitHub API rate limit exceeded"
+    }
+  };
+}
+
+function duplicateRecurrenceFollowUpIssue() {
+  return {
+    kind: "issue",
+    number: 200,
+    title: "Broken files do not show up in Hidden",
+    body: [
+      "Follow-up to #5389.",
+      "Same bug: broken files still missing from Hidden tab after import.",
+      "Expected: failed imports remain visible in Hidden.",
+      "Actual: the files disappear entirely."
+    ].join("\n"),
+    repositoryContext: {
+      repository: "photoprism/photoprism",
+      issues: [
+        {
+          number: 5389,
+          title: "Broken files do not show up in Hidden",
+          body: "Original report still open.",
+          state: "open",
+          labels: ["bug"],
+          htmlUrl: "https://github.example/issues/5389"
+        }
+      ]
+    }
+  };
+}
+
+function explicitDuplicateOpenIssue() {
+  return {
+    kind: "issue",
+    number: 200,
+    title: "Broken files do not show up in Hidden",
+    body: [
+      "Duplicate of #5389.",
+      "Same issue still reproduces on current main."
+    ].join("\n"),
+    repositoryContext: {
+      repository: "photoprism/photoprism",
+      issues: [
+        {
+          number: 5389,
+          title: "Broken files do not show up in Hidden",
+          body: "Original report still open.",
+          state: "open",
+          labels: ["bug"],
+          htmlUrl: "https://github.example/issues/5389"
+        }
+      ]
+    }
   };
 }
 

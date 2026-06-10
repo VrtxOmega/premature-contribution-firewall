@@ -172,7 +172,12 @@ const REPORTER_EVIDENCE_NEXT_ACTION_LABELS = new Set([
   "stable-discipline-failed",
   "needs-kernel-build-evidence",
   "needs-tool-provenance",
-  "review-budget-high"
+  "review-budget-high",
+  "behavioral-risk",
+  "rapid-submission",
+  "high-pr-volume",
+  "issue-form-incomplete",
+  "missing-linked-issue"
 ]);
 
 export function buildMaintainerQueue(payload = {}, options = {}) {

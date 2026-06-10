@@ -82,8 +82,77 @@ export const DEFAULT_LABEL_DEFINITIONS = {
   "drive-by-risk": {
     color: "bf8700",
     description: "PCF: contribution needs prior review or clearer subsystem routing"
+  },
+  "behavioral-risk": {
+    color: "bf8700",
+    description: "PCF: behavioral slop or rapid-submission signals need maintainer context"
+  },
+  "rapid-submission": {
+    color: "bf8700",
+    description: "PCF: submission pacing looks unusually fast for the diff size"
+  },
+  "high-pr-volume": {
+    color: "cf222e",
+    description: "PCF: author has unusually high recent pull-request volume"
+  },
+  "issue-form-incomplete": {
+    color: "bf8700",
+    description: "PCF: required issue template sections are missing"
+  },
+  "missing-linked-issue": {
+    color: "bf8700",
+    description: "PCF: repository policy requires a linked issue reference"
   }
 };
+
+export function formatReadinessComment({ result = {}, posture = {}, maintainerStack = null } = {}) {
+  const lines = [
+    "## PCF readiness summary",
+    "",
+    `**Status:** ${result.status} (${result.score}/100)`
+  ];
+
+  if (posture?.stackEnabled) {
+    lines.push(`**Assurance:** ${posture.assuranceLabel}${posture.shielded ? " (shielded, dry-run enforced)" : ""}`);
+  }
+
+  lines.push("", result.summary || "No summary supplied.");
+
+  if (maintainerStack?.behavioral?.findings?.length) {
+    lines.push("", "### Behavioral context");
+    for (const finding of maintainerStack.behavioral.findings.slice(0, 5)) {
+      lines.push(`- ${finding.severity}: ${finding.reason}`);
+    }
+  }
+
+  if (maintainerStack?.author?.enabled) {
+    lines.push("", `### Author context`, `- ${maintainerStack.author.summary}`);
+  }
+
+  if (maintainerStack?.vouch?.configured) {
+    lines.push(`- ${maintainerStack.vouch.summary}`);
+  }
+
+  if (maintainerStack?.duplicateAssist?.suggestions?.length) {
+    lines.push("", "### Duplicate assist (deterministic, verify manually)");
+    for (const suggestion of maintainerStack.duplicateAssist.suggestions) {
+      const ref = suggestion.number ? `#${suggestion.number} ` : "";
+      lines.push(`- ${ref}${suggestion.title || "untitled"} (score ${suggestion.score})`);
+    }
+  }
+
+  if (result.repairSteps?.length) {
+    lines.push("", "### Repair before review");
+    for (const step of result.repairSteps.slice(0, 8)) lines.push(`- ${step}`);
+  }
+
+  if (posture?.nonClaims?.length) {
+    lines.push("", "_Maintainer context only; not AI-authorship detection._");
+  }
+
+  lines.push("", "<!-- premature-contribution-firewall-readiness -->");
+  return lines.filter((line, index, list) => line || list[index - 1] !== "").join("\n");
+}
 
 export function formatWebhookDryRun({ owner, repo, number, event, action, evaluation }) {
   return {

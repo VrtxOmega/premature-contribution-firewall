@@ -24,7 +24,7 @@ const STOP_WORDS = new Set([
 ]);
 
 const SOLVED_LABELS = /\b(duplicate|fixed|resolved|done|released|wontfix|wont-fix)\b/i;
-const FIXED_TEXT = /\b(fixed by|fixed in|resolved by|landed in|merged in|available in|released in|already fixed|duplicate of)\b/i;
+const FIXED_TEXT = /\b(fixed by|fixed in|fixed\s+[a-z0-9][\w-]*|resolved by|landed in|merged in|available in|released in|already fixed|duplicate of)\b/i;
 
 export function normalizeRepositoryContext(rawContext = null) {
   if (!rawContext || typeof rawContext !== "object") {
@@ -132,17 +132,23 @@ export function analyzeRepositoryContext(input = {}) {
     .filter((item) => !isContextualDirectReference(item, current));
   const concurrentPullRequests = rankMatches(localPullRequests.filter((item) => isOpen(item)), current, "concurrent-pr", { requireOverlap: false })
     .filter((item) => item.fileOverlap.length > 0 || item.score >= 0.24);
-  const upstreamSolved = rankMatches(upstreamItems.filter((item) => isSolved(item) || item.scope === "upstream"), current, "upstream-solved", { threshold: 0.16 })
-    .filter((item) => isSolved(item) || item.score >= 0.2 || item.fileOverlap.length > 0);
+  const similarClosedPullRequests = rankMatches(localPullRequests.filter((item) => isClosed(item)), current, "similar-closed-pr")
+    .filter((item) => !isContextualDirectReference(item, current));
+  const upstreamSolved = rankMatches(
+    upstreamItems.filter((item) => isSolved(item) || item.scope === "upstream"),
+    current,
+    "upstream-solved",
+    { threshold: 0.16, keepSolved: true }
+  ).filter((item) => isSolved(item) || item.score >= 0.2 || item.fileOverlap.length > 0);
 
   const labels = [];
   if (similarOpenIssues.length || linkedIssues.some((item) => isOpen(item))) labels.push("possibly-duplicate");
-  if (similarClosedIssues.length || linkedClosedIssues.length) labels.push("possibly-solved");
+  if (similarClosedIssues.length || linkedClosedIssues.length || similarClosedPullRequests.length) labels.push("possibly-solved");
   if (linkedClosedIssues.length) labels.push("linked-issue-closed");
   if (concurrentPullRequests.length) labels.push("concurrent-work");
   if (upstreamSolved.length) labels.push("possibly-upstream-fixed");
 
-  const hardFindings = similarClosedIssues.length + linkedClosedIssues.length + upstreamSolved.length;
+  const hardFindings = similarClosedIssues.length + linkedClosedIssues.length + similarClosedPullRequests.length + upstreamSolved.length;
   const softFindings = similarOpenIssues.length + concurrentPullRequests.length;
   const checkStatus = hardFindings > 0 ? "fail" : softFindings > 0 ? "warn" : "pass";
 
@@ -150,6 +156,7 @@ export function analyzeRepositoryContext(input = {}) {
     ...linkedClosedIssues,
     ...similarOpenIssues,
     ...similarClosedIssues,
+    ...similarClosedPullRequests,
     ...concurrentPullRequests,
     ...upstreamSolved
   ].slice(0, 12);
@@ -161,10 +168,11 @@ export function analyzeRepositoryContext(input = {}) {
     upstreamRepository: context.upstreamRepository,
     checkStatus,
     labels: [...new Set(labels)],
-    summary: summarizeFindings({ similarOpenIssues, similarClosedIssues, linkedClosedIssues, concurrentPullRequests, upstreamSolved }),
+    summary: summarizeFindings({ similarOpenIssues, similarClosedIssues, linkedClosedIssues, similarClosedPullRequests, concurrentPullRequests, upstreamSolved }),
     similarOpenIssues: similarOpenIssues.slice(0, 5),
     similarClosedIssues: similarClosedIssues.slice(0, 5),
     linkedClosedIssues: linkedClosedIssues.slice(0, 5),
+    similarClosedPullRequests: similarClosedPullRequests.slice(0, 5),
     concurrentPullRequests: concurrentPullRequests.slice(0, 5),
     upstreamSolved: upstreamSolved.slice(0, 5),
     findings
@@ -238,7 +246,7 @@ function rankMatches(items, current, relation, options = {}) {
   const threshold = options.threshold ?? 0.18;
   return items
     .map((item) => enrichMatch(item, current, relation))
-    .filter((item) => item.score >= threshold || item.fileOverlap.length > 0 || item.directReference)
+    .filter((item) => item.score >= threshold || item.fileOverlap.length > 0 || item.directReference || (options.keepSolved && isSolved(item)))
     .sort((a, b) => {
       if (b.directReference !== a.directReference) return Number(b.directReference) - Number(a.directReference);
       if (b.fileOverlap.length !== a.fileOverlap.length) return b.fileOverlap.length - a.fileOverlap.length;
@@ -260,6 +268,7 @@ function enrichMatch(item, current, relation) {
     scope: item.scope,
     number: item.number,
     title: item.title,
+    body: item.body,
     state: item.state || "unknown",
     labels: item.labels,
     url: item.url,
@@ -278,11 +287,12 @@ function isContextualDirectReference(item, current) {
   return Boolean(item.directReference && item.number && current.contextualIssueRefs?.has(String(item.number)));
 }
 
-function summarizeFindings({ similarOpenIssues, similarClosedIssues, linkedClosedIssues, concurrentPullRequests, upstreamSolved }) {
+function summarizeFindings({ similarOpenIssues, similarClosedIssues, linkedClosedIssues, similarClosedPullRequests, concurrentPullRequests, upstreamSolved }) {
   const parts = [];
   if (similarOpenIssues.length) parts.push(`${similarOpenIssues.length} similar open issue(s)`);
   if (similarClosedIssues.length) parts.push(`${similarClosedIssues.length} similar closed/solved issue(s)`);
   if (linkedClosedIssues.length) parts.push(`${linkedClosedIssues.length} linked issue(s) already closed`);
+  if (similarClosedPullRequests.length) parts.push(`${similarClosedPullRequests.length} similar closed/merged pull request(s)`);
   if (concurrentPullRequests.length) parts.push(`${concurrentPullRequests.length} concurrent pull request(s)`);
   if (upstreamSolved.length) parts.push(`${upstreamSolved.length} upstream solved/fixed signal(s)`);
   return parts.length ? parts.join(", ") : "Repository context supplied; no similar, concurrent, solved, or upstream-fixed work found.";
@@ -351,7 +361,7 @@ function extractContextualIssueRefs(text, repository = "") {
   if (!refs.size) return new Set();
   const contextual = new Set();
   const source = String(text || "");
-  const disqualifier = /\b(?:duplicate of|duplicates\s+(?:#|https?:\/\/github\.com)|same as|fixed by|fix(?:e[sd])?\s+#|close[sd]?\s+#|resolve[sd]?\s+#)\b/i;
+  const disqualifier = /\b(?:duplicate of|duplicates\s+(?:#|https?:\/\/github\.com)|same as|same (?:bug|issue|problem|error|crash|failure)|still (?:happens|broken|fails|occurs|reproduces|present)|not fixed(?: yet)?|same regression|regression (?:again|returned|reappeared)|re[- ]?occurs?|fixed by|fix(?:e[sd])?\s+#|close[sd]?\s+#|resolve[sd]?\s+#)\b/i;
   const contextualSignal = /\b(?:follow-?up|followup|reported (?:in|on)|discussion|tracked|broader|covers|covered by|supersedes|split from|continuation|version of|updated for|known issues?|faq|for more details|see also|similar issue|related issue|prior issue|previous issue|separate issue|variants? such as)\b/i;
 
   for (const ref of refs) {

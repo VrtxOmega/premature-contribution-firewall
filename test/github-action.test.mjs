@@ -15,6 +15,10 @@ test("GitHub Action is a read-only composite dry-run queue runner", async () => 
   assert.match(action, /PCF_POST_COMMENTS: "false"/);
   assert.match(action, /PCF_APPLY_LABELS: "false"/);
   assert.match(action, /PCF_COLLECT_REPOSITORY_CONTEXT: "true"/);
+  assert.match(action, /shielded:/);
+  assert.match(action, /assurance-level:/);
+  assert.match(action, /PCF_SHIELDED: \$\{\{ inputs\.shielded \}\}/);
+  assert.match(action, /PCF_ASSURANCE_LEVEL: \$\{\{ inputs\.assurance-level \}\}/);
   assert.match(action, /GITHUB_TOKEN: \$\{\{ inputs\.github-token \|\| github\.token \}\}/);
   assert.match(action, /artifact-path=\$output_path/);
   assert.doesNotMatch(action, /PCF_POST_COMMENTS: "true"|PCF_APPLY_LABELS: "true"/);

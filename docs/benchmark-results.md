@@ -4,8 +4,8 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 
 ## Summary
 
-- Version: 2026.05.30
-- Cases: 69/69 passing
+- Version: 2026.06.10
+- Cases: 77/77 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
@@ -13,7 +13,7 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 - standard-pr: 9/9 passing
 - tool-use: 2/2 passing
 - issue: 37/37 passing
-- repo-context: 5/5 passing
+- repo-context: 13/13 passing
 - repo-policy: 3/3 passing
 - kernel-grade: 7/7 passing
 - patch-series: 4/4 passing
@@ -79,6 +79,14 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 | PASS | repo-context | repo-context-comment-linked-issue | needs-repair | needs-repair | 84 | `duplicate-search-needed`, `possibly-duplicate`, `needs-repair` |
 | PASS | repo-context | repo-context-concurrent-pr | needs-repair | needs-repair | 90 | `concurrent-work`, `needs-repair` |
 | PASS | repo-context | repo-context-upstream-fixed | needs-repair | needs-repair | 82 | `possibly-upstream-fixed`, `needs-repair` |
+| PASS | repo-context | repo-context-linked-closed-explicit-duplicate | needs-repair | needs-repair | 62 | `needs-context`, `needs-logs`, `needs-technical-analysis`, `possibly-solved` |
+| PASS | repo-context | repo-context-title-similarity-closed | needs-repair | needs-repair | 77 | `needs-technical-analysis`, `possibly-solved`, `needs-repair` |
+| PASS | repo-context | repo-context-upstream-release-fix | needs-repair | needs-repair | 76 | `duplicate-search-needed`, `possibly-upstream-fixed`, `needs-repair` |
+| PASS | repo-context | repo-context-merged-local-pr | needs-repair | needs-repair | 82 | `possibly-solved`, `needs-repair` |
+| PASS | repo-context | repo-context-draft-concurrent-pr | needs-repair | needs-repair | 90 | `concurrent-work`, `needs-repair` |
+| PASS | repo-context | repo-context-collection-failed | needs-repair | needs-repair | 71 | `needs-context`, `duplicate-search-needed`, `needs-technical-analysis`, `repo-context-unavailable` |
+| PASS | repo-context | repo-context-duplicate-recurrence-followup | needs-repair | needs-repair | 56 | `needs-context`, `needs-environment`, `needs-logs`, `duplicate-search-needed` |
+| PASS | repo-context | repo-context-explicit-duplicate-open | low-review-value | low-review-value | 30 | `needs-context`, `needs-reproducer`, `needs-expected-actual`, `needs-logs` |
 | PASS | kernel-grade | kernel-ready-pr | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | kernel-grade | kernel-missing-signoff | low-review-value | low-review-value | 56 | `needs-clear-summary`, `kernel-subject-discipline`, `needs-dco-signoff`, `low-review-value` |
 | PASS | kernel-grade | kernel-missing-fixes | needs-repair | needs-repair | 91 | `needs-fixes-tag`, `needs-repair` |

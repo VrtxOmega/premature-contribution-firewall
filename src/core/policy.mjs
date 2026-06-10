@@ -207,7 +207,7 @@ function canonicalSection(raw) {
   return "";
 }
 
-function templateSectionSatisfied(section, body, signals) {
+export function templateSectionSatisfied(section, body, signals) {
   if (section === "tests") return signals.hasTestEvidence;
   if (section === "linked issue") return signals.hasIssueLink;
   if (section === "description") return body.trim().length >= 120;

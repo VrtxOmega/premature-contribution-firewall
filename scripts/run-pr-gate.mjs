@@ -25,6 +25,8 @@ if (args.includes("--help") || args.includes("-h")) {
 const eventPath = readFlag(args, "--event") || process.env.GITHUB_EVENT_PATH || "";
 const failOn = readFlag(args, "--fail-on") || process.env.PCF_FAIL_ON || "never";
 const profile = readFlag(args, "--profile") || "";
+const shielded = readBoolFlag(args, "--shielded") || process.env.PCF_SHIELDED === "true";
+const assuranceLevel = readFlag(args, "--assurance-level") || process.env.PCF_ASSURANCE_LEVEL || "";
 const writePath = readFlag(args, "--write") || "";
 const summaryPath = process.env.GITHUB_STEP_SUMMARY || "";
 const outputPath = process.env.GITHUB_OUTPUT || "";
@@ -46,7 +48,12 @@ if (!event.pull_request) {
 }
 
 const normalized = normalizeWebhookPayload("pull_request", event);
-const evaluation = evaluateContribution(normalized, { profile: profile || normalized.profile });
+const evaluation = evaluateContribution(normalized, {
+  profile: profile || normalized.profile,
+  shielded,
+  assuranceLevel: assuranceLevel || undefined,
+  maintainerStack: shielded || process.env.PCF_MAINTAINER_STACK === "true"
+});
 const markdown = renderPrGateMarkdown(evaluation, normalized);
 
 console.log(`PCF PR gate: ${normalized.repository || "unknown-repo"}#${normalized.number || "?"}`);
@@ -94,6 +101,18 @@ function renderPrGateMarkdown(result, input) {
     for (const step of result.repairSteps) lines.push(`- ${step}`);
   }
   const failing = result.checks.filter((check) => check.status !== "pass");
+  if (evaluation.maintainerStack?.summary) {
+    lines.push("");
+    lines.push(`**Maintainer stack:** ${evaluation.maintainerStack.summary}`);
+  }
+  if (evaluation.readinessComment) {
+    lines.push("");
+    lines.push("<details><summary>Readiness comment draft</summary>");
+    lines.push("");
+    lines.push(evaluation.readinessComment);
+    lines.push("");
+    lines.push("</details>");
+  }
   if (failing.length) {
     lines.push("");
     lines.push("<details><summary>Non-passing checks</summary>");
@@ -112,6 +131,14 @@ function renderPrGateMarkdown(result, input) {
 function readFlag(values, flag) {
   const index = values.indexOf(flag);
   return index >= 0 ? values[index + 1] : "";
+}
+
+function readBoolFlag(values, flag) {
+  const index = values.indexOf(flag);
+  if (index < 0) return false;
+  const next = values[index + 1];
+  if (!next || next.startsWith("--")) return true;
+  return ["true", "1", "yes", "on"].includes(String(next).toLowerCase());
 }
 
 function printHelp() {

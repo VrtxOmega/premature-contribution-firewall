@@ -6,6 +6,7 @@ import {
 } from "./policy.mjs";
 import { analyzeRepositoryContext, normalizeRepositoryContext } from "./repository-context.mjs";
 import { applyFeedbackCalibration } from "./calibration.mjs";
+import { enrichWithMaintainerStack } from "./maintainer-stack.mjs";
 
 const GENERIC_TITLES = new Set([
   "fix",
@@ -100,9 +101,11 @@ export function evaluateContribution(rawInput = {}, options = {}) {
   const kind = input.kind === "issue" ? "issue" : "pull_request";
   const baseResult = kind === "issue" ? evaluateIssue(input, { ...options, profile }) : evaluatePullRequest(input, { ...options, profile });
   baseResult.profile = profile;
-  const result = options.feedbackCalibration
+  const calibrated = options.feedbackCalibration
     ? applyFeedbackCalibration(baseResult, input, options.feedbackCalibration)
     : baseResult;
+  calibrated.profile = profile;
+  const result = enrichWithMaintainerStack(input, calibrated, options);
   result.profile = profile;
   result.comment = renderMarkdownReport(result);
   return result;
@@ -141,7 +144,15 @@ export function normalizeInput(rawInput = {}) {
     patchSeries: rawInput.patchSeries || null,
     htmlUrl: rawInput.htmlUrl || rawInput.html_url || "",
     repository: rawInput.repository || null,
-    number: rawInput.number || rawInput.issue_number || null
+    number: rawInput.number || rawInput.issue_number || null,
+    author: String(rawInput.author || rawInput.authorLogin || rawInput.user?.login || ""),
+    authorLogin: String(rawInput.authorLogin || rawInput.author || rawInput.user?.login || ""),
+    authorContext: rawInput.authorContext && typeof rawInput.authorContext === "object" ? rawInput.authorContext : null,
+    headRef: String(rawInput.headRef || rawInput.head?.ref || rawInput.branch || ""),
+    branch: String(rawInput.branch || rawInput.headRef || rawInput.head?.ref || ""),
+    createdAt: rawInput.createdAt || rawInput.submittedAt || rawInput.created_at || "",
+    submittedAt: rawInput.submittedAt || rawInput.createdAt || rawInput.created_at || "",
+    duplicateAssistCandidates: Array.isArray(rawInput.duplicateAssistCandidates) ? rawInput.duplicateAssistCandidates : []
   };
 }
 
@@ -1056,6 +1067,12 @@ export function renderMarkdownReport(result) {
   const calibrationLine = result.calibration?.active
     ? `**Feedback calibration:** ${result.calibration.summary}`
     : "";
+  const stackLine = result.maintainerStack?.summary
+    ? `**Maintainer stack:** ${result.maintainerStack.summary}`
+    : "";
+  const postureLine = result.shieldedPosture?.stackEnabled
+    ? `**Shielded posture:** ${result.shieldedPosture.shielded ? "shielded" : "stack"} / ${result.shieldedPosture.assuranceLabel}`
+    : "";
   const seriesLine = result.patchSeries
     ? `**Patch series:** ${result.patchSeries.patchCount} patch(es), ${result.patchSeries.messageCount} message(s), cover=${result.patchSeries.coverLetter ? "yes" : "no"}`
     : "";
@@ -1083,6 +1100,8 @@ export function renderMarkdownReport(result) {
     repositoryContextLine,
     maintainerTriageLine,
     calibrationLine,
+    postureLine,
+    stackLine,
     seriesLine,
     labelsLine,
     "",
@@ -1427,6 +1446,7 @@ function publicRepositoryContext(repositoryTriage) {
     similarOpenIssues: repositoryTriage?.similarOpenIssues || [],
     similarClosedIssues: repositoryTriage?.similarClosedIssues || [],
     linkedClosedIssues: repositoryTriage?.linkedClosedIssues || [],
+    similarClosedPullRequests: repositoryTriage?.similarClosedPullRequests || [],
     concurrentPullRequests: repositoryTriage?.concurrentPullRequests || [],
     upstreamSolved: repositoryTriage?.upstreamSolved || [],
     findings: (repositoryTriage?.findings || []).slice(0, 12)
@@ -1463,10 +1483,16 @@ function resolveProfile(input, options = {}) {
 
 function normalizeCommits(commits) {
   if (!Array.isArray(commits)) return [];
-  return commits.map((commit) => {
-    if (typeof commit === "string") return commit;
-    return String(commit.message || commit.body || commit.title || "");
-  }).filter(Boolean);
+  return commits
+    .map((commit) => {
+      if (typeof commit === "string") return { message: commit };
+      return {
+        message: String(commit.message || commit.body || commit.title || ""),
+        date: commit.date || commit.committedAt || commit.committed_at || "",
+        committedAt: commit.committedAt || commit.committed_at || commit.date || ""
+      };
+    })
+    .filter((commit) => commit.message);
 }
 
 function aggregateContributionText(input) {
@@ -1474,7 +1500,7 @@ function aggregateContributionText(input) {
     input.title,
     input.body,
     input.contributingText,
-    ...input.commits,
+    ...input.commits.map((commit) => (typeof commit === "string" ? commit : commit.message)),
     ...input.files.map((file) => `${file.filename || ""}\n${file.patch || ""}`)
   ].filter(Boolean).join("\n");
 }
