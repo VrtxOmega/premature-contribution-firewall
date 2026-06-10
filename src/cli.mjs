@@ -15,7 +15,7 @@ if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
 }
 
 const command = args[0];
-if (!["evaluate", "evaluate-patch", "queue", "setup", "setup-pilot"].includes(command)) {
+if (!["evaluate", "evaluate-patch", "queue", "setup", "setup-pilot", "preflight"].includes(command)) {
   console.error(`Unknown command: ${command}`);
   printHelp();
   process.exit(2);
@@ -67,6 +67,23 @@ if (command === "queue") {
   process.exit(0);
 }
 
+if (command === "preflight") {
+  const input = parsePreflightInput(text, file, { profile, policyFiles });
+  const evaluation = evaluateContribution(input, { profile: profile || input.profile });
+  const allowRepair = args.includes("--allow-repair");
+  const ready = evaluation.status === "ready-for-maintainer"
+    || (allowRepair && evaluation.status === "needs-repair");
+
+  if (format === "json") {
+    console.log(JSON.stringify({ ready, gate: allowRepair ? "allow-repair" : "ready-only", evaluation }, null, 2));
+  } else if (format === "markdown") {
+    console.log(renderMarkdownReport(evaluation));
+  } else {
+    printPreflightPretty(evaluation, { ready, allowRepair });
+  }
+  process.exit(ready ? 0 : 1);
+}
+
 const jsonInput = command === "evaluate" ? JSON.parse(text) : null;
 const input = command === "evaluate-patch"
   ? parsePatchSubmission(text, { profile: profile || "kernel-grade", repositoryFiles: policyFiles })
@@ -79,6 +96,47 @@ if (format === "json") {
   console.log(renderMarkdownReport(evaluation));
 } else {
   printPretty(evaluation);
+}
+
+function parsePreflightInput(rawText, fileName, { profile: requestedProfile, policyFiles: files }) {
+  const looksLikePatchFile = /\.(patch|mbox|eml|diff)$/i.test(String(fileName || ""));
+  if (!looksLikePatchFile) {
+    try {
+      const parsed = JSON.parse(rawText);
+      return { ...parsed, repositoryFiles: files.length ? files : parsed.repositoryFiles };
+    } catch {
+      // fall through to patch parsing
+    }
+  }
+  return parsePatchSubmission(rawText, {
+    profile: requestedProfile || "kernel-grade",
+    repositoryFiles: files
+  });
+}
+
+function printPreflightPretty(evaluation, { ready, allowRepair }) {
+  const verdict = ready ? "READY TO SUBMIT" : "NOT READY YET";
+  console.log(`PCF contributor preflight: ${verdict}`);
+  console.log(`Status: ${evaluation.status} (${evaluation.score}/100)`);
+  console.log(`Profile: ${evaluation.profile.name}`);
+  console.log(`Gate: ${allowRepair ? "ready-for-maintainer or needs-repair passes" : "only ready-for-maintainer passes"}`);
+  console.log("");
+  console.log(evaluation.summary);
+  if (!ready && evaluation.repairSteps.length) {
+    console.log("");
+    console.log("Fix before submitting:");
+    for (const step of evaluation.repairSteps) console.log(`- ${step}`);
+  }
+  const failing = evaluation.checks.filter((check) => check.status !== "pass");
+  if (!ready && failing.length) {
+    console.log("");
+    console.log("Failing checks:");
+    for (const check of failing) {
+      console.log(`- ${check.status.toUpperCase()} ${check.title}: ${check.reason}`);
+    }
+  }
+  console.log("");
+  console.log("This preflight is advisory. It does not guarantee acceptance and makes no GitHub writes.");
 }
 
 function printPretty(evaluation) {
@@ -156,5 +214,8 @@ function printHelp() {
   node src/cli.mjs queue <queue-payload.json> [--format pretty|json|markdown]
   node src/cli.mjs evaluate <payload.json> [--format pretty|json|markdown] [--profile standard|kernel-grade]
   node src/cli.mjs evaluate-patch <patch-or-mbox> [--format pretty|json|markdown] [--profile kernel-grade] [--policy policy-files.json]
-  cat queue-payload.json | node src/cli.mjs queue - --format json`);
+  node src/cli.mjs preflight <payload.json|patch-or-mbox> [--allow-repair] [--format pretty|json|markdown] [--profile standard|kernel-grade] [--policy policy-files.json]
+  cat queue-payload.json | node src/cli.mjs queue - --format json
+
+Preflight exit codes: 0 = ready to submit, 1 = not ready, 2 = usage error.`);
 }

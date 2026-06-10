@@ -35,11 +35,32 @@ inputs:
     description: Markdown artifact path relative to the workflow workspace, or an absolute path.
     required: false
     default: pcf-queue.md
+  mode:
+    description: "auto: PR gate on pull_request events, queue otherwise. queue: always build the full queue. pr-gate: always evaluate the triggering pull request."
+    required: false
+    default: auto
+  fail-on:
+    description: "PR-gate failure threshold: never, low-review-value, or needs-repair. Only used in pr-gate mode."
+    required: false
+    default: never
+  profile:
+    description: "Review profile for the PR gate: standard or kernel-grade. Only used in pr-gate mode."
+    required: false
+    default: ""
 
 outputs:
   artifact-path:
     description: Absolute path to the generated PCF markdown queue artifact.
     value: ${{ steps.run-pcf.outputs.artifact-path }}
+  status:
+    description: PR-gate evaluation status (pr-gate mode only).
+    value: ${{ steps.run-pcf.outputs.status }}
+  score:
+    description: PR-gate evaluation score 0-100 (pr-gate mode only).
+    value: ${{ steps.run-pcf.outputs.score }}
+  ready:
+    description: Whether the PR-gate evaluation is ready-for-maintainer (pr-gate mode only).
+    value: ${{ steps.run-pcf.outputs.ready }}
 
 runs:
   using: composite
@@ -70,6 +91,9 @@ runs:
         INPUT_INCLUDE_ISSUES: ${{ inputs.include-issues }}
         INPUT_UPSTREAM_REPOSITORY: ${{ inputs.upstream-repository }}
         INPUT_OUTPUT: ${{ inputs.output }}
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_PROFILE: ${{ inputs.profile }}
         GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
         PCF_DRY_RUN: "true"
         PCF_POST_COMMENTS: "false"
@@ -77,6 +101,31 @@ runs:
         PCF_COLLECT_REPOSITORY_CONTEXT: "true"
       run: |
         set -euo pipefail
+
+        mode="${INPUT_MODE:-auto}"
+        if [ "$mode" = "auto" ]; then
+          if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ] || [ "${GITHUB_EVENT_NAME:-}" = "pull_request_target" ]; then
+            mode="pr-gate"
+          else
+            mode="queue"
+          fi
+        fi
+
+        if [ "$mode" = "pr-gate" ]; then
+          output="${INPUT_OUTPUT:-pcf-queue.md}"
+          if [[ "$output" = /* ]]; then
+            output_path="$output"
+          else
+            output_path="$GITHUB_WORKSPACE/$output"
+          fi
+          gate_args=(--fail-on "${INPUT_FAIL_ON:-never}" --write "$output_path")
+          if [ -n "${INPUT_PROFILE:-}" ]; then
+            gate_args+=(--profile "$INPUT_PROFILE")
+          fi
+          node "$GITHUB_ACTION_PATH/scripts/run-pr-gate.mjs" "${gate_args[@]}"
+          echo "artifact-path=$output_path" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
 
         repository="${INPUT_REPOSITORY:-${GITHUB_REPOSITORY:-}}"
         if [ -z "$repository" ]; then

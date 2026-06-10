@@ -1,6 +1,6 @@
 {
   "name": "premature-contribution-firewall",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "A GitHub-oriented maintainer firewall that gates inbound PRs and issues by review readiness instead of AI detection.",
   "license": "MIT",
@@ -12,6 +12,19 @@
     "url": "https://github.com/VrtxOmega/premature-contribution-firewall/issues"
   },
   "homepage": "https://github.com/VrtxOmega/premature-contribution-firewall#readme",
+  "bin": {
+    "pcf": "src/cli.mjs",
+    "premature-contribution-firewall": "src/cli.mjs"
+  },
+  "files": [
+    "src",
+    "fixtures",
+    "scripts/run-public-pilot.mjs",
+    "scripts/run-pr-gate.mjs",
+    "action.yml",
+    "README.md",
+    "LICENSE"
+  ],
   "keywords": [
     "github",
     "maintainers",
@@ -24,7 +37,7 @@
   ],
   "scripts": {
     "start": "node src/server.mjs",
-    "check": "node --check src/server.mjs && node --check src/cli.mjs && node --check src/config.mjs && node --check src/core/api.mjs && node --check src/core/adversary.mjs && node --check src/core/benchmark.mjs && node --check src/core/calibration.mjs && node --check src/core/candidates.mjs && node --check src/core/contributor-preflight.mjs && node --check src/core/evaluator.mjs && node --check src/core/feedback.mjs && node --check src/core/history.mjs && node --check src/core/pilot-proof.mjs && node --check src/core/policy.mjs && node --check src/core/patch.mjs && node --check src/core/queue.mjs && node --check src/core/repository-context.mjs && node --check src/core/setup.mjs && node --check src/core/setup-guide.mjs && node --check src/core/watchlist.mjs && node --check src/github/client.mjs && node --check src/github/webhook.mjs && node --check src/github/templates.mjs && node --check scripts/run-adversary.mjs && node --check scripts/run-benchmark.mjs && node --check scripts/run-maintainer-demo.mjs && node --check scripts/run-public-pilot.mjs && node --check scripts/run-large-bench.mjs && node --check scripts/run-watchlist.mjs && node --check scripts/verify-ci-workflow.mjs && node --check scripts/verify-repo-hygiene.mjs && node --check public/app.js",
+    "check": "node --check scripts/run-pr-gate.mjs && node --check src/server.mjs && node --check src/cli.mjs && node --check src/config.mjs && node --check src/core/api.mjs && node --check src/core/adversary.mjs && node --check src/core/benchmark.mjs && node --check src/core/calibration.mjs && node --check src/core/candidates.mjs && node --check src/core/contributor-preflight.mjs && node --check src/core/evaluator.mjs && node --check src/core/feedback.mjs && node --check src/core/history.mjs && node --check src/core/pilot-proof.mjs && node --check src/core/policy.mjs && node --check src/core/patch.mjs && node --check src/core/queue.mjs && node --check src/core/repository-context.mjs && node --check src/core/setup.mjs && node --check src/core/setup-guide.mjs && node --check src/core/watchlist.mjs && node --check src/github/client.mjs && node --check src/github/webhook.mjs && node --check src/github/templates.mjs && node --check scripts/run-adversary.mjs && node --check scripts/run-benchmark.mjs && node --check scripts/run-maintainer-demo.mjs && node --check scripts/run-public-pilot.mjs && node --check scripts/run-large-bench.mjs && node --check scripts/run-watchlist.mjs && node --check scripts/verify-ci-workflow.mjs && node --check scripts/verify-repo-hygiene.mjs && node --check public/app.js",
     "setup:pilot": "node src/cli.mjs setup",
     "setup:pilot:markdown": "node src/cli.mjs setup --format markdown",
     "pilot:public": "node scripts/run-public-pilot.mjs",
@@ -52,7 +65,8 @@
     "demo:maintainer:write": "node scripts/run-maintainer-demo.mjs --format markdown --write docs/maintainer-demo-output.md --fail-on-regression",
     "demo:pr": "node src/cli.mjs evaluate fixtures/pr-unready.json",
     "demo:issue": "node src/cli.mjs evaluate fixtures/issue-unready.json",
-    "demo:kernel": "node src/cli.mjs evaluate fixtures/pr-kernel-ready.json --profile kernel-grade"
+    "demo:kernel": "node src/cli.mjs evaluate fixtures/pr-kernel-ready.json --profile kernel-grade",
+    "preflight": "node src/cli.mjs preflight"
   },
   "engines": {
     "node": ">=22"

@@ -83,6 +83,43 @@ jobs:
 
 See [docs/GITHUB_ACTION.md](docs/GITHUB_ACTION.md) for inputs, upstream-repo context, and the safety contract.
 
+### PR Gate Mode
+
+When the same Action runs on a `pull_request` event (or with `mode: pr-gate`), it evaluates just the triggering PR, writes a readiness verdict to the job step summary, and exposes `status`, `score`, and `ready` outputs. It still makes no comments, labels, or other GitHub writes; the only "write" is the workflow's own step summary.
+
+```yaml
+name: PCF PR gate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: PCF readiness check
+        uses: VrtxOmega/premature-contribution-firewall@v0.1.0
+        with:
+          fail-on: never
+```
+
+`fail-on` accepts `never` (report only), `low-review-value`, or `needs-repair` for repos that want the gate to block. Start with `never`; tighten only after the artifact has earned trust.
+
+## Contributor Preflight
+
+Contributors can check their own work before submitting, so the repair request never has to happen:
+
+```bash
+node src/cli.mjs preflight my-pr-draft.json
+node src/cli.mjs preflight my-series.patch --format json
+node src/cli.mjs preflight my-pr-draft.json --allow-repair
+```
+
+Exit code 0 means ready to submit, 1 means not ready (with a fix-first checklist), 2 means usage error. Patch and mbox files are auto-detected and use the kernel-grade profile. The preflight is advisory: it does not guarantee acceptance and makes no GitHub writes.
+
 ## Feedback Loop
 
 PCF is not only a static rule set. When a maintainer says PCF was too harsh, too lenient, or missed duplicate/upstream/concurrent context, the correction can become a local evidence case file.
