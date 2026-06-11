@@ -20,6 +20,16 @@ Before any public PR or comment, the contribution lane must pass these checks:
 
 ## Ledger
 
+### 2026-06-11 - Open PR - `amber-lang/amber#1116`
+
+- PR: <https://github.com/amber-lang/amber/pull/1116>
+- Related issue: <https://github.com/amber-lang/amber/issues/897>
+- Outcome: opened as a narrow compiler-output fix against the `staging` branch; initial GitHub readback reported it as open, mergeable, and not draft. CodeRabbit review was pending at closeout.
+- What was wanted: a `bug` + `help wanted` + `good first issue` bucket asking for ShellCheck cleanup on generated Amber test scripts.
+- What changed: the generated shell-version prelude now adds `-r` to the zsh and ksh `read` calls, removing the `SC2162` warning class without touching the other ShellCheck classes in the bucket.
+- Evidence: the latest June 8 report showed repeated `SC2162` findings from the generated prelude. A focused `shellversion()` repro produced two `SC2162` findings before the fix and zero filtered findings after the fix when `SC2296` and `SC2034` were excluded as separate warning classes.
+- Gate retained: for bucket issues, choose exactly one current warning class, prove it on current `staging`, leave unrelated warning classes for separate PRs, and avoid claiming the whole bucket is closed.
+
 ### 2026-06-11 - Open PR - `KaotoIO/forms#104`
 
 - PR: <https://github.com/KaotoIO/forms/pull/104>
