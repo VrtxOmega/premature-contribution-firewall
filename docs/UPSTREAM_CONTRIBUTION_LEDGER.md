@@ -20,6 +20,16 @@ Before any public PR or comment, the contribution lane must pass these checks:
 
 ## Ledger
 
+### 2026-06-11 - Accepted - `ansvisor/ansvisor#235`
+
+- PR: <https://github.com/ansvisor/ansvisor/pull/235>
+- Related issue: <https://github.com/ansvisor/ansvisor/issues/231>
+- Outcome: merged quickly after all checks passed; the linked issue closed automatically.
+- What was wanted: a fresh `bug` + `help wanted` issue with an exact file pointer and acceptance criteria for preventing duplicate platform rows on the insights dashboard when provider model slugs drift over time.
+- What changed: the insights dashboard now groups prompt-result buckets by `platform` only while keeping latest model and region metadata for display. The pure grouping logic was moved into a small local helper module and covered with Vitest cases for model slug drift, latest metadata, sorted history, aggregate counts, and distinct platform separation.
+- Evidence: live issue readback showed #231 open, unassigned, and without comments before implementation. Open and all-state PR searches by issue number plus semantic grouping terms found no overlap. Local validation passed with focused Vitest, touched-file Prettier and ESLint, full `format:check`, full `test`, `typecheck`, full `lint` with zero errors, and `git diff --cached --check`. Upstream CI passed `server - lint & format`, `web - format, lint & typecheck`, Vercel, and the welcome check.
+- Gate retained: when an issue includes root cause, acceptance criteria, and a precise display-layer pointer, keep the PR scoped to that surface, test the data-shaping edge cases directly, and leave only one short repo-centered PCF provenance comment after merge.
+
 ### 2026-06-11 - Open PR - `Xarlos89/Eos#151`
 
 - PR: <https://github.com/Xarlos89/Eos/pull/151>
