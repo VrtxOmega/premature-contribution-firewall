@@ -39,7 +39,7 @@ Before any public PR or comment, the contribution lane must pass these checks:
 - What changed: the generated shell-version prelude now adds `-r` to the zsh and ksh `read` calls, removing the `SC2162` warning class without touching the other ShellCheck classes in the bucket.
 - Evidence: the latest June 8 report showed repeated `SC2162` findings from the generated prelude. A focused `shellversion()` repro produced two `SC2162` findings before the fix and zero filtered findings after the fix when `SC2296` and `SC2034` were excluded as separate warning classes.
 - Gate retained: for bucket issues, choose exactly one current warning class, prove it on current `staging`, leave unrelated warning classes for separate PRs, and avoid claiming the whole bucket is closed.
-- Follow-up: after merge, left one short thank-you/provenance comment explaining that PCF helped scope the PR to one current warning class and verify before/after ShellCheck output.
+- Follow-up: after merge, left one short thank-you/provenance comment explaining that PCF helped keep the Amber contribution narrow, check overlap, and verify generated output before opening.
 
 ### 2026-06-11 - Open PR - `KaotoIO/forms#104`
 
