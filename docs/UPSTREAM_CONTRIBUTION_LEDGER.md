@@ -30,6 +30,16 @@ Before any public PR or comment, the contribution lane must pass these checks:
 - Evidence: live issue readback showed #231 open, unassigned, and without comments before implementation. Open and all-state PR searches by issue number plus semantic grouping terms found no overlap. Local validation passed with focused Vitest, touched-file Prettier and ESLint, full `format:check`, full `test`, `typecheck`, full `lint` with zero errors, and `git diff --cached --check`. Upstream CI passed `server - lint & format`, `web - format, lint & typecheck`, Vercel, and the welcome check.
 - Gate retained: when an issue includes root cause, acceptance criteria, and a precise display-layer pointer, keep the PR scoped to that surface, test the data-shaping edge cases directly, and leave only one short repo-centered PCF provenance comment after merge.
 
+### 2026-06-11 - Open PR - `ansvisor/ansvisor#237`
+
+- PR: <https://github.com/ansvisor/ansvisor/pull/237>
+- Related issue: <https://github.com/ansvisor/ansvisor/issues/236>
+- Outcome: opened after the maintainer of #235 explicitly invited the sibling prompt-detail fix; initial GitHub readback reported it as open, mergeable, and not draft. At closeout, server, Vercel, and welcome checks were passing, with the web check still pending.
+- What was wanted: the prompt detail page had its own copy of the same platform grouping bug fixed in #235, using a `platform|modelUsed` key that split one platform into duplicate cards when the provider model slug drifted.
+- What changed: prompt detail grouping was extracted into a local `grouping.ts` helper, now keyed by `platform` only while preserving latest model and region metadata for display. A Vitest regression covers model slug drift and separate-platform behavior.
+- Evidence: maintainer comment on #235 pointed directly to issue #236 and the affected route. Live issue readback showed #236 open, unassigned, with exact file path and acceptance criteria; all-state PR search by issue number and grouping/model/platform terms found no open overlap. Local validation passed with focused Vitest, touched-file Prettier and ESLint, full `test`, `typecheck`, `format:check`, full `lint` with zero errors, `git diff --cached --check`, and `git diff --check HEAD~1..HEAD`.
+- Gate retained: direct maintainer invitation is high-signal, but still rerun all-state overlap and issue-state checks immediately before publishing; then keep the diff to the named display-layer copy and reuse the already accepted test shape.
+
 ### 2026-06-11 - Open PR - `Xarlos89/Eos#151`
 
 - PR: <https://github.com/Xarlos89/Eos/pull/151>
