@@ -20,6 +20,16 @@ Before any public PR or comment, the contribution lane must pass these checks:
 
 ## Ledger
 
+### 2026-06-11 - Open PR - `oakwood-commons/scafctl#493`
+
+- PR: <https://github.com/oakwood-commons/scafctl/pull/493>
+- Related issue: <https://github.com/oakwood-commons/scafctl/issues/492>
+- Outcome: opened as a narrow CLI provider-detail fix; initial GitHub readback reported it as open, mergeable, not draft, and DCO passing.
+- What was wanted: a `bug` + `help wanted` + `good first issue` + `developer-experience` issue where `scafctl get provider <official> -o json` returned only catalog metadata while MCP could return full schema/detail information.
+- What changed: structured CLI output for official providers now attempts to load the official plugin descriptor and emits the shared `BuildProviderDetail` payload, while preserving the catalog-metadata fallback when plugin resolution is unavailable.
+- Evidence: current-main before-output for `get provider github -o json` contained only `catalogRef`, description, name, source, and version; after the fix it included capabilities, schema, outputSchemas, examples, and concrete plugin version. Full `go test ./...`, `task lint`, `task format:check`, `task vet`, `go build ./...`, and `git diff --check` passed locally.
+- Gate retained: for CLI/MCP parity bugs, prove the mismatch on current main, keep the fix in the user-facing command path unless shared logic is truly needed, preserve offline fallback behavior, and test the richer structured output without making unit tests fetch from the network.
+
 ### 2026-06-11 - Open PR - `amber-lang/amber#1116`
 
 - PR: <https://github.com/amber-lang/amber/pull/1116>
