@@ -20,6 +20,16 @@ Before any public PR or comment, the contribution lane must pass these checks:
 
 ## Ledger
 
+### 2026-06-11 - Open PR - `Xarlos89/Eos#151`
+
+- PR: <https://github.com/Xarlos89/Eos/pull/151>
+- Related issue: <https://github.com/Xarlos89/Eos/issues/134>
+- Outcome: opened as a narrow Flask API response-shape fix; initial GitHub readback reported it as open, mergeable, not draft, review-required, and maintainer edits enabled. No checks were reported at closeout.
+- What was wanted: a `bug` + `help wanted` issue where several API routes returned `jsonify(data, status_code)`, causing Flask to serialize the payload and status as a JSON array while the HTTP status stayed `200`.
+- What changed: the listed `roles`, `logging`, `settings`, and `healthchecks` route returns now use Flask's `(jsonify(payload), status_code)` tuple form. A route-level unittest suite covers the affected role, logging, setting, and healthcheck responses with a fake DB so Docker/Postgres is not required.
+- Evidence: current-master reproduction for `GET /role` returned HTTP `200` with body `[{"status": "ok"}, 200]`; after the fix it returned HTTP `200` with body `{"status": "ok"}`. Focused route tests, Ruff check, Ruff format check, compileall, targeted pre-commit, `git diff --check`, and an AST guard for remaining multi-argument `jsonify(...)` calls all passed locally. The upstream PR contains one commit, five files, `+150/-27`.
+- Gate retained: for API route response-shape bugs, prove the malformed HTTP/body behavior with a Flask test client, keep the change to return tuple shape only, avoid overlapping bot-helper issues, and avoid Docker/Postgres by using fake route dependencies in focused tests.
+
 ### 2026-06-11 - Open PR - `annotorious/annotorious#610`
 
 - PR: <https://github.com/annotorious/annotorious/pull/610>
