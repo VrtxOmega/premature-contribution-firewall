@@ -20,6 +20,16 @@ Before any public PR or comment, the contribution lane must pass these checks:
 
 ## Ledger
 
+### 2026-06-11 - Open PR - `annotorious/annotorious#610`
+
+- PR: <https://github.com/annotorious/annotorious/pull/610>
+- Related issue: <https://github.com/annotorious/annotorious/issues/595>
+- Outcome: opened as a narrow OpenSeadragon polygon-simplification configurability fix; initial GitHub readback reported it as open, mergeable, not draft, `CLEAN`, and maintainer edits enabled. No checks were reported at closeout.
+- What was wanted: an `openseadragon` + `help wanted` issue where detailed polygons were visibly simplified after deselection; the maintainer confirmed the `PixiLayer` simplification path and pointed to the existing optional `tolerance` argument on `simplifyPolygon` / `simplifyMultiPolygon`.
+- What changed: `AnnotoriousOSDOpts` now exposes `polygonSimplificationTolerance`, `PixiLayer` passes that value into polygon and multipolygon simplification, and the default remains `1` to preserve the existing rendering self-protection. Callers can set `0` when they need full polygon geometry preserved.
+- Evidence: live issue readback showed #595 open and unassigned, with no open overlapping PRs for the simplification/tolerance lane. Local validation passed with `npm test --workspace @annotorious/annotorious -- simplificationTolerance.test.ts`, `npm test --workspace @annotorious/annotorious`, `npm run build --workspace @annotorious/openseadragon`, `npm test`, and `npm run build`. The upstream PR contains one commit, four files, `+72/-3`.
+- Gate retained: when a maintainer names the code path and likely option, implement that path directly, keep the default performance safeguard unchanged, test both polygon and multipolygon tolerance behavior, and do not add a PCF provenance note on the upstream PR before merge.
+
 ### 2026-06-11 - Open PR - `oakwood-commons/scafctl#493`
 
 - PR: <https://github.com/oakwood-commons/scafctl/pull/493>
