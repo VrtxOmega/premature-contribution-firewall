@@ -9,12 +9,19 @@ import { evaluateDiffShape } from "../core/diff-shape.mjs";
 import { evaluateContribution } from "../core/evaluator.mjs";
 import { buildLaneStatus } from "../core/lane-status.mjs";
 import { laneSchemaResource } from "../core/lane-schema.mjs";
-import { listLaneRecords, readLaneRecord, saveEvidenceBundle, saveLaneRecord } from "../core/lane-store.mjs";
+import { laneIdFor, listLaneRecords, readLaneRecord, saveEvidenceBundle, saveLaneRecord } from "../core/lane-store.mjs";
+import {
+  buildMcpServerCard,
+  buildMcpSubmissionReadiness,
+  reproEvidenceSchemaResource,
+  safetyDoctrineResource
+} from "../core/mcp-submission.mjs";
 import { parsePatchSubmission } from "../core/patch.mjs";
 import { buildPolicyProfile } from "../core/policy.mjs";
 import { scanTouchedFilePolicy } from "../core/policy-scan.mjs";
 import { buildMaintainerQueue } from "../core/queue.mjs";
 import { analyzeRepositoryContext } from "../core/repository-context.mjs";
+import { evaluateReproGate } from "../core/repro-gate.mjs";
 import { buildContributorScout } from "../core/scout.mjs";
 import { buildSemanticDuplicateAssist } from "../core/semantic-duplicate-assist.mjs";
 import { buildWatchlistReport } from "../core/watchlist.mjs";
@@ -44,6 +51,13 @@ const TOOLS = [
     name: "pcf_health",
     title: "PCF MCP Health",
     description: "Return PCF MCP health, package version, dry-run posture, known resources, and write-safety state. Performs no network, shell, filesystem traversal, or GitHub writes.",
+    inputSchema: objectSchema({}),
+    annotations: TOOL_ANNOTATIONS
+  },
+  {
+    name: "pcf_submission_readiness",
+    title: "MCP Submission Readiness",
+    description: "Run a local self-audit of PCF MCP registry readiness: package bin, Glama metadata, docs, smoke wiring, resources, prompts, and safe tool annotations. Does not submit anywhere.",
     inputSchema: objectSchema({}),
     annotations: TOOL_ANNOTATIONS
   },
@@ -174,6 +188,19 @@ const TOOLS = [
     annotations: TOOL_ANNOTATIONS
   },
   {
+    name: "pcf_repro_gate",
+    title: "Repro Evidence Gate",
+    description: "Classify caller-supplied before/after reproduction and validation evidence. This tool records no files and never executes commands.",
+    inputSchema: objectSchema({
+      before: { type: "object", description: "Before-fix evidence as {verdict, notes, commands}." },
+      after: { type: "object", description: "After-fix validation evidence as {verdict, notes, commands}." },
+      commands: { type: "array", items: { type: "object" }, description: "Optional phase-tagged command evidence supplied by the caller." },
+      artifacts: { type: "array", items: { type: "object" } },
+      generatedAt: { type: "string" }
+    }),
+    annotations: TOOL_ANNOTATIONS
+  },
+  {
     name: "pcf_lane_status",
     title: "Contribution Lane Status",
     description: "Summarize supplied scout, overlap, policy, repro, diff, preflight, PR, and provenance gates into a lane status and next gate. Does not verify external state.",
@@ -184,6 +211,19 @@ const TOOLS = [
       pr: { type: "string" },
       gates: { type: "object", description: "Gate status map." },
       artifacts: { type: "array", items: { type: "object" } },
+      gateOrder: { type: "array", items: { type: "string" } }
+    }),
+    annotations: TOOL_ANNOTATIONS
+  },
+  {
+    name: "pcf_lane_resume",
+    title: "Resume Contribution Lane",
+    description: "Read a local lane record from the fixed PCF lane store and summarize the next gate. This does not verify external state.",
+    inputSchema: objectSchema({
+      laneId: { type: "string" },
+      repository: { type: "string" },
+      issue: { type: "string" },
+      branch: { type: "string" },
       gateOrder: { type: "array", items: { type: "string" } }
     }),
     annotations: TOOL_ANNOTATIONS
@@ -295,6 +335,12 @@ const RESOURCES = [
     mimeType: "application/json"
   },
   {
+    uri: "pcf://mcp/server-card",
+    name: "PCF MCP Server Card",
+    description: "Registry-oriented server metadata, install guidance, capabilities, and safety contract.",
+    mimeType: "application/json"
+  },
+  {
     uri: "pcf://api/spec",
     name: "PCF API Spec",
     description: "Sanitized local API and schema summary.",
@@ -304,6 +350,18 @@ const RESOURCES = [
     uri: "pcf://schemas/lane",
     name: "PCF Lane JSON Schema",
     description: "Machine-readable contribution-lane schema and gate order.",
+    mimeType: "application/json"
+  },
+  {
+    uri: "pcf://schemas/repro",
+    name: "PCF Repro Evidence JSON Schema",
+    description: "Machine-readable before/after reproduction evidence shape for pcf_repro_gate.",
+    mimeType: "application/json"
+  },
+  {
+    uri: "pcf://doctrine/safety",
+    name: "PCF MCP Safety Doctrine",
+    description: "Non-claims, gate order, public-action boundary, and local-write boundary for agent use.",
     mimeType: "application/json"
   },
   {
@@ -349,6 +407,14 @@ const PROMPTS = [
     arguments: [
       { name: "contribution", description: "What was merged", required: false }
     ]
+  },
+  {
+    name: "pcf_submission_review",
+    description: "Review PCF MCP before Glama or registry submission.",
+    arguments: [
+      { name: "target", description: "Registry or review target, e.g. Glama", required: false },
+      { name: "notes", description: "Known reviewer concerns or local context", required: false }
+    ]
   }
 ];
 
@@ -369,6 +435,8 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
   switch (name) {
     case "pcf_health":
       return buildHealth();
+    case "pcf_submission_readiness":
+      return submissionReadiness();
     case "pcf_evaluate": {
       const input = args.input || {};
       return evaluateContribution(input, { profile: args.profile || input.profile });
@@ -403,8 +471,12 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
       return scanTouchedFilePolicy(args);
     case "pcf_diff_shape":
       return evaluateDiffShape(args);
+    case "pcf_repro_gate":
+      return evaluateReproGate(args);
     case "pcf_lane_status":
       return buildLaneStatus(args);
+    case "pcf_lane_resume":
+      return resumeLaneRecord(args);
     case "pcf_lane_save":
       return saveLaneRecord(args);
     case "pcf_lane_read":
@@ -429,12 +501,80 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
   }
 }
 
+async function resumeLaneRecord(args = {}) {
+  let stored;
+  try {
+    stored = await readLaneRecord(args);
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return {
+        ok: false,
+        id: laneIdFor(args),
+        status: "missing",
+        summary: "No local PCF lane record was found for the supplied lane id or repository/issue.",
+        nextGate: {
+          id: "lane_save",
+          status: "blocked",
+          reason: "Save or supply a lane record before resuming."
+        },
+        lane: {
+          repository: args.repository || "",
+          issue: args.issue || "",
+          branch: args.branch || "",
+          pr: args.pr || ""
+        },
+        gates: {},
+        artifacts: [],
+        nonClaims: [
+          "Lane resume reads local PCF lane evidence only.",
+          "A missing lane does not prove the contribution lane is invalid; it means this local store has no saved record."
+        ]
+      };
+    }
+    throw error;
+  }
+  const record = stored.record || {};
+  const status = buildLaneStatus({
+    lane: record.lane || {},
+    repository: record.lane?.repository,
+    issue: record.lane?.issue,
+    branch: record.lane?.branch,
+    pr: record.lane?.pr,
+    gates: record.gates || {},
+    artifacts: record.artifacts || [],
+    gateOrder: args.gateOrder
+  });
+  return {
+    ok: true,
+    id: stored.id,
+    path: stored.path,
+    status: status.status,
+    summary: status.summary,
+    nextGate: status.nextGate,
+    lane: status.lane,
+    gates: status.gates,
+    artifacts: status.artifacts,
+    recordUpdatedAt: record.updatedAt || "",
+    nonClaims: [
+      "Lane resume reads local PCF lane evidence only.",
+      "It does not contact GitHub, inspect local git state, execute commands, or verify whether evidence is current."
+    ]
+  };
+}
+
 export async function readPcfMcpResource(uri) {
   if (uri === "pcf://status") {
     return {
       uri,
       mimeType: "application/json",
       text: JSON.stringify(await buildHealth(), null, 2)
+    };
+  }
+  if (uri === "pcf://mcp/server-card") {
+    return {
+      uri,
+      mimeType: "application/json",
+      text: JSON.stringify(await serverCard(), null, 2)
     };
   }
   if (uri === "pcf://api/spec") {
@@ -449,6 +589,20 @@ export async function readPcfMcpResource(uri) {
       uri,
       mimeType: "application/json",
       text: JSON.stringify(laneSchemaResource(), null, 2)
+    };
+  }
+  if (uri === "pcf://schemas/repro") {
+    return {
+      uri,
+      mimeType: "application/json",
+      text: JSON.stringify(reproEvidenceSchemaResource(), null, 2)
+    };
+  }
+  if (uri === "pcf://doctrine/safety") {
+    return {
+      uri,
+      mimeType: "application/json",
+      text: JSON.stringify(safetyDoctrineResource(), null, 2)
     };
   }
   if (uri === "pcf://docs/watchlist") {
@@ -488,6 +642,15 @@ export async function getPcfMcpPrompt(name, arguments_ = {}) {
       "Keep it project-centered: PCF helped keep scope narrow, check overlap, and verify behavior. Do not imply maintainer endorsement."
     ].join("\n"));
   }
+  if (name === "pcf_submission_review") {
+    return promptResult("PCF MCP submission review", [
+      `Review PCF MCP for ${args.target || "registry submission"}.`,
+      args.notes ? `Context: ${args.notes}` : "Context: local-only review before any public submission.",
+      "Run pcf_submission_readiness first, then read pcf://mcp/server-card and pcf://doctrine/safety.",
+      "Verify tool annotations, local-write boundaries, docs, smoke command, package bin, and glama.json.",
+      "Do not submit, push, badge, or publish without explicit human approval."
+    ].join("\n"));
+  }
   throw new Error(`Unknown PCF MCP prompt: ${name}`);
 }
 
@@ -504,6 +667,8 @@ async function buildHealth() {
     githubWriteToolsExposed: false,
     localArtifactWrites: "fixed PCF lane/evidence store only",
     localArtifactWriteTools: ["pcf_lane_save", "pcf_evidence_bundle_save"],
+    submissionReadinessTool: "pcf_submission_readiness",
+    serverCardResource: "pcf://mcp/server-card",
     githubWrites: "disabled",
     shellExecution: "not exposed",
     arbitraryFileRead: "not exposed",
@@ -522,8 +687,71 @@ async function packageMetadata() {
   const parsed = JSON.parse(text);
   return {
     name: parsed.name || PCF_MCP_SERVER_NAME,
-    version: parsed.version || "0.0.0"
+    version: parsed.version || "0.0.0",
+    description: parsed.description || "",
+    license: parsed.license || "",
+    repository: parsed.repository || {},
+    homepage: parsed.homepage || "",
+    bin: parsed.bin || {},
+    files: parsed.files || [],
+    keywords: parsed.keywords || [],
+    scripts: parsed.scripts || {}
   };
+}
+
+async function serverCard() {
+  return buildMcpServerCard({
+    packageInfo: await packageMetadata(),
+    tools: listPcfMcpTools(),
+    resources: listPcfMcpResources(),
+    prompts: listPcfMcpPrompts()
+  });
+}
+
+async function submissionReadiness() {
+  return buildMcpSubmissionReadiness({
+    packageInfo: await packageMetadata(),
+    tools: listPcfMcpTools(),
+    resources: listPcfMcpResources(),
+    prompts: listPcfMcpPrompts(),
+    files: {
+      glamaJson: await readGlamaMetadata(),
+      mcpDocs: await pathExists("docs/MCP.md"),
+      mcpSmoke: await pathExists("scripts/mcp-smoke.mjs")
+    }
+  });
+}
+
+async function readGlamaMetadata() {
+  try {
+    const parsed = JSON.parse(await readFile(join(REPO_ROOT, "glama.json"), "utf8"));
+    const maintainers = Array.isArray(parsed.maintainers) ? parsed.maintainers : [];
+    const uniqueMaintainers = new Set(maintainers);
+    return {
+      exists: true,
+      valid: parsed.$schema === "https://glama.ai/mcp/schemas/server.json"
+        && maintainers.length > 0
+        && maintainers.every((maintainer) => typeof maintainer === "string" && maintainer.trim())
+        && uniqueMaintainers.size === maintainers.length,
+      schema: parsed.$schema || "",
+      maintainers
+    };
+  } catch (error) {
+    return {
+      exists: error?.code !== "ENOENT",
+      valid: false,
+      error: error?.message || String(error)
+    };
+  }
+}
+
+async function pathExists(relativePath) {
+  try {
+    await access(join(REPO_ROOT, relativePath));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function readKnownFileResource(uri, relativePath, mimeType) {

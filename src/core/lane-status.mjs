@@ -6,7 +6,8 @@ const DEFAULT_GATE_ORDER = [
   "diffShape",
   "preflight",
   "pr",
-  "provenance"
+  "provenance",
+  "calibration"
 ];
 
 const PASS_STATUSES = new Set(["pass", "passed", "ready", "done", "merged", "accepted"]);
