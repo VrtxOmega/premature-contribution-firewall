@@ -19,6 +19,16 @@ Before any public PR or comment, the contribution lane must pass these checks:
 
 ## Ledger
 
+### 2026-06-11 - Open PR - `KaotoIO/forms#104`
+
+- PR: <https://github.com/KaotoIO/forms/pull/104>
+- Related issue: <https://github.com/KaotoIO/kaoto/issues/3281>
+- Outcome: opened as a narrow bugfix PR against the `1.x` forms branch; initial GitHub readback reported it as open, mergeable, and not draft. CodeRabbit review was pending at closeout.
+- What was wanted: a `bug` + `good first issue` + `help wanted` empty-state copy fix where the form already on the `All` tab should not tell the user to switch to `All`.
+- What changed: `NoFieldFound` now keeps the `Switch to All tab` action for filtered `Required` / `Modified` tabs, but shows a plain no-results message when `All` is already selected.
+- Evidence: `KaotoIO/kaoto#3283` was already merged and intentionally scoped to adding REST DSL search, while `#3281` was opened separately for this shared forms-library message. `@kaoto/forms@1.7.1` and `1.7.2` had identical `NoFieldFound` output, so the fix belonged in `KaotoIO/forms` rather than a Kaoto app dependency bump.
+- Gate retained: when a downstream app issue points at a shared library component, verify the library source/release branch first and open the PR in the owning repo/release line instead of patching around the symptom in the app.
+
 ### 2026-06-11 - Open PR - `StingraySoftware/stingray#978`
 
 - PR: <https://github.com/StingraySoftware/stingray/pull/978>
