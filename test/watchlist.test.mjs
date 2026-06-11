@@ -11,6 +11,7 @@ import {
   renderWatchlistMarkdown,
   renderWatchlistSummary
 } from "../src/core/watchlist.mjs";
+import { runWatchlist } from "../scripts/run-watchlist.mjs";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -138,6 +139,41 @@ test("watchlist CLI runs fixture-backed repos without network", async () => {
       "json"
     ], { cwd: repoRoot });
     assert.doesNotThrow(() => JSON.parse(overrideStdout));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("watchlist entry timeout records an error and continues", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "pcf-watchlist-timeout-"));
+  const configPath = join(dir, "watchlist.json");
+  try {
+    await writeFile(configPath, JSON.stringify({
+      name: "Timeout radar",
+      repositories: [
+        { repository: "slow/repo", priority: "high" },
+        { repository: "fast/repo", priority: "medium" }
+      ]
+    }), "utf8");
+
+    const report = await runWatchlist({
+      configPath,
+      entryTimeoutMs: 5,
+      reportBuilder: async ({ repository, signal }) => {
+        if (repository === "slow/repo") {
+          return new Promise((_, reject) => {
+            signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+          });
+        }
+        return proofFor(repository, [candidateRow({ number: 42, status: "candidate" })]);
+      }
+    });
+
+    assert.equal(report.summary.errors, 1);
+    assert.equal(report.summary.scanned, 1);
+    assert.equal(report.summary.candidates, 1);
+    assert.match(report.repositories.find((row) => row.repository === "slow/repo").error, /timed out/);
+    assert.equal(report.candidates[0].repository, "fast/repo");
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -15,6 +15,7 @@ export function loadConfig(cwd = process.cwd(), env = process.env) {
     githubQueueLimit: clampNumber(env.PCF_GITHUB_QUEUE_LIMIT, 25, 1, 100),
     githubCacheTtlMs: clampNumber(env.PCF_GITHUB_CACHE_TTL_MS, 60_000, 0, 10 * 60_000),
     githubSearchDelayMs: clampNumber(env.PCF_GITHUB_SEARCH_DELAY_MS, 2_000, 0, 30_000),
+    githubRequestTimeoutMs: clampNumber(env.PCF_GITHUB_REQUEST_TIMEOUT_MS, 20_000, 0, 5 * 60_000),
     queueHistoryEnabled: env.PCF_QUEUE_HISTORY_ENABLED !== "false",
     queueHistoryPath: env.PCF_QUEUE_HISTORY_PATH || join(cwd, "data", "queue-history.json"),
     queueHistoryLimit: clampNumber(env.PCF_QUEUE_HISTORY_LIMIT, 50, 1, 500),
