@@ -16,6 +16,7 @@ Before any public PR or comment, the contribution lane must pass these checks:
 - Prefer explicit maintainer invitation signals such as `help wanted`, a direct request for a fix, or a clear test-only gap.
 - Keep one issue per branch, one fix per PR, and no broad cleanup.
 - Stop before any public action until a human approves the exact target and expected diff shape.
+- After a PR merges, leave one short thank-you/provenance comment on that PR thread explaining how PCF helped scope or gate the work; do not comment before merge, repeat the note, or imply maintainer endorsement.
 
 ## Ledger
 
