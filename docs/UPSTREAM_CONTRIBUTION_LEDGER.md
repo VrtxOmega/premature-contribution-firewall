@@ -19,6 +19,17 @@ Before any public PR or comment, the contribution lane must pass these checks:
 
 ## Ledger
 
+### 2026-06-11 - Open PR - `StingraySoftware/stingray#978`
+
+- PR: <https://github.com/StingraySoftware/stingray/pull/978>
+- Related issue: <https://github.com/StingraySoftware/stingray/issues/977>
+- Outcome: opened as a narrow bugfix PR; initial GitHub readback reported it as open, mergeable, and not draft. GitHub had not reported CI checks yet at closeout.
+- What was wanted: a `bug` + `help wanted` issue with a concrete reproduction where `AveragedCrossspectrum` returned all-zero powers for `Lightcurve(..., input_counts=False)`.
+- What changed: the light-curve cross-spectrum path now reads public `counts` / `counts_err` attributes, matching the existing `AveragedPowerspectrum` path, and adds a regression test for identical countrate light curves.
+- Evidence: current-main repro before the fix returned zero cross powers for `input_counts=False`; after the fix, the cross spectrum matched the averaged power spectrum for both `input_counts=False` and `input_counts=True`.
+- Gate retained: proceed when the issue has explicit help-wanted signal, no open PR overlap, fork PRs are accepted, the bug reproduces locally, nearby TODO/FIXME scan does not contradict the patch, and the diff stays one-issue/three-file small.
+- Caveat: the broader local `TestAveragedCrossspectrum` class run exposed an unrelated `test_timelag` failure that also reproduces from a clean `origin/main` worktree under the same local dependency set, so it was not treated as a blocker for this issue-specific PR.
+
 ### 2026-06-11 - Accepted - `koalaman/shellcheck#3484`
 
 - PR: <https://github.com/koalaman/shellcheck/pull/3484>
