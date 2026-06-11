@@ -30,15 +30,16 @@ Before any public PR or comment, the contribution lane must pass these checks:
 - Evidence: current-main before-output for `get provider github -o json` contained only `catalogRef`, description, name, source, and version; after the fix it included capabilities, schema, outputSchemas, examples, and concrete plugin version. Full `go test ./...`, `task lint`, `task format:check`, `task vet`, `go build ./...`, and `git diff --check` passed locally.
 - Gate retained: for CLI/MCP parity bugs, prove the mismatch on current main, keep the fix in the user-facing command path unless shared logic is truly needed, preserve offline fallback behavior, and test the richer structured output without making unit tests fetch from the network.
 
-### 2026-06-11 - Open PR - `amber-lang/amber#1116`
+### 2026-06-11 - Approved PR - `amber-lang/amber#1116`
 
 - PR: <https://github.com/amber-lang/amber/pull/1116>
 - Related issue: <https://github.com/amber-lang/amber/issues/897>
-- Outcome: opened as a narrow compiler-output fix against the `staging` branch; initial GitHub readback reported it as open, mergeable, and not draft. CodeRabbit review was pending at closeout.
+- Outcome: opened as a narrow compiler-output fix against the `staging` branch. Follow-up readback showed the PR open, mergeable, review-approved by two project members, and CodeRabbit passing with no actionable comments.
 - What was wanted: a `bug` + `help wanted` + `good first issue` bucket asking for ShellCheck cleanup on generated Amber test scripts.
 - What changed: the generated shell-version prelude now adds `-r` to the zsh and ksh `read` calls, removing the `SC2162` warning class without touching the other ShellCheck classes in the bucket.
 - Evidence: the latest June 8 report showed repeated `SC2162` findings from the generated prelude. A focused `shellversion()` repro produced two `SC2162` findings before the fix and zero filtered findings after the fix when `SC2296` and `SC2034` were excluded as separate warning classes.
 - Gate retained: for bucket issues, choose exactly one current warning class, prove it on current `staging`, leave unrelated warning classes for separate PRs, and avoid claiming the whole bucket is closed.
+- Follow-up gate: wait for maintainer merge before leaving any short PCF provenance note; approval is not a merge and should not be treated as maintainer endorsement of PCF.
 
 ### 2026-06-11 - Open PR - `KaotoIO/forms#104`
 
