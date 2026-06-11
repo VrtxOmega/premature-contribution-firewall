@@ -11,26 +11,56 @@ export function createGitHubClient(config = {}) {
   const readCache = new Map();
   const readCacheTtlMs = Number.isFinite(Number(config.githubCacheTtlMs)) ? Number(config.githubCacheTtlMs) : 60_000;
   const searchDelayMs = Number.isFinite(Number(config.githubSearchDelayMs)) ? Math.max(0, Number(config.githubSearchDelayMs)) : 2_000;
+  const requestTimeoutMs = Number.isFinite(Number(config.githubRequestTimeoutMs)) ? Math.max(0, Number(config.githubRequestTimeoutMs)) : 20_000;
   let nextSearchAt = 0;
 
   async function request(path, options = {}) {
     const url = `${apiBase}${path}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        ...(readToken ? { Authorization: `Bearer ${readToken}` } : {}),
-        ...(options.headers || {})
+    const { signal: upstreamSignal, timeoutMs: optionTimeoutMs, ...fetchOptions } = options;
+    const timeoutMs = Number.isFinite(Number(optionTimeoutMs)) ? Math.max(0, Number(optionTimeoutMs)) : requestTimeoutMs;
+    const controller = new AbortController();
+    let timeout = null;
+    const abort = (reason) => {
+      if (!controller.signal.aborted) controller.abort(reason);
+    };
+    if (upstreamSignal) {
+      if (upstreamSignal.aborted) {
+        abort(upstreamSignal.reason || new Error("request aborted"));
+      } else {
+        upstreamSignal.addEventListener("abort", () => abort(upstreamSignal.reason || new Error("request aborted")), { once: true });
       }
-    });
-    const text = await response.text();
-    const data = text ? safeJson(text) : null;
-    if (!response.ok) {
-      const detail = data?.message || text || response.statusText;
-      throw new Error(`GitHub API ${response.status} ${response.statusText}: ${detail}`);
     }
-    return data;
+    if (timeoutMs > 0) {
+      timeout = setTimeout(() => abort(new Error(`GitHub API request timed out after ${timeoutMs}ms`)), timeoutMs);
+    }
+    try {
+      const response = await fetch(url, {
+        ...fetchOptions,
+        signal: controller.signal,
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          ...(readToken ? { Authorization: `Bearer ${readToken}` } : {}),
+          ...(fetchOptions.headers || {})
+        }
+      });
+      const text = await response.text();
+      const data = text ? safeJson(text) : null;
+      if (!response.ok) {
+        const detail = data?.message || text || response.statusText;
+        throw new Error(`GitHub API ${response.status} ${response.statusText}: ${detail}`);
+      }
+      return data;
+    } catch (error) {
+      if (controller.signal.aborted) {
+        const reason = controller.signal.reason;
+        const message = reason instanceof Error ? reason.message : String(reason || "request aborted");
+        throw new Error(`${message}: ${path}`);
+      }
+      throw error;
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
   }
 
   async function getInstallationToken(installationId) {
@@ -89,16 +119,17 @@ export function createGitHubClient(config = {}) {
     body = "",
     files = [],
     installationId = "",
-    upstreamRepository = ""
+    upstreamRepository = "",
+    signal = null
   }) {
     const repository = `${owner}/${repo}`;
     const currentIssueRefs = extractIssueRefs(`${title}\n${body}`, repository);
     const terms = searchTerms(`${title}\n${body}`);
     const queryText = terms.length ? terms.join(" ") : title || repo;
     await waitForSearchSlot();
-    const localSearch = await readRequest(installationId, `/search/issues?q=${encodeURIComponent(`${queryText} repo:${repository} in:title,body`)}&per_page=20`);
+    const localSearch = await readRequest(installationId, `/search/issues?q=${encodeURIComponent(`${queryText} repo:${repository} in:title,body`)}&per_page=20`, { signal });
     const pullFiles = kind === "pull_request" && number && files.length === 0
-      ? await safeReadPullFiles({ owner, repo, number, installationId })
+      ? await safeReadPullFiles({ owner, repo, number, installationId, signal })
       : files;
 
     const issues = [];
@@ -112,7 +143,7 @@ export function createGitHubClient(config = {}) {
 
     for (const issueRef of currentIssueRefs) {
       if (String(issueRef) === String(number)) continue;
-      const referenced = await safeReadIssue({ owner, repo, number: issueRef, installationId });
+      const referenced = await safeReadIssue({ owner, repo, number: issueRef, installationId, signal });
       if (!referenced) continue;
       if (referenced.type === "pull_request") pushContextItem(pullRequests, referenced);
       else pushContextItem(issues, referenced);
@@ -135,13 +166,13 @@ export function createGitHubClient(config = {}) {
 
     if (upstreamRepository) {
       await waitForSearchSlot();
-      const upstreamSearch = await request(`/search/issues?q=${encodeURIComponent(`${queryText} repo:${upstreamRepository} in:title,body`)}&per_page=20`);
+      const upstreamSearch = await request(`/search/issues?q=${encodeURIComponent(`${queryText} repo:${upstreamRepository} in:title,body`)}&per_page=20`, { signal });
       for (const item of upstreamSearch.items || []) {
         const normalized = normalizeSearchItem(item, "upstream");
         if (item.pull_request) context.upstream.pullRequests.push(normalized);
         else context.upstream.issues.push(normalized);
       }
-      context.upstream.commits = await safeSearchCommits({ repository: upstreamRepository, queryText });
+      context.upstream.commits = await safeSearchCommits({ repository: upstreamRepository, queryText, signal });
     }
 
     if (pullFiles.length) {
@@ -165,7 +196,8 @@ export function createGitHubClient(config = {}) {
     includePullRequests = true,
     includeIssues = true,
     installationId = "",
-    upstreamRepository = config.upstreamRepository || ""
+    upstreamRepository = config.upstreamRepository || "",
+    signal = null
   }) {
     const safeLimit = Math.max(1, Math.min(100, Number(limit) || 25));
     const repository = `${owner}/${repo}`;
@@ -179,14 +211,15 @@ export function createGitHubClient(config = {}) {
           `/repos/${owner}/${repo}/pulls?state=open&sort=updated&direction=desc&per_page=${safeLimit}`
         );
         for (const pullRequest of (Array.isArray(pullRequests) ? pullRequests : []).slice(0, safeLimit)) {
-          const files = await safeReadPullFileStats({ owner, repo, number: pullRequest.number, installationId });
+          const files = await safeReadPullFileStats({ owner, repo, number: pullRequest.number, installationId, signal });
           items.push(await normalizePullRequestQueueItem({
             owner,
             repo,
             pullRequest,
             files,
             installationId,
-            upstreamRepository
+            upstreamRepository,
+            signal
           }));
         }
       } catch (error) {
@@ -200,14 +233,15 @@ export function createGitHubClient(config = {}) {
     if (includeIssues && items.length < safeLimit) {
       try {
         const issueLimit = safeLimit - items.length;
-        const issueItems = await readOpenIssuesOnly({ owner, repo, limit: issueLimit, installationId });
+        const issueItems = await readOpenIssuesOnly({ owner, repo, limit: issueLimit, installationId, signal });
         for (const issue of issueItems) {
           items.push(await normalizeIssueQueueItem({
             owner,
             repo,
             issue,
             installationId,
-            upstreamRepository
+            upstreamRepository,
+            signal
           }));
         }
       } catch (error) {
@@ -229,12 +263,13 @@ export function createGitHubClient(config = {}) {
     };
   }
 
-  async function searchOpenPullRequestsForIssue({ owner, repo, issueNumber, installationId = "" }) {
+  async function searchOpenPullRequestsForIssue({ owner, repo, issueNumber, installationId = "", signal = null }) {
     const repository = `${owner}/${repo}`;
     await waitForSearchSlot();
     const data = await readRequest(
       installationId,
-      `/search/issues?q=${encodeURIComponent(`repo:${repository} is:pr is:open #${issueNumber}`)}&per_page=20`
+      `/search/issues?q=${encodeURIComponent(`repo:${repository} is:pr is:open #${issueNumber}`)}&per_page=20`,
+      { signal }
     );
     return (data.items || []).map((pullRequest) => ({
       number: pullRequest.number,
@@ -296,7 +331,7 @@ export function createGitHubClient(config = {}) {
     return data;
   }
 
-  async function readOpenIssuesOnly({ owner, repo, limit, installationId }) {
+  async function readOpenIssuesOnly({ owner, repo, limit, installationId, signal = null }) {
     const issueLimit = Math.max(1, Math.min(100, Number(limit) || 25));
     const perPage = Math.min(100, Math.max(25, issueLimit * 4));
     const issuesOnly = [];
@@ -304,7 +339,8 @@ export function createGitHubClient(config = {}) {
     for (let page = 1; issuesOnly.length < issueLimit && page <= 10; page += 1) {
       const issues = await readRequest(
         installationId,
-        `/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=${perPage}&page=${page}`
+        `/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=${perPage}&page=${page}`,
+        { signal }
       );
       const pageItems = Array.isArray(issues) ? issues : [];
       for (const issue of pageItems) {
@@ -317,18 +353,18 @@ export function createGitHubClient(config = {}) {
     return issuesOnly.slice(0, issueLimit);
   }
 
-  async function safeReadPullFiles({ owner, repo, number, installationId }) {
+  async function safeReadPullFiles({ owner, repo, number, installationId, signal = null }) {
     try {
-      const data = await readRequest(installationId, `/repos/${owner}/${repo}/pulls/${number}/files?per_page=100`);
+      const data = await readRequest(installationId, `/repos/${owner}/${repo}/pulls/${number}/files?per_page=100`, { signal });
       return Array.isArray(data) ? data.map((file) => file.filename).filter(Boolean) : [];
     } catch {
       return [];
     }
   }
 
-  async function safeReadPullFileStats({ owner, repo, number, installationId }) {
+  async function safeReadPullFileStats({ owner, repo, number, installationId, signal = null }) {
     try {
-      const data = await readRequest(installationId, `/repos/${owner}/${repo}/pulls/${number}/files?per_page=100`);
+      const data = await readRequest(installationId, `/repos/${owner}/${repo}/pulls/${number}/files?per_page=100`, { signal });
       return Array.isArray(data)
         ? data.map((file) => ({
           filename: file.filename,
@@ -342,18 +378,18 @@ export function createGitHubClient(config = {}) {
     }
   }
 
-  async function safeReadIssue({ owner, repo, number, installationId }) {
+  async function safeReadIssue({ owner, repo, number, installationId, signal = null }) {
     try {
-      const issue = await readRequest(installationId, `/repos/${owner}/${repo}/issues/${number}`);
+      const issue = await readRequest(installationId, `/repos/${owner}/${repo}/issues/${number}`, { signal });
       return issue ? normalizeSearchItem(issue) : null;
     } catch {
       return null;
     }
   }
 
-  async function safeReadIssueCommentBodies({ owner, repo, number, installationId }) {
+  async function safeReadIssueCommentBodies({ owner, repo, number, installationId, signal = null }) {
     try {
-      const comments = await readRequest(installationId, `/repos/${owner}/${repo}/issues/${number}/comments?per_page=20`);
+      const comments = await readRequest(installationId, `/repos/${owner}/${repo}/issues/${number}/comments?per_page=20`, { signal });
       return Array.isArray(comments)
         ? comments.map((comment) => String(comment.body || "").trim()).filter(Boolean).join("\n\n")
         : "";
@@ -362,7 +398,7 @@ export function createGitHubClient(config = {}) {
     }
   }
 
-  async function normalizePullRequestQueueItem({ owner, repo, pullRequest, files, installationId, upstreamRepository }) {
+  async function normalizePullRequestQueueItem({ owner, repo, pullRequest, files, installationId, upstreamRepository, signal = null }) {
     const repository = `${owner}/${repo}`;
     const title = pullRequest.title || "";
     const body = pullRequest.body || "";
@@ -378,7 +414,8 @@ export function createGitHubClient(config = {}) {
       body,
       files,
       installationId,
-      upstreamRepository
+      upstreamRepository,
+      signal
     });
 
     return {
@@ -402,12 +439,12 @@ export function createGitHubClient(config = {}) {
     };
   }
 
-  async function normalizeIssueQueueItem({ owner, repo, issue, installationId, upstreamRepository }) {
+  async function normalizeIssueQueueItem({ owner, repo, issue, installationId, upstreamRepository, signal = null }) {
     const repository = `${owner}/${repo}`;
     const title = issue.title || "";
     const body = issue.body || "";
     const number = issue.number;
-    const commentBody = await safeReadIssueCommentBodies({ owner, repo, number, installationId });
+    const commentBody = await safeReadIssueCommentBodies({ owner, repo, number, installationId, signal });
     const contextBody = [body, commentBody ? `Issue comments:\n${commentBody}` : ""].filter(Boolean).join("\n\n");
     const repositoryContext = await safeCollectQueueContext({
       owner,
@@ -418,7 +455,8 @@ export function createGitHubClient(config = {}) {
       body: contextBody,
       files: [],
       installationId,
-      upstreamRepository
+      upstreamRepository,
+      signal
     });
 
     return {
@@ -452,10 +490,11 @@ export function createGitHubClient(config = {}) {
     }
   }
 
-  async function safeSearchCommits({ repository, queryText }) {
+  async function safeSearchCommits({ repository, queryText, signal = null }) {
     try {
       await waitForSearchSlot();
       const data = await request(`/search/commits?q=${encodeURIComponent(`${queryText} repo:${repository}`)}&per_page=10`, {
+        signal,
         headers: { Accept: "application/vnd.github.cloak-preview+json" }
       });
       return (data.items || []).map((item) => ({

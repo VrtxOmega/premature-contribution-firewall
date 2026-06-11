@@ -35,6 +35,7 @@ Current public state:
 - Build history: [36-hour idea-to-v0.1.0 evidence capsule](docs/BUILD_ARC_36_HOURS.md).
 - Maintainer feedback tracker: [five-maintainer artifact-shape feedback pass](docs/MAINTAINER_FEEDBACK_TRACKER.md).
 - Real-world usage so far: author-run read-only shadow pilots against public queues, with two public briefs in this repo and private replay captures for calibration.
+- Upstream contribution learning ledger: [public wins, misses, blocked lanes, and gate changes](docs/UPSTREAM_CONTRIBUTION_LEDGER.md).
 - Still not a hosted service or write-enabled bot; every write surface stays opt-in and dry-run by default.
 - No target repository or maintainer listed in the pilot ledger is an endorsement.
 

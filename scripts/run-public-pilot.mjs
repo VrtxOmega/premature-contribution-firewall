@@ -21,6 +21,7 @@ export async function buildPublicPilotReport({
   upstreamRepository = "",
   contributorPreflight = false,
   preflightChecks = null,
+  signal = null,
   generatedAt = new Date().toISOString(),
   config = loadConfig(new URL("..", import.meta.url).pathname)
 } = {}) {
@@ -75,7 +76,8 @@ export async function buildPublicPilotReport({
     limit,
     includePullRequests,
     includeIssues,
-    upstreamRepository
+    upstreamRepository,
+    signal
   });
   const queue = buildMaintainerQueue(collected, {
     now: generatedAt,
@@ -83,7 +85,7 @@ export async function buildPublicPilotReport({
     repository: targetRepository,
     upstreamRepository
   });
-  const target = await safeReadRepositoryMetadata(githubClient, owner, repo);
+  const target = await safeReadRepositoryMetadata(githubClient, owner, repo, signal);
   if (capturePath) {
     await writeReplayCapture(capturePath, buildReplayCapture({
       repository: targetRepository,
@@ -109,7 +111,7 @@ export async function buildPublicPilotReport({
   });
   if (contributorPreflight) {
     proof = attachContributorPreflight(proof, {
-      checks: preflightChecks || await collectLiveContributorPreflightChecks({ proof, githubClient, owner, repo }),
+      checks: preflightChecks || await collectLiveContributorPreflightChecks({ proof, githubClient, owner, repo, signal }),
       generatedAt
     });
   }
@@ -305,7 +307,7 @@ function attachContributorPreflight(proof, { checks = [], generatedAt = new Date
   };
 }
 
-async function collectLiveContributorPreflightChecks({ proof = {}, githubClient, owner = "", repo = "" } = {}) {
+async function collectLiveContributorPreflightChecks({ proof = {}, githubClient, owner = "", repo = "", signal = null } = {}) {
   const repository = `${owner}/${repo}`;
   const candidates = (proof.queue?.items || []).filter((item) => item.kind === "issue" && item.action === "review-now");
   const checks = [];
@@ -314,7 +316,7 @@ async function collectLiveContributorPreflightChecks({ proof = {}, githubClient,
       checks.push({
         itemId: item.id,
         number: item.number,
-        pullRequests: await githubClient.searchOpenPullRequestsForIssue({ owner, repo, issueNumber: item.number })
+        pullRequests: await githubClient.searchOpenPullRequestsForIssue({ owner, repo, issueNumber: item.number, signal })
       });
     } catch (error) {
       checks.push({
@@ -344,9 +346,9 @@ function shellArg(value) {
   return `'${text.replaceAll("'", "'\\''")}'`;
 }
 
-async function safeReadRepositoryMetadata(githubClient, owner, repo) {
+async function safeReadRepositoryMetadata(githubClient, owner, repo, signal = null) {
   try {
-    return await githubClient.request(`/repos/${owner}/${repo}`);
+    return await githubClient.request(`/repos/${owner}/${repo}`, { signal });
   } catch {
     return {};
   }
