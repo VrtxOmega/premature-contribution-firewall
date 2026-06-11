@@ -50,15 +50,17 @@ Before any public PR or comment, the contribution lane must pass these checks:
 - Evidence: live issue readback showed #595 open and unassigned, with no open overlapping PRs for the simplification/tolerance lane. Local validation passed with `npm test --workspace @annotorious/annotorious -- simplificationTolerance.test.ts`, `npm test --workspace @annotorious/annotorious`, `npm run build --workspace @annotorious/openseadragon`, `npm test`, and `npm run build`. The upstream PR contains one commit, four files, `+72/-3`.
 - Gate retained: when a maintainer names the code path and likely option, implement that path directly, keep the default performance safeguard unchanged, test both polygon and multipolygon tolerance behavior, and do not add a PCF provenance note on the upstream PR before merge.
 
-### 2026-06-11 - Open PR - `oakwood-commons/scafctl#493`
+### 2026-06-11 - Closed Without Merge - `oakwood-commons/scafctl#493`
 
 - PR: <https://github.com/oakwood-commons/scafctl/pull/493>
 - Related issue: <https://github.com/oakwood-commons/scafctl/issues/492>
-- Outcome: opened as a narrow CLI provider-detail fix; initial GitHub readback reported it as open, mergeable, not draft, and DCO passing.
+- Superseding maintainer PR: <https://github.com/oakwood-commons/scafctl/pull/494>
+- Outcome: closed without merge after the maintainer explained that `help wanted` had been applied to #492 by mistake; they had already planned the fix and merged #494 before seeing #493. The maintainer thanked the contribution and apologized for the label confusion.
 - What was wanted: a `bug` + `help wanted` + `good first issue` + `developer-experience` issue where `scafctl get provider <official> -o json` returned only catalog metadata while MCP could return full schema/detail information.
 - What changed: structured CLI output for official providers now attempts to load the official plugin descriptor and emits the shared `BuildProviderDetail` payload, while preserving the catalog-metadata fallback when plugin resolution is unavailable.
-- Evidence: current-main before-output for `get provider github -o json` contained only `catalogRef`, description, name, source, and version; after the fix it included capabilities, schema, outputSchemas, examples, and concrete plugin version. Full `go test ./...`, `task lint`, `task format:check`, `task vet`, `go build ./...`, and `git diff --check` passed locally.
+- Evidence: current-main before-output for `get provider github -o json` contained only `catalogRef`, description, name, source, and version; after the fix it included capabilities, schema, outputSchemas, examples, and concrete plugin version. Full `go test ./...`, `task lint`, `task format:check`, `task vet`, `go build ./...`, and `git diff --check` passed locally. Live readback on 2026-06-11 showed #494 merged at 20:07:29Z, #492 closed at 20:07:30Z, and #493 closed at 20:21:07Z with the maintainer's apology.
 - Gate retained: for CLI/MCP parity bugs, prove the mismatch on current main, keep the fix in the user-facing command path unless shared logic is truly needed, preserve offline fallback behavior, and test the richer structured output without making unit tests fetch from the network.
+- Gate added: `help wanted` is not enough when the maintainer may be actively self-fixing the issue. Before opening, check same-day maintainer PRs, recently pushed maintainer branches when visible, linked issue closure timing, and all-state PR search around the exact issue and title terms. If a maintainer-owned fix appears between coding and PR open, stop and ask rather than publishing.
 
 ### 2026-06-11 - Accepted - `amber-lang/amber#1116`
 
