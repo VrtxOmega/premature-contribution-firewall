@@ -1,0 +1,91 @@
+name: npm Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Package version to publish"
+        required: true
+        type: string
+      dry-run:
+        description: "Run npm publish as a dry run"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-${{ github.ref }}-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install Dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --ignore-scripts --package-lock=false
+          fi
+
+      - name: Verify Version Input
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
+          const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+          const expected = process.env.EXPECTED_VERSION;
+          if (packageJson.version !== expected) {
+            console.error(`package.json version ${packageJson.version} does not match workflow input ${expected}`);
+            process.exit(1);
+          }
+          NODE
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+
+      - name: Verify Version Is Unpublished
+        run: |
+          set -euo pipefail
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          if npm view "${name}@${version}" version --registry=https://registry.npmjs.org >/tmp/npm-existing-version.txt 2>/tmp/npm-existing-version.err; then
+            echo "::error::${name}@${version} is already published"
+            cat /tmp/npm-existing-version.txt
+            exit 1
+          fi
+
+      - name: Run Proof Gates
+        run: npm run ci:gates
+
+      - name: Verify Package Contents
+        run: npm pack --dry-run --json
+
+      - name: Publish
+        run: |
+          if [ "${DRY_RUN}" = "true" ]; then
+            npm publish --access public --provenance --dry-run
+          else
+            npm publish --access public --provenance
+          fi
+        env:
+          DRY_RUN: ${{ inputs.dry-run }}
