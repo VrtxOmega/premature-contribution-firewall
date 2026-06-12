@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -294,6 +294,24 @@ test("JSON-RPC handler and stdio server respond to MCP tool calls", async () => 
   assert.equal(response.id, 2);
   const content = JSON.parse(response.result.content[0].text);
   assert.equal(content.githubWrites, "disabled");
+});
+
+test("npm-style pcf-mcp bin symlink starts the stdio server", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "pcf-mcp-bin-"));
+  const binPath = join(dir, "pcf-mcp");
+  try {
+    await symlink(join(repoRoot, "src/mcp/server.mjs"), binPath);
+    const stdout = execFileSync(process.execPath, [binPath], {
+      cwd: repoRoot,
+      input: `${JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} })}\n`,
+      encoding: "utf8"
+    });
+    const response = JSON.parse(stdout.trim());
+    assert.equal(response.id, 1);
+    assert.ok(response.result.tools.some((tool) => tool.name === "pcf_submission_readiness"));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 function escapeRegExp(value) {

@@ -48,3 +48,19 @@ test("issue templates route maintainer feedback into reproducible cases", async 
   assert.match(contextMiss, /Upstream fix/);
   assert.match(contextMiss, /repositoryContext/);
 });
+
+test("package metadata exposes the MCP server in the publish surface", async () => {
+  const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const launchDoc = await readFile(new URL("../docs/LAUNCH.md", import.meta.url), "utf8");
+
+  assert.equal(packageJson.bin.pcf, "src/cli.mjs");
+  assert.equal(packageJson.bin["premature-contribution-firewall"], "src/cli.mjs");
+  assert.equal(packageJson.bin["pcf-mcp"], "src/mcp/server.mjs");
+  assert.ok(packageJson.files.includes("src"));
+  assert.ok(packageJson.files.includes("docs/MCP.md"));
+  assert.ok(packageJson.files.includes("scripts/mcp-smoke.mjs"));
+  assert.ok(packageJson.files.includes("glama.json"));
+
+  assert.match(launchDoc, /pcf-mcp/);
+  assert.match(launchDoc, /npm view premature-contribution-firewall version bin/);
+});

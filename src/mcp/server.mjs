@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   PCF_MCP_PROTOCOL_VERSION,
   PCF_MCP_SERVER_NAME,
@@ -150,7 +152,16 @@ function errorResult(id, code, message) {
   };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+function isDirectCliEntrypoint() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+  } catch {
+    return fileURLToPath(import.meta.url) === process.argv[1];
+  }
+}
+
+if (isDirectCliEntrypoint()) {
   runPcfMcpServer().catch((error) => {
     console.error(`[${PCF_MCP_SERVER_NAME}] MCP server failed`, error);
     process.exitCode = 1;

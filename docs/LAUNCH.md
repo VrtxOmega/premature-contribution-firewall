@@ -1,6 +1,6 @@
 # PCF Launch Runbook
 
-This is the operator checklist for taking PCF from a local v0.1.0 pilot to public distribution. Every step that needs credentials or a human judgment call is marked OPERATOR. Everything else is already automated in the repo.
+This is the operator checklist for taking PCF from a local pilot to public distribution. Every step that needs credentials or a human judgment call is marked OPERATOR. Everything else is already automated in the repo.
 
 ## 0. Preconditions
 
@@ -8,11 +8,11 @@ This is the operator checklist for taking PCF from a local v0.1.0 pilot to publi
 npm run ci:gates
 ```
 
-All gates must pass: repo hygiene, workflow contract, syntax, unit tests, 69/69 benchmark, 11/11 red test, maintainer demo with zero regressions.
+All gates must pass: repo hygiene, workflow contract, syntax, unit tests, current benchmark corpus, current red-test corpus, maintainer demo with zero regressions.
 
 ## 1. npm Publish (unlocks `npx` adoption)
 
-The package is npx-ready: `bin` exposes `pcf` and `premature-contribution-firewall`, and `files` whitelists `src`, `fixtures`, the pilot/PR-gate scripts, `action.yml`, README, and LICENSE.
+The package is npx-ready: `bin` exposes `pcf`, `premature-contribution-firewall`, and `pcf-mcp`. The `files` whitelist includes `src`, `fixtures`, MCP docs, the MCP smoke script, the pilot/PR-gate scripts, `action.yml`, README, changelog, Glama metadata, and LICENSE.
 
 OPERATOR steps:
 
@@ -23,13 +23,17 @@ npm publish --access public --provenance
 
 Notes:
 
-- `--provenance` requires publishing from a GitHub Actions workflow with `id-token: write`, or use a local publish without it for the first release and add provenance in CI for v0.1.1.
+- `--provenance` requires publishing from a GitHub Actions workflow with `id-token: write`; if publishing locally, omit `--provenance` and record that provenance is absent for that patch release.
+- npm does not allow republishing an existing version. If package metadata changes after publication, bump a new patch version before publishing.
 - Verify the package name is available; if `premature-contribution-firewall` is taken, the fallback scope is `@vrtxomega/premature-contribution-firewall` (update `bin` consumers in docs).
 - Smoke test after publish:
 
 ```bash
 npx premature-contribution-firewall@latest --help
 npx premature-contribution-firewall@latest evaluate fixtures/pr-ready.json
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
+  | npx -y -p premature-contribution-firewall@latest pcf-mcp
+npm view premature-contribution-firewall version bin
 ```
 
 ## 2. GitHub Marketplace Listing (unlocks one-click Action adoption)
@@ -41,7 +45,7 @@ The Action supports two modes:
 
 OPERATOR steps:
 
-1. Tag a release: `git tag v0.1.0 && git push origin v0.1.0` (or `v0.1.1` if npm publish required changes).
+1. Tag a release: `git tag v0.1.2 && git push origin v0.1.2` after the package and Action docs are verified.
 2. Create a GitHub Release from the tag; paste `docs/RELEASE_POST_V0_1_0.md` content.
 3. On the release page, check "Publish this Action to the GitHub Marketplace".
 4. Category: "Continuous integration" + "Code review". The `branding` block (filter icon, blue) is already in `action.yml`.

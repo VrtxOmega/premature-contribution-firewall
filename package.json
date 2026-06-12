@@ -1,12 +1,12 @@
 {
   "name": "premature-contribution-firewall",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "A GitHub-oriented maintainer firewall that gates inbound PRs and issues by review readiness instead of AI detection.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/VrtxOmega/premature-contribution-firewall.git"
+    "url": "git+https://github.com/VrtxOmega/premature-contribution-firewall.git"
   },
   "bugs": {
     "url": "https://github.com/VrtxOmega/premature-contribution-firewall/issues"

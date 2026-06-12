@@ -17,7 +17,7 @@ The output is a maintainer queue, not a vibe score: labels, repair checklists, r
 
 ## Status
 
-PCF is a public v0.1.1 release. The recommended adoption path is still read-only first: run the GitHub Action, read one artifact, and decide whether it is useful before enabling anything else.
+PCF is preparing the public v0.1.2 MCP release surface. Until that package and tag are published, the latest public release remains v0.1.1. The recommended adoption path is still read-only first: run the GitHub Action, read one artifact, and decide whether it is useful before enabling anything else.
 
 Try it in one command, no install:
 
@@ -27,9 +27,9 @@ npx premature-contribution-firewall preflight your-pr-draft.json
 
 Current public state:
 
-- Published on npm: [`premature-contribution-firewall`](https://www.npmjs.com/package/premature-contribution-firewall) with `pcf` CLI (`evaluate`, `queue`, `preflight`, `setup`).
+- Published on npm: [`premature-contribution-firewall`](https://www.npmjs.com/package/premature-contribution-firewall) with `pcf` CLI (`evaluate`, `queue`, `preflight`, `setup`) and, after the v0.1.2 publish, the `pcf-mcp` stdio server bin.
 - Published on the GitHub Marketplace as a read-only Action with two modes: `workflow_dispatch` queue artifact and `pull_request` PR gate (step-summary verdict, optional `fail-on` blocking, no GitHub writes).
-- MCP server: `pcf-mcp` / `npm run mcp` exposes default-safe agent tools for scout, policy, repro, diff-shape, lane status/resume, evidence drafts, fixed local lane storage, and registry-readiness self-audit. See [docs/MCP.md](docs/MCP.md).
+- MCP server: `pcf-mcp` / `npm run mcp` exposes default-safe agent tools for scout, policy, repro, diff-shape, lane status/resume, evidence drafts, fixed local lane storage, and registry-readiness self-audit. The release gate verifies `npm pack` includes the bin before publish. See [docs/MCP.md](docs/MCP.md).
 - Contributor preflight: `pcf preflight` checks a draft PR or patch before submission, with a stable exit-code contract for hooks and CI.
 - Initial release post: [v0.1.0 read-only maintainer queue pilot](docs/RELEASE_POST_V0_1_0.md).
 - Canonical output sample: [maintainer export bundle from PCF's own public queue](docs/MAINTAINER_EXPORT_SAMPLE.md).
@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run PCF
-        uses: VrtxOmega/premature-contribution-firewall@v0.1.0
+        uses: VrtxOmega/premature-contribution-firewall@v0.1.1
         with:
           github-token: ${{ github.token }}
           limit: 25
