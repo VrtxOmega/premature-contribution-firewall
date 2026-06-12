@@ -37,8 +37,9 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
 
       - name: Install Dependencies
         run: |
@@ -80,12 +81,21 @@ jobs:
       - name: Verify Package Contents
         run: npm pack --dry-run --json
 
+      - name: Prepare Trusted Publishing Auth
+        run: |
+          set -euo pipefail
+          npm --version
+          npmrc="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          if [ -f "$npmrc" ]; then
+            sed -i '/_authToken/d' "$npmrc"
+          fi
+
       - name: Publish
         run: |
           if [ "${DRY_RUN}" = "true" ]; then
-            npm publish --access public --provenance --dry-run
+            npm publish --access public --dry-run
           else
-            npm publish --access public --provenance
+            npm publish --access public
           fi
         env:
           DRY_RUN: ${{ inputs.dry-run }}
