@@ -1,6 +1,6 @@
 {
   "name": "premature-contribution-firewall",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "A GitHub-oriented maintainer firewall that gates inbound PRs and issues by review readiness instead of AI detection.",
   "license": "MIT",
@@ -23,6 +23,8 @@
     "docs/MCP.md",
     "docs/WATCHLIST.md",
     "docs/UPSTREAM_CONTRIBUTION_LEDGER.md",
+    "docs/AI_CONTRIBUTION_POSTURE_INDEX.md",
+    "packages/pcf-mcp-buildout/contracts/agent_bus_console_ui.yaml",
     "scripts/mcp-smoke.mjs",
     "scripts/run-public-pilot.mjs",
     "scripts/run-pr-gate.mjs",
@@ -44,7 +46,7 @@
   ],
   "scripts": {
     "start": "node src/server.mjs",
-    "check": "node --check scripts/run-pr-gate.mjs && node --check src/server.mjs && node --check src/cli.mjs && node --check src/config.mjs && node --check src/core/api.mjs && node --check src/core/adversary.mjs && node --check src/core/author-context.mjs && node --check src/core/behavioral-signals.mjs && node --check src/core/benchmark.mjs && node --check src/core/calibration.mjs && node --check src/core/candidates.mjs && node --check src/core/contribution-drafts.mjs && node --check src/core/contributor-preflight.mjs && node --check src/core/diff-shape.mjs && node --check src/core/evaluator.mjs && node --check src/core/feedback.mjs && node --check src/core/history.mjs && node --check src/core/issue-form-validator.mjs && node --check src/core/lane-schema.mjs && node --check src/core/lane-status.mjs && node --check src/core/lane-store.mjs && node --check src/core/maintainer-stack.mjs && node --check src/core/pilot-proof.mjs && node --check src/core/policy.mjs && node --check src/core/policy-scan.mjs && node --check src/core/patch.mjs && node --check src/core/queue.mjs && node --check src/core/repository-context.mjs && node --check src/core/repro-gate.mjs && node --check src/core/mcp-submission.mjs && node --check src/core/scout.mjs && node --check src/core/semantic-duplicate-assist.mjs && node --check src/core/setup.mjs && node --check src/core/setup-guide.mjs && node --check src/core/shielded-posture.mjs && node --check src/core/vouch-context.mjs && node --check src/core/watchlist.mjs && node --check src/github/client.mjs && node --check src/github/webhook.mjs && node --check src/github/templates.mjs && node --check src/mcp/core.mjs && node --check src/mcp/server.mjs && node --check scripts/mcp-smoke.mjs && node --check scripts/run-adversary.mjs && node --check scripts/run-benchmark.mjs && node --check scripts/run-maintainer-demo.mjs && node --check scripts/run-public-pilot.mjs && node --check scripts/run-large-bench.mjs && node --check scripts/run-watchlist.mjs && node --check scripts/verify-ci-workflow.mjs && node --check scripts/verify-repo-hygiene.mjs && node --check public/app.js",
+    "check": "node --check scripts/run-pr-gate.mjs && node --check src/server.mjs && node --check src/cli.mjs && node --check src/config.mjs && node --check src/core/api.mjs && node --check src/core/adversary.mjs && node --check src/core/author-context.mjs && node --check src/core/ai-contribution-posture.mjs && node --check src/core/behavioral-signals.mjs && node --check src/core/benchmark.mjs && node --check src/core/calibration.mjs && node --check src/core/candidates.mjs && node --check src/core/contribution-drafts.mjs && node --check src/core/contributor-preflight.mjs && node --check src/core/diff-shape.mjs && node --check src/core/evaluator.mjs && node --check src/core/feedback.mjs && node --check src/core/history.mjs && node --check src/core/issue-form-validator.mjs && node --check src/core/lane-schema.mjs && node --check src/core/lane-status.mjs && node --check src/core/lane-store.mjs && node --check src/core/maintainer-stack.mjs && node --check src/core/pilot-proof.mjs && node --check src/core/policy.mjs && node --check src/core/policy-scan.mjs && node --check src/core/patch.mjs && node --check src/core/queue.mjs && node --check src/core/repository-context.mjs && node --check src/core/repro-gate.mjs && node --check src/core/mcp-submission.mjs && node --check src/core/scout.mjs && node --check src/core/semantic-duplicate-assist.mjs && node --check src/core/setup.mjs && node --check src/core/setup-guide.mjs && node --check src/core/shielded-posture.mjs && node --check src/core/vouch-context.mjs && node --check src/core/watchlist.mjs && node --check src/github/client.mjs && node --check src/github/webhook.mjs && node --check src/github/templates.mjs && node --check src/mcp/core.mjs && node --check src/mcp/server.mjs && node --check scripts/mcp-smoke.mjs && node --check scripts/run-adversary.mjs && node --check scripts/run-benchmark.mjs && node --check scripts/run-maintainer-demo.mjs && node --check scripts/run-public-pilot.mjs && node --check scripts/run-large-bench.mjs && node --check scripts/run-watchlist.mjs && node --check scripts/verify-ci-workflow.mjs && node --check scripts/verify-repo-hygiene.mjs && node --check public/app.js",
     "mcp": "node src/mcp/server.mjs",
     "mcp:smoke": "node scripts/mcp-smoke.mjs",
     "setup:pilot": "node src/cli.mjs setup",

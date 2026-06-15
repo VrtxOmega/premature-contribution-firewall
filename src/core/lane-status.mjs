@@ -1,5 +1,6 @@
 const DEFAULT_GATE_ORDER = [
   "scout",
+  "aiPosture",
   "overlap",
   "policy",
   "repro",

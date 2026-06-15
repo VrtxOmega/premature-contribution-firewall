@@ -35,7 +35,7 @@ Watchlist mode is the first gate, not the last gate.
 Before cloning or coding a candidate:
 
 1. Read the repository contribution policy.
-2. Check AI/tooling policy.
+2. Check AI/tooling policy and the [AI contribution posture index](AI_CONTRIBUTION_POSTURE_INDEX.md).
 3. Reproduce the issue on current upstream.
 4. Re-check open PR overlap and maintainer ownership.
 5. Keep the patch narrow and testable.

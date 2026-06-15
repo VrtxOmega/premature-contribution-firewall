@@ -123,6 +123,19 @@ function scoreCandidate(candidate, options) {
     blockers.push({ id: "fork-pr-not-allowed", reason: "Contribution route does not appear to accept direct fork PRs." });
     score -= 35;
   }
+  if (candidate.aiAssisted !== false && (candidate.aiPosture === "ai-resistant" || candidate.aiPostureRisk === "high")) {
+    blockers.push({
+      id: "ai-posture-resistant",
+      reason: candidate.aiPostureReason || "Indexed AI-assisted contribution posture is resistant/high-friction for this repository."
+    });
+    score -= 50;
+  } else if (candidate.aiAssisted !== false && (candidate.aiPosture === "ai-conditional" || candidate.aiPostureRisk === "medium")) {
+    warnings.push({
+      id: "ai-posture-conditional",
+      reason: candidate.aiPostureReason || "AI-assisted contribution posture is conditional; ask maintainers before coding."
+    });
+    score -= 12;
+  }
 
   const platformHits = options.platformRiskTerms.filter((term) => text.includes(term));
   if (platformHits.length && candidate.platformFit !== true) {

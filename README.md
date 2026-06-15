@@ -17,7 +17,7 @@ The output is a maintainer queue, not a vibe score: labels, repair checklists, r
 
 ## Status
 
-PCF is preparing the public v0.1.2 MCP release surface. Until that package and tag are published, the latest public release remains v0.1.1. The recommended adoption path is still read-only first: run the GitHub Action, read one artifact, and decide whether it is useful before enabling anything else.
+PCF's public npm release is v0.1.2, including the `pcf-mcp` stdio server bin. Local main is preparing the next v0.1.3 readiness surface with the AI-assisted contribution posture gate and Agent Bus console contract scaffold. The recommended adoption path remains read-only first: run the GitHub Action or MCP smoke path, read one artifact, and decide whether it is useful before enabling anything else.
 
 Try it in one command, no install:
 
@@ -27,7 +27,7 @@ npx premature-contribution-firewall preflight your-pr-draft.json
 
 Current public state:
 
-- Published on npm: [`premature-contribution-firewall`](https://www.npmjs.com/package/premature-contribution-firewall) with `pcf` CLI (`evaluate`, `queue`, `preflight`, `setup`) and, after the v0.1.2 publish, the `pcf-mcp` stdio server bin.
+- Published on npm: [`premature-contribution-firewall`](https://www.npmjs.com/package/premature-contribution-firewall) with `pcf` CLI (`evaluate`, `queue`, `preflight`, `setup`) and the `pcf-mcp` stdio server bin.
 - Published on the GitHub Marketplace as a read-only Action with two modes: `workflow_dispatch` queue artifact and `pull_request` PR gate (step-summary verdict, optional `fail-on` blocking, no GitHub writes).
 - MCP server: `pcf-mcp` / `npm run mcp` exposes default-safe agent tools for scout, policy, repro, diff-shape, lane status/resume, evidence drafts, fixed local lane storage, and registry-readiness self-audit. The release gate verifies `npm pack` includes the bin before publish. See [docs/MCP.md](docs/MCP.md).
 - Contributor preflight: `pcf preflight` checks a draft PR or patch before submission, with a stable exit-code contract for hooks and CI.
@@ -37,6 +37,7 @@ Current public state:
 - Maintainer feedback tracker: [five-maintainer artifact-shape feedback pass](docs/MAINTAINER_FEEDBACK_TRACKER.md).
 - Real-world usage so far: author-run read-only shadow pilots against public queues, with two public briefs in this repo and private replay captures for calibration.
 - Upstream contribution learning ledger: [public wins, misses, blocked lanes, and gate changes](docs/UPSTREAM_CONTRIBUTION_LEDGER.md).
+- AI-assisted contribution posture index: [evidence-based repo compatibility, not a maintainer blacklist](docs/AI_CONTRIBUTION_POSTURE_INDEX.md).
 - Still not a hosted service or write-enabled bot; every write surface stays opt-in and dry-run by default.
 - No target repository or maintainer listed in the pilot ledger is an endorsement.
 

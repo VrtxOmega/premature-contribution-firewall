@@ -17,6 +17,7 @@ Before any public PR or comment, the contribution lane must pass these checks:
 - Keep one issue per branch, one fix per PR, and no broad cleanup.
 - Stop before any public action until a human approves the exact target and expected diff shape.
 - After a PR merges, leave one short thank-you/provenance comment on that PR thread explaining how PCF helped scope or gate the work; do not comment before merge, repeat the note, or imply maintainer endorsement.
+- Before investing implementation time, check the repo's **AI-assisted contribution posture** in [AI_CONTRIBUTION_POSTURE_INDEX.md](AI_CONTRIBUTION_POSTURE_INDEX.md). Search `CONTRIBUTING.md`, issue/PR discussions, and prior closures for maintainer trust/provenance signals — not just technical review readiness.
 
 ## Ledger
 
@@ -40,15 +41,29 @@ Before any public PR or comment, the contribution lane must pass these checks:
 - Evidence: maintainer comment on #235 pointed directly to issue #236 and the affected route. Live issue readback showed #236 open, unassigned, with exact file path and acceptance criteria; all-state PR search by issue number and grouping/model/platform terms found no open overlap. Local validation passed with focused Vitest, touched-file Prettier and ESLint, full `test`, `typecheck`, `format:check`, full `lint` with zero errors, `git diff --cached --check`, and `git diff --check HEAD~1..HEAD`.
 - Gate retained: direct maintainer invitation is high-signal, but still rerun all-state overlap and issue-state checks immediately before publishing; then keep the diff to the named display-layer copy and reuse the already accepted test shape.
 
-### 2026-06-11 - Open PR - `Xarlos89/Eos#151`
+### 2026-06-13 - Accepted - `karakeep-app/karakeep#2863`
+
+- PR: <https://github.com/karakeep-app/karakeep/pull/2863>
+- Related issue: <https://github.com/karakeep-app/karakeep/issues/2766>
+- Outcome: merged on 2026-06-13; linked issue closed.
+- What was wanted: a `bug` + `status/approved` issue where `BROWSER_WEB_URL` failed on IPv6-enabled Docker networks because WHATWG `URL.hostname` silently rejects unbracketed IPv6 literals.
+- What changed: a shared helper now brackets IPv6 literals before assigning resolved addresses into `URL.hostname`; crawler CDP and admin browser status paths both use it. Focused Vitest coverage covers IPv4, IPv6, and path/query preservation.
+- Evidence: issue #2766 was open with `status/approved` before implementation. PR body included explicit LLM disclosure (Codex-assisted identification/implementation with human review and listed validation). Local validation spanned shared, workers, and trpc packages (Vitest, typecheck, lint, format) plus commit-hook `turbo run typecheck lint format`. Upstream merge readback: `MERGED` at 2026-06-13T09:55:21Z, four files, `+40/-2`.
+- Rejection class: n/a — merge on technical merit with disclosed assistance.
+- Gate retained: when an approved bug names a URL-host assignment edge case, extract one shared helper, wire every named call site, test IPv4/IPv6/path preservation directly, and list every validation command actually run.
+- Gate contrast: same contributor workflow that Eos rejected on provenance was accepted here with disclosed AI assistance when scope, tests, and validation were clear. Review-the-work posture.
+
+### 2026-06-13 - Closed Without Merge - `Xarlos89/Eos#151`
 
 - PR: <https://github.com/Xarlos89/Eos/pull/151>
 - Related issue: <https://github.com/Xarlos89/Eos/issues/134>
-- Outcome: opened as a narrow Flask API response-shape fix; initial GitHub readback reported it as open, mergeable, not draft, review-required, and maintainer edits enabled. No checks were reported at closeout.
+- Outcome: closed without merge on 2026-06-13 after maintainer stated discomfort with AI-assisted contribution despite scoped fix, tests, validation listing, and PR-template compliance requested mid-review.
 - What was wanted: a `bug` + `help wanted` issue where several API routes returned `jsonify(data, status_code)`, causing Flask to serialize the payload and status as a JSON array while the HTTP status stayed `200`.
 - What changed: the listed `roles`, `logging`, `settings`, and `healthchecks` route returns now use Flask's `(jsonify(payload), status_code)` tuple form. A route-level unittest suite covers the affected role, logging, setting, and healthcheck responses with a fake DB so Docker/Postgres is not required.
-- Evidence: current-master reproduction for `GET /role` returned HTTP `200` with body `[{"status": "ok"}, 200]`; after the fix it returned HTTP `200` with body `{"status": "ok"}`. Focused route tests, Ruff check, Ruff format check, compileall, targeted pre-commit, `git diff --check`, and an AST guard for remaining multi-argument `jsonify(...)` calls all passed locally. The upstream PR contains one commit, five files, `+150/-27`.
+- Evidence: current-master reproduction for `GET /role` returned HTTP `200` with body `[{"status": "ok"}, 200]`; after the fix it returned HTTP `200` with body `{"status": "ok"}`. Focused route tests, Ruff check, Ruff format check, compileall, targeted pre-commit, `git diff --check`, and an AST guard for remaining multi-argument `jsonify(...)` calls all passed locally. The upstream PR contains one commit, five files, `+150/-27`. Maintainer asked for PR-template reformat (done), then asked whether AI was used and how the repo was found. Contributor disclosed AI-assisted workflow with human review/validation. Maintainer closed with: "AI-generated low-quality code is not acceptable for this project and will not be merged into the codebase" and prior comment that the PR "reads as AI-generated code, not a careful contribution from someone who understands the project."
+- Rejection class: **maintainer trust/provenance posture**, not a cited technical defect in the patch or tests.
 - Gate retained: for API route response-shape bugs, prove the malformed HTTP/body behavior with a Flask test client, keep the change to return tuple shape only, avoid overlapping bot-helper issues, and avoid Docker/Postgres by using fake route dependencies in focused tests.
+- Gate added: if a repo has no upfront AI/tooling policy but maintainers interrogate provenance after technical work is already supplied, classify the repo as **AI-resistant / high-friction** in [AI_CONTRIBUTION_POSTURE_INDEX.md](AI_CONTRIBUTION_POSTURE_INDEX.md) and stop before implementation unless explicit maintainer approval is obtained first. Do not treat template compliance or validation listing as sufficient when the review axis is contributor trust.
 
 ### 2026-06-11 - Open PR - `annotorious/annotorious#610`
 

@@ -1,10 +1,21 @@
 # Changelog
 
-## Unreleased
+## v0.1.3 - Unreleased
+
+### AI-Assisted Contribution Posture Gate
+
+- Added an evidence-based AI-assisted contribution posture index so PCF can stop high-friction lanes before implementation instead of discovering maintainer provenance objections after code is written.
+- Added the read-only `pcf_ai_contribution_posture` MCP tool and `pcf://docs/ai-posture-index` resource, with tests covering indexed resistant and conditional repositories.
+- Added `aiPosture` to lane gate ordering and scout scoring so AI-resistant/high-risk repos become blockers and conditional/medium-risk repos require review before coding.
+
+### Agent Bus Contract Scaffold
+
+- Added the Agent Bus console UI contract scaffold under `packages/pcf-mcp-buildout/contracts/` with regression coverage for required mission-control sections and backlog hooks.
 
 ### Release Hygiene
 
-- Keep future changes here until they are assigned to a versioned release.
+- Bumped local package metadata to `0.1.3` because npm already serves `0.1.2`; do not publish, tag, or push this release surface until final approval.
+- Included the AI posture index and Agent Bus contract scaffold in the package dry-run surface.
 
 ## v0.1.2
 

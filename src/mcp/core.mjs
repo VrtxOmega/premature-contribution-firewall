@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 import { createApiSpec } from "../core/api.mjs";
 import { buildFeedbackCalibration } from "../core/calibration.mjs";
 import { buildPrBodyDraft, buildProvenanceDraft } from "../core/contribution-drafts.mjs";
+import {
+  evaluateAiContributionPosture,
+  parseAiContributionPostureIndex
+} from "../core/ai-contribution-posture.mjs";
 import { buildContributorPreflight } from "../core/contributor-preflight.mjs";
 import { evaluateDiffShape } from "../core/diff-shape.mjs";
 import { evaluateContribution } from "../core/evaluator.mjs";
@@ -114,6 +118,23 @@ const TOOLS = [
       checks: { type: "array", items: { type: "object" }, description: "Overlap check evidence, usually open PR search results." },
       generatedAt: { type: "string", description: "Optional ISO timestamp." }
     }),
+    annotations: TOOL_ANNOTATIONS
+  },
+  {
+    name: "pcf_ai_contribution_posture",
+    title: "AI Contribution Posture Gate",
+    description: "Classify AI-assisted contribution risk for a repository using the evidence-based posture index and optional caller-supplied policy/discussion text. Does not search GitHub.",
+    inputSchema: objectSchema({
+      repository: { type: "string", description: "owner/repo target." },
+      aiAssisted: { type: "boolean", default: true, description: "If false, the gate is informational and returns skipped." },
+      policyHits: {
+        type: "array",
+        items: { type: "string" },
+        description: "Optional CONTRIBUTING/issue/PR excerpts mentioning AI, LLM, Copilot, or generated code."
+      },
+      indexMarkdown: { type: "string", description: "Optional posture-index markdown override. Defaults to the bundled docs index." },
+      generatedAt: { type: "string" }
+    }, ["repository"]),
     annotations: TOOL_ANNOTATIONS
   },
   {
@@ -377,6 +398,12 @@ const RESOURCES = [
     mimeType: "text/markdown"
   },
   {
+    uri: "pcf://docs/ai-posture-index",
+    name: "AI Contribution Posture Index",
+    description: "Evidence-based repo compatibility index for AI-assisted contributions.",
+    mimeType: "text/markdown"
+  },
+  {
     uri: "pcf://config/watchlist",
     name: "Default Watchlist Config",
     description: "Curated local watchlist configuration, when present.",
@@ -459,6 +486,8 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
       return buildWatchlistReport({ config: args.config || {}, runs: args.runs || [], generatedAt: args.generatedAt || new Date().toISOString() });
     case "pcf_contributor_preflight":
       return buildContributorPreflight({ proof: args.proof || {}, checks: args.checks || [], generatedAt: args.generatedAt || new Date().toISOString() });
+    case "pcf_ai_contribution_posture":
+      return evaluateAiContributionPostureGate(args);
     case "pcf_scout":
       return buildContributorScout(args);
     case "pcf_repository_context":
@@ -611,6 +640,9 @@ export async function readPcfMcpResource(uri) {
   if (uri === "pcf://docs/upstream-ledger") {
     return readKnownFileResource(uri, "docs/UPSTREAM_CONTRIBUTION_LEDGER.md", "text/markdown");
   }
+  if (uri === "pcf://docs/ai-posture-index") {
+    return readKnownFileResource(uri, "docs/AI_CONTRIBUTION_POSTURE_INDEX.md", "text/markdown");
+  }
   if (uri === "pcf://config/watchlist") {
     return readKnownFileResource(uri, "config/watchlist.json", "application/json");
   }
@@ -624,7 +656,7 @@ export async function getPcfMcpPrompt(name, arguments_ = {}) {
     const issue = args.issue ? ` issue ${args.issue}` : "";
     return promptResult("PCF lane review", [
       `Review the contribution lane${repository}${issue} with PCF discipline before coding.`,
-      "Check issue state, maintainer comments, duplicate/open PR overlap, contribution policy, TODO/FIXME signals, platform fit, local reproduction, and expected diff shape.",
+      "Check issue state, maintainer comments, duplicate/open PR overlap, AI-assisted contribution posture, contribution policy, TODO/FIXME signals, platform fit, local reproduction, and expected diff shape.",
       "Stop before public action unless every gate has evidence and the human approved the target."
     ].join("\n"));
   }
@@ -652,6 +684,18 @@ export async function getPcfMcpPrompt(name, arguments_ = {}) {
     ].join("\n"));
   }
   throw new Error(`Unknown PCF MCP prompt: ${name}`);
+}
+
+async function evaluateAiContributionPostureGate(args = {}) {
+  const markdown = args.indexMarkdown || await readFile(join(REPO_ROOT, "docs/AI_CONTRIBUTION_POSTURE_INDEX.md"), "utf8");
+  const index = parseAiContributionPostureIndex(markdown);
+  return evaluateAiContributionPosture({
+    repository: args.repository,
+    aiAssisted: args.aiAssisted,
+    policyHits: args.policyHits || [],
+    index,
+    generatedAt: args.generatedAt || new Date().toISOString()
+  });
 }
 
 async function buildHealth() {

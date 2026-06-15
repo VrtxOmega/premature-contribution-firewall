@@ -68,6 +68,7 @@ pcf://mcp/server-card
 | `pcf_queue` | read-only | Build a maintainer queue from supplied items. |
 | `pcf_watchlist_report` | read-only | Render a watchlist report from supplied run proofs. |
 | `pcf_contributor_preflight` | read-only | Classify supplied contributor candidates and overlap checks. |
+| `pcf_ai_contribution_posture` | read-only | Classify AI-assisted contribution risk from the posture index and supplied policy text. |
 | `pcf_scout` | read-only | Rank supplied contribution candidates by PCF gates. |
 | `pcf_repository_context` | read-only | Analyze supplied duplicate/concurrent/upstream context. |
 | `pcf_duplicate_assist` | read-only | Run deterministic duplicate-assist token overlap. |
@@ -99,6 +100,7 @@ The save tools write local evidence only. They do not contact maintainers or Git
 | `pcf://doctrine/safety` | Agent safety doctrine, public-action boundary, and non-claims. |
 | `pcf://docs/watchlist` | Watchlist operating model. |
 | `pcf://docs/upstream-ledger` | Public upstream contribution learning ledger. |
+| `pcf://docs/ai-posture-index` | Evidence-based AI-assisted contribution compatibility index. |
 | `pcf://config/watchlist` | Default local watchlist config when present. |
 
 ## Prompts
@@ -168,15 +170,16 @@ omsg-drain codex
 ## First Useful Flow
 
 1. `pcf_scout` with supplied candidate issues.
-2. `pcf_lane_save` to persist the selected lane.
-3. `pcf_policy_scan` on touched files.
-4. `pcf_repro_gate` on caller-supplied before/after repro and validation logs.
-5. `pcf_evidence_bundle_save` for the proof bundle after commands have actually been run elsewhere.
-6. `pcf_diff_shape` on changed-file stats.
-7. `pcf_preflight` on the final PR body or patch.
-8. `pcf_pr_body_draft` from the evidence.
-9. `pcf_lane_resume` when another agent or later session picks up the lane.
-10. After merge only, `pcf_provenance_draft`.
+2. `pcf_ai_contribution_posture` for the selected `owner/repo` before cloning or coding.
+3. `pcf_lane_save` to persist the selected lane.
+4. `pcf_policy_scan` on touched files.
+5. `pcf_repro_gate` on caller-supplied before/after repro and validation logs.
+6. `pcf_evidence_bundle_save` for the proof bundle after commands have actually been run elsewhere.
+7. `pcf_diff_shape` on changed-file stats.
+8. `pcf_preflight` on the final PR body or patch.
+9. `pcf_pr_body_draft` from the evidence.
+10. `pcf_lane_resume` when another agent or later session picks up the lane.
+11. After merge only, `pcf_provenance_draft`.
 
 ## Safety and Threat Model
 

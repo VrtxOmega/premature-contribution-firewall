@@ -24,6 +24,7 @@ test("MCP manifest exposes safe PCF tools, resources, and prompts", () => {
   assert.ok(toolNames.includes("pcf_health"));
   assert.ok(toolNames.includes("pcf_submission_readiness"));
   assert.ok(toolNames.includes("pcf_scout"));
+  assert.ok(toolNames.includes("pcf_ai_contribution_posture"));
   assert.ok(toolNames.includes("pcf_repro_gate"));
   assert.ok(toolNames.includes("pcf_lane_save"));
   assert.ok(toolNames.includes("pcf_lane_resume"));
@@ -40,6 +41,7 @@ test("MCP manifest exposes safe PCF tools, resources, and prompts", () => {
   assert.equal(tools.find((tool) => tool.name === "pcf_evidence_bundle_save").annotations.readOnlyHint, false);
   assert.equal(tools.find((tool) => tool.name === "pcf_lane_read").annotations.readOnlyHint, true);
 
+  assert.ok(listPcfMcpResources().some((resource) => resource.uri === "pcf://docs/ai-posture-index"));
   assert.ok(listPcfMcpResources().some((resource) => resource.uri === "pcf://schemas/lane"));
   assert.ok(listPcfMcpResources().some((resource) => resource.uri === "pcf://schemas/repro"));
   assert.ok(listPcfMcpResources().some((resource) => resource.uri === "pcf://doctrine/safety"));
@@ -192,6 +194,7 @@ test("lane store writes only under PCF_DATA_DIR and evidence is explicit", async
       summary: "Needs repro evidence.",
       gates: {
         scout: { status: "pass", reason: "candidate" },
+        aiPosture: { status: "pass", reason: "low risk" },
         overlap: { status: "pass", reason: "no open overlap" },
         policy: { status: "pass", reason: "policy checked" },
         repro: { status: "pending", reason: "not run" }

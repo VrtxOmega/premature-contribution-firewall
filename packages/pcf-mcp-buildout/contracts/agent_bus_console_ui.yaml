@@ -1,0 +1,290 @@
+# Agent Bus Console UI contract — scaffolded from live implementation.
+# Authoritative runtime: apps/omega-agent-bus-console/ (Grok-owned)
+# PCF repo anchor: packages/pcf-mcp-buildout/ (contract + integration backlog)
+
+schema_version: "1"
+contract: agent_bus_console_ui
+topic: agent-bus-console
+title: VERITAS Agent Bus Mission Control
+
+meta:
+  generated_at: "2026-06-11"
+  generated_from: de_facto_live_implementation
+  implementation_version: v3_mission_control
+  source_tree: apps/omega-agent-bus-console/
+  launch_wrapper: bin/omega-agent-bus-console
+  pcf_repo_commit: be91675
+  status: scaffold
+  notes:
+    - Contract documents what ships today plus explicit backlog gaps.
+    - UI/server code stays in apps/omega-agent-bus-console/ unless coordinated.
+    - PCF MCP (src/mcp/) is separate; bridge hooks are backlog.
+
+runtime:
+  server: apps/omega-agent-bus-console/server.py
+  framework: starlette
+  bind:
+    host_env: OMEGA_BUS_CONSOLE_HOST
+    host_default: 127.0.0.1
+    port_env: OMEGA_BUS_CONSOLE_PORT
+    port_default: 7788
+  data_dir_env: OMEGA_BRAIN_DATA_DIR
+  data_dir_default: ~/.omega-brain
+  db: omega_brain.db
+  operator_attention: operator/attention.json
+  replay_dir: console/replays
+  poll_interval_ms: 4000
+  theme: veritas_black_gold_glassmorphism
+  theme_file: static/styles.css
+  default_agents:
+    - grok
+    - codex
+    - hermes
+    - devin
+    - antigravity
+    - cascade
+
+message_parse:
+  module: parse.py
+  verdicts: [ACCEPT, REVISE, BLOCKED, DEFER, ACK, SEND, DONE, ASKED]
+  field_keys:
+    - topic
+    - objective
+    - my-slice
+    - invite
+    - boundaries
+    - artifact
+    - credit
+    - verdict
+    - integration
+  enrichers:
+    - enrich_message
+    - enrich_verdict_card
+    - enrich_trust_panel
+
+views:
+  header_bar:
+    file: static/index.html
+    controller: static/app.js
+    status: implemented
+    elements:
+      brand_mark: { status: implemented }
+      btn_refresh: { status: implemented, handler: refreshData }
+      btn_attention: { status: implemented, handler: attention_only_toggle }
+      btn_replay: { status: implemented, handler: replayTopic, saves_to_replay_dir: true }
+
+  mission_bar:
+    file: static/index.html#mission-bar
+    controller: static/app.js#loadMission
+    status: implemented
+    api: GET /api/console/mission
+    fields: [mission, state, owner, reviewer, verdict, next_action, risk, summary, needs_human]
+
+  workflow_graph:
+    file: static/index.html#workflow-graph
+    controller: static/app.js#loadGraph
+    status: implemented
+    api: GET /api/console/graph
+    features:
+      agent_nodes_operational_state: { status: implemented }
+      verdict_colored_edges: { status: implemented }
+      edge_click_message_detail: { status: implemented }
+      node_click_agent_filter: { status: implemented }
+      legend: { status: implemented, stages: [ASKED, ACK, ACCEPT, REVISE, BLOCKED, DONE, idle, working, waiting] }
+
+  verdicts_strip:
+    file: static/index.html#verdict-list
+    controller: static/app.js#loadVerdicts
+    status: implemented
+    api: GET /api/console/verdicts
+    features:
+      evidence_preview_lines: { status: implemented, max: 2 }
+      next_action_label: { status: implemented }
+      click_filters_topic_and_detail: { status: implemented }
+
+  agents_tasks_sidebar:
+    file: static/index.html#agent-list
+    controller: static/app.js#loadAgents
+    status: implemented
+    agents_api: GET /api/console/agents
+    agent_features:
+      online_dot: { status: implemented }
+      pending_count: { status: implemented }
+      op_status_badge: { status: implemented }
+      current_topic: { status: implemented }
+      click_agent_filter: { status: implemented }
+    task_board:
+      status: implemented
+      api: GET /api/console/tasks
+      columns: [Posted, Claimed, In progress, Blocked, Complete]
+      task_click_topic_filter: { status: implemented }
+
+  thread_timeline:
+    file: static/index.html#timeline
+    controller: static/app.js#loadThreads
+    status: implemented
+    apis:
+      threads: GET /api/console/threads
+      topics: GET /api/console/topics
+      messages_raw: GET /api/console/messages
+    features:
+      topic_chips: { status: implemented }
+      grouped_thread_expand: { status: implemented }
+      stage_rail: { status: implemented }
+      key_messages_only: { status: implemented }
+      search_q_filter: { status: implemented, enables_raw_mode: true }
+      show_raw_toggle: { status: implemented }
+      attention_only_filter: { status: implemented }
+      message_click_trust_panel: { status: implemented }
+
+  evidence_artifact_panel:
+    file: static/index.html#evidence
+    controller: static/app.js#renderEvidence
+    status: partial
+    api: GET /api/console/messages/{id}
+    features:
+      verdict_and_badges: { status: implemented }
+      collaboration_fields: { status: implemented }
+      evidence_lines: { status: implemented }
+      commands_run: { status: implemented }
+      files_changed: { status: implemented }
+      linked_outputs_paths_commits: { status: implemented }
+      risks_open_questions: { status: implemented }
+      thread_chain_replies: { status: implemented }
+      raw_json: { status: implemented }
+      embedded_diff_preview: { status: missing, backlog: evidence_embeds }
+      embedded_pcf_preflight_lane_evidence: { status: missing, backlog: pcf_bridge }
+
+api_routes:
+  - method: GET
+    path: /
+    status: implemented
+    returns: index.html
+  - method: GET
+    path: /api/console/status
+    status: implemented
+    ui_wired: false
+  - method: GET
+    path: /api/console/agents
+    status: implemented
+    ui_wired: true
+  - method: GET
+    path: /api/console/topics
+    status: implemented
+    ui_wired: true
+  - method: GET
+    path: /api/console/tasks
+    status: implemented
+    ui_wired: true
+  - method: GET
+    path: /api/console/verdicts
+    status: implemented
+    ui_wired: true
+  - method: GET
+    path: /api/console/graph
+    status: implemented
+    ui_wired: true
+  - method: GET
+    path: /api/console/mission
+    status: implemented
+    ui_wired: true
+  - method: GET
+    path: /api/console/threads
+    status: implemented
+    ui_wired: true
+  - method: GET
+    path: /api/console/messages
+    status: implemented
+    ui_wired: true
+    query_params: [limit, since_id, agent, topic, q, attention_only]
+  - method: GET
+    path: /api/console/messages/{message_id}
+    status: implemented
+    ui_wired: true
+  - method: GET
+    path: /api/console/replay/{topic}
+    status: implemented
+    ui_wired: true
+    query_params: [save]
+  - method: GET
+    path: /api/console/replays
+    status: implemented
+    ui_wired: false
+  - method: POST
+    path: /api/console/combine
+    status: partial
+    ui_wired: false
+    backlog: combine_frontend
+
+integration:
+  standalone_starlette_app:
+    status: implemented
+    path: apps/omega-agent-bus-console/server.py
+  launch_wrapper:
+    status: implemented
+    path: bin/omega-agent-bus-console
+  loopback_bind:
+    status: implemented
+  poll_refresh:
+    status: implemented
+    interval_ms: 4000
+  sse_live_push:
+    status: missing
+    backlog: sse_send_ui
+  send_compose_from_ui:
+    status: missing
+    backlog: sse_send_ui
+    target: omega_send
+  embed_routes_in_omega_brain_network:
+    status: missing
+  systemd_user_unit:
+    status: missing
+    backlog: systemd_unit
+    owner: codex
+  pcf_mcp_bridge:
+    status: missing
+    backlog: pcf_bridge
+    notes:
+      - Deep-link parsed paths to pcf_preflight, pcf_diff_shape, pcf_lane_status.
+      - Read-only; no GitHub writes through console.
+
+pcf_mcp:
+  implemented_in_repo: true
+  paths: [src/mcp/, docs/MCP.md]
+  console_contract_hooks: missing
+  bridge_backlog: pcf_bridge
+
+backlog:
+  - id: combine_frontend
+    priority: high
+    summary: Wire POST /api/console/combine in UI (shift+multi-select → markdown export per v1 #93)
+    owner: grok
+    blocked_by: []
+  - id: evidence_embeds
+    priority: medium
+    summary: Embedded diff preview in trust panel
+    owner: grok
+    blocked_by: []
+  - id: pcf_bridge
+    priority: medium
+    summary: PCF MCP evidence deep-links from parsed paths and lane store
+    owner: coordinated
+    blocked_by: [evidence_embeds]
+  - id: sse_send_ui
+    priority: medium
+    summary: SSE live push plus compose/send from UI via omega_send
+    owner: coordinated
+    blocked_by: []
+  - id: systemd_unit
+    priority: low
+    summary: systemd user unit omega-agent-bus-console.service
+    owner: codex
+    blocked_by: []
+
+verification:
+  commands:
+    - curl -sf http://127.0.0.1:7788/api/console/status
+    - curl -sf http://127.0.0.1:7788/api/console/mission
+  expected:
+    status_http: 200
+    mission_fields: [topic, mission, state, owner, reviewer, verdict, next_action, risk, summary]

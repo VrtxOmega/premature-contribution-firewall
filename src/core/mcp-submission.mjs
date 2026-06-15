@@ -75,6 +75,7 @@ export const PCF_SAFETY_DOCTRINE = {
   },
   gateOrder: [
     "scout",
+    "aiPosture",
     "overlap",
     "policy",
     "repro",
