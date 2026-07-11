@@ -63,7 +63,7 @@ const COSMETIC_PATTERNS = [
   ["formatting", /\b(whitespace|indent(?:ation)?|formatting|prettier|black|gofmt|rustfmt|lint-only|lint only)\b/i],
   ["docs-only", /\b(readme|docs?|documentation|comment|javadoc|docstring|broken link|website copy)\b/i],
   ["visual-polish", /\b(color|theme|icon|alignment|margin|padding|css polish|ui polish)\b/i],
-  ["chore", /\b(chore|cleanup|refactor only|rename only|bump dependency|dependabot)\b/i]
+  ["chore", /\b(chore|code cleanup|cleanup only|refactor only|rename only|bump dependency|dependabot)\b/i]
 ];
 
 const PROCESS_PATTERNS = [
@@ -279,6 +279,10 @@ function scoreIssue(issue) {
   }
 
   const cosmeticHits = matchingPatternIds(COSMETIC_PATTERNS, text);
+  const cosmeticIntentHits = matchingPatternIds(
+    COSMETIC_PATTERNS,
+    canonicalizeAnalysisText(`${issue.title || ""}\n${labels.join(" ")}`)
+  );
   const processHits = matchingPatternIds(PROCESS_PATTERNS, text);
   const generatedNoiseHits = matchingPatternIds(GENERATED_NOISE_PATTERNS, `${issue.repository}\n${text}`);
   const automatedCiHits = matchingPatternIds(AUTOMATED_CI_REPORT_PATTERNS, automationText);
@@ -296,10 +300,10 @@ function scoreIssue(issue) {
       reason: `Looks cosmetic/docs-only: ${cosmeticHits.slice(0, 3).join(", ")}.`
     });
     score -= 45;
-  } else if (cosmeticHits.length) {
+  } else if (cosmeticIntentHits.length) {
     warnings.push({
       id: "cosmetic-language-present",
-      reason: `Cosmetic/docs terms also present: ${cosmeticHits.slice(0, 3).join(", ")}.`
+      reason: `Cosmetic/docs intent also present: ${cosmeticIntentHits.slice(0, 3).join(", ")}.`
     });
     score -= 8;
   }

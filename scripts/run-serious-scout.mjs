@@ -208,18 +208,21 @@ async function enrichOpenPullRequestOverlap({ issues, githubClient, maxChecks, p
     try {
       const pullRequests = [];
       let incomplete = false;
+      let hasOverlap = false;
       if (issue.number) {
         const results = await githubClient.searchOpenPullRequests({ repository, query: `#${issue.number}`, limit: 10 });
         pullRequests.push(...results);
-        incomplete ||= results.incompleteResults === true || searchWasTruncated(results);
+        hasOverlap = dedupePullRequests(pullRequests).length > 0;
+        incomplete ||= !hasOverlap && (results.incompleteResults === true || searchWasTruncated(results));
       }
       for (const term of terms) {
+        if (hasOverlap) break;
         const results = await githubClient.searchOpenPullRequests({ repository, query: term, limit: 10 });
         pullRequests.push(...results);
-        incomplete ||= results.incompleteResults === true || searchWasTruncated(results);
+        hasOverlap = dedupePullRequests(pullRequests).length > 0;
+        incomplete ||= !hasOverlap && (results.incompleteResults === true || searchWasTruncated(results));
       }
-      if (incomplete) throw new Error("GitHub PR search was incomplete or truncated.");
-      const hasOverlap = dedupePullRequests(pullRequests).length > 0;
+      if (!hasOverlap && incomplete) throw new Error("GitHub PR search was incomplete or truncated.");
       if (hasOverlap) found += 1;
       enrichedByKey.set(issueKey(issue), {
         ...issue,

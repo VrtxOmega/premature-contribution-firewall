@@ -39,6 +39,50 @@ test("serious scout ranks reproducible high-impact bugs above cosmetic noise", (
   assert.equal(report.candidates.find((row) => row.repository === "runtime/thin").status, "review");
 });
 
+test("serious scout ignores incidental documentation metadata in a strong bug report", () => {
+  const report = buildSeriousCandidateScout({
+    collection: verifiedCollection(),
+    issues: [{
+      ...seriousIssue(),
+      body: `${seriousIssue().body}\nIntegration: Parser Runtime (documentation, issues)\nReference: https://example.test/docs/runtime`
+    }]
+  });
+
+  assert.equal(report.candidates[0].status, "candidate");
+  assert.ok(!report.candidates[0].warnings.some((warning) => warning.id === "cosmetic-language-present"));
+  assert.equal(report.automation.status, "PROMOTE");
+});
+
+test("serious scout does not mistake an operational cleanup failure for code cleanup", () => {
+  const report = buildSeriousCandidateScout({
+    collection: verifiedCollection(),
+    issues: [{
+      ...seriousIssue(),
+      title: "Compaction crash blocks version cleanup and causes unbounded disk growth",
+      body: `${seriousIssue().body}\nThe version cleanup operation never runs after the decoder aborts.`
+    }]
+  });
+
+  assert.equal(report.candidates[0].status, "candidate");
+  assert.ok(!report.candidates[0].warnings.some((warning) => warning.id === "cosmetic-language-present"));
+  assert.equal(report.automation.status, "PROMOTE");
+});
+
+test("serious scout still demotes explicit cosmetic intent in a high-impact report", () => {
+  const report = buildSeriousCandidateScout({
+    collection: verifiedCollection(),
+    issues: [{
+      ...seriousIssue(),
+      title: "Docs-only: improve crash troubleshooting wording",
+      labels: ["docs", "bug"]
+    }]
+  });
+
+  assert.equal(report.candidates[0].status, "review");
+  assert.ok(report.candidates[0].warnings.some((warning) => warning.id === "cosmetic-language-present"));
+  assert.equal(report.automation.status, "NO_ACTION");
+});
+
 test("serious scout blocks feature requests without concrete bug impact", () => {
   const report = buildSeriousCandidateScout({
     collection: verifiedCollection(),
@@ -410,6 +454,103 @@ test("serious scout fails closed when open-PR overlap search is truncated", asyn
   assert.equal(report.candidates[0].status, "review");
   assert.equal(report.automation.status, "NO_ACTION");
   assert.match(report.overlap.errors[0].message, /truncated/);
+});
+
+test("serious scout treats a returned open PR as conclusive overlap despite result truncation", async () => {
+  const calls = [];
+  const report = await runSeriousScout({
+    queries: ["fixture-query"],
+    checkPrOverlap: true,
+    githubClient: {
+      async searchOpenIssues() {
+        return { items: [seriousIssue()], incompleteResults: false };
+      },
+      async searchOpenPullRequests(args) {
+        calls.push(args);
+        const results = [{
+          number: 9001,
+          title: "Fix parser crash",
+          htmlUrl: "https://github.example/runtime/core/pull/9001"
+        }];
+        Object.defineProperty(results, "totalCount", { value: 42 });
+        return results;
+      }
+    }
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(report.overlap.complete, true);
+  assert.equal(report.overlap.found, 1);
+  assert.equal(report.overlap.failed, 0);
+  assert.equal(report.candidates[0].status, "blocked");
+  assert.ok(report.candidates[0].blockers.some((blocker) => blocker.id === "open-pr-overlap"));
+  assert.equal(report.automation.status, "NO_ACTION");
+});
+
+test("serious scout accepts positive overlap proof from an incomplete search response", async () => {
+  const report = await runSeriousScout({
+    queries: ["fixture-query"],
+    checkPrOverlap: true,
+    githubClient: {
+      async searchOpenIssues() {
+        return { items: [seriousIssue()], incompleteResults: false };
+      },
+      async searchOpenPullRequests() {
+        const results = [{
+          number: 9002,
+          title: "Resolve nested import panic",
+          htmlUrl: "https://github.example/runtime/core/pull/9002"
+        }];
+        Object.defineProperty(results, "incompleteResults", { value: true });
+        return results;
+      }
+    }
+  });
+
+  assert.equal(report.overlap.complete, true);
+  assert.equal(report.overlap.found, 1);
+  assert.equal(report.overlap.failed, 0);
+  assert.equal(report.candidates[0].status, "blocked");
+  assert.equal(report.automation.status, "NO_ACTION");
+});
+
+test("serious scout accepts later identifier proof after an inconclusive issue-number search", async () => {
+  const calls = [];
+  const report = await runSeriousScout({
+    queries: ["fixture-query"],
+    checkPrOverlap: true,
+    githubClient: {
+      async searchOpenIssues() {
+        return {
+          items: [{
+            ...seriousIssue(),
+            body: `${seriousIssue().body}\nThe failing path is handled by \`ParserCrashHandler\`.`
+          }],
+          incompleteResults: false
+        };
+      },
+      async searchOpenPullRequests({ query }) {
+        calls.push(query);
+        if (query === "#101") {
+          const results = [];
+          Object.defineProperty(results, "incompleteResults", { value: true });
+          return results;
+        }
+        return [{
+          number: 9003,
+          title: "Fix ParserCrashHandler nested imports",
+          htmlUrl: "https://github.example/runtime/core/pull/9003"
+        }];
+      }
+    }
+  });
+
+  assert.deepEqual(calls, ["#101", "ParserCrashHandler"]);
+  assert.equal(report.overlap.complete, true);
+  assert.equal(report.overlap.found, 1);
+  assert.equal(report.overlap.failed, 0);
+  assert.equal(report.candidates[0].status, "blocked");
+  assert.equal(report.automation.status, "NO_ACTION");
 });
 
 test("serious scout infers required overlap from per-issue error state", () => {
