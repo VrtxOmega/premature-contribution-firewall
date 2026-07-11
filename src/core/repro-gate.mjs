@@ -22,6 +22,7 @@ const FAILURE_TEXT = /\b(fail(?:ed|ing)?|error|exception|repro(?:duced)?|regress
 const FIXED_TEXT = /\b(pass(?:ed|es|ing)?|fixed|verified|works|success|ok)\b/i;
 
 export function evaluateReproGate(input = {}) {
+  input = plainObject(input);
   const before = normalizeEvidence(input.before || input.baseline || {}, "before");
   const after = normalizeEvidence(input.after || input.validation || {}, "after");
   const combinedCommands = normalizeCommands(input.commands || []);
@@ -35,6 +36,9 @@ export function evaluateReproGate(input = {}) {
   const beforeHasFailure = hasFailureEvidence(beforeEvidence);
   const beforeHasEvidence = hasAnyEvidence(beforeEvidence);
   const afterHasEvidence = hasAnyEvidence(afterEvidence);
+  const artifacts = normalizeArtifacts(input.artifacts || []);
+  const beforeHasTangibleEvidence = hasTangibleEvidence(beforeEvidence, artifacts, "before");
+  const afterHasTangibleEvidence = hasTangibleEvidence(afterEvidence, artifacts, "after");
   const afterFailures = afterCommands.filter((command) => command.exitCode !== null && command.exitCode !== 0);
   const unknownAfterCommands = afterCommands.filter((command) => command.exitCode === null);
   const afterVerdict = normalizeStatus(afterEvidence.verdict || afterEvidence.status);
@@ -54,6 +58,12 @@ export function evaluateReproGate(input = {}) {
       id: "before-not-reproduced",
       severity: "warning",
       reason: "Before-fix evidence does not clearly show the issue reproducing."
+    });
+  } else if (!beforeHasTangibleEvidence) {
+    blockers.push({
+      id: "before-verdict-unsubstantiated",
+      severity: "blocker",
+      reason: "Before-fix failure is asserted only as caller-written text; add a command result or phase-tagged artifact."
     });
   }
 
@@ -89,6 +99,12 @@ export function evaluateReproGate(input = {}) {
       severity: "warning",
       reason: "After-fix evidence exists, but it is not explicitly passing or fixed."
     });
+  } else if (afterPassed && !afterHasTangibleEvidence) {
+    blockers.push({
+      id: "after-verdict-unsubstantiated",
+      severity: "blocker",
+      reason: "After-fix success is asserted only as caller-written text; add a command result or phase-tagged artifact."
+    });
   }
 
   for (const command of unknownAfterCommands) {
@@ -107,8 +123,9 @@ export function evaluateReproGate(input = {}) {
     summary: summarizeReproGate({ status, beforeHasFailure, afterPassed, blockers, warnings }),
     gate: {
       status,
+      verified: status === "pass",
       reason: summarizeReproGate({ status, beforeHasFailure, afterPassed, blockers, warnings }),
-      evidence: normalizeArtifacts(input.artifacts || []),
+      evidence: artifacts,
       updatedAt: input.generatedAt || new Date().toISOString()
     },
     evidence: {
@@ -123,6 +140,18 @@ export function evaluateReproGate(input = {}) {
       "A passing repro gate does not prove correctness without code review and maintainer judgment."
     ]
   };
+}
+
+function plainObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function hasTangibleEvidence(evidence, artifacts, phase) {
+  if (evidence.commands.some((command) => command.exitCode !== null || command.outputPath)) return true;
+  return artifacts.some((artifact) => {
+    const kind = `${artifact.kind} ${artifact.summary}`.toLowerCase();
+    return artifact.path && (kind.includes(phase) || kind.includes("repro") || kind.includes("validation") || kind.includes("test"));
+  });
 }
 
 function normalizeEvidence(value, phase) {

@@ -260,6 +260,8 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
 }
 
 export function evaluateSubmission(payload = {}, options = {}) {
+  payload = plainObject(payload);
+  options = plainObject(options);
   const feedbackCalibration = payload.feedbackCalibration || options.feedbackCalibration || null;
   if (payload.text || payload.patchText || payload.kind === "patch") {
     const parsed = parsePatchSubmission(payload.text || payload.patchText || "", {
@@ -281,6 +283,8 @@ export function evaluateSubmission(payload = {}, options = {}) {
 }
 
 export function evaluateBatch(payload = {}, options = {}) {
+  payload = plainObject(payload);
+  options = plainObject(options);
   if (!Array.isArray(payload.items)) {
     return {
       ok: false,
@@ -302,6 +306,14 @@ export function evaluateBatch(payload = {}, options = {}) {
   }
 
   const results = items.map((item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      return {
+        ok: false,
+        id: String(index + 1),
+        index,
+        error: "batch item must be an object"
+      };
+    }
     try {
       const evaluation = evaluateSubmission(item.input ? { ...item.input, profile: item.profile || item.input.profile } : item, {
         profile: item.profile || payload.profile,
@@ -341,6 +353,10 @@ export function evaluateBatch(payload = {}, options = {}) {
     },
     results
   };
+}
+
+function plainObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
 export function evaluateMaintainerQueue(payload = {}, options = {}) {

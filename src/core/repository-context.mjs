@@ -65,6 +65,20 @@ export function normalizeRepositoryContext(rawContext = null) {
     };
   }
 
+  if (!hasSubstantiveContext(rawContext)) {
+    return {
+      hasContext: false,
+      source: String(rawContext.source || "none"),
+      repository: String(rawContext.repository || rawContext.repo || ""),
+      upstreamRepository: "",
+      issues: [],
+      pullRequests: [],
+      upstream: { issues: [], pullRequests: [], commits: [], releases: [] },
+      currentIssueRefs: [],
+      error: ""
+    };
+  }
+
   const upstream = rawContext.upstream || {};
   return {
     hasContext: true,
@@ -85,13 +99,14 @@ export function normalizeRepositoryContext(rawContext = null) {
 }
 
 export function analyzeRepositoryContext(input = {}) {
+  input = plainObject(input);
   const context = normalizeRepositoryContext(input.repositoryContext || input.repoContext);
   if (!context.hasContext) {
     return emptyAnalysis({
       hasContext: false,
       source: context.source,
       summary: "No repository issue/PR context supplied; duplicate and upstream checks were not run.",
-      checkStatus: "pass"
+      checkStatus: "unchecked"
     });
   }
 
@@ -177,6 +192,30 @@ export function analyzeRepositoryContext(input = {}) {
     upstreamSolved: upstreamSolved.slice(0, 5),
     findings
   };
+}
+
+function hasSubstantiveContext(rawContext) {
+  if (rawContext.error) return true;
+  const upstream = rawContext.upstream || {};
+  const arrays = [
+    rawContext.issues,
+    rawContext.pullRequests,
+    rawContext.prs,
+    rawContext.currentIssueRefs,
+    upstream.issues,
+    upstream.pullRequests,
+    upstream.prs,
+    upstream.commits,
+    upstream.releases
+  ];
+  if (arrays.some((items) => Array.isArray(items) && items.length > 0)) return true;
+  const source = String(rawContext.source || "").toLowerCase();
+  const repository = String(rawContext.repository || rawContext.repo || "");
+  return Boolean(repository && source && source !== "none");
+}
+
+function plainObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
 function normalizeItems(items, fallbackType, scope) {
@@ -304,7 +343,7 @@ function emptyAnalysis(overrides = {}) {
     source: "none",
     repository: "",
     upstreamRepository: "",
-    checkStatus: "pass",
+    checkStatus: "unchecked",
     labels: [],
     summary: "",
     similarOpenIssues: [],

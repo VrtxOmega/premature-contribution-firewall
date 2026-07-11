@@ -281,6 +281,76 @@ export function createGitHubClient(config = {}) {
     }));
   }
 
+  async function searchOpenPullRequests({ repository, query = "", limit = 20, installationId = "", signal = null }) {
+    const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
+    const safeRepository = String(repository || "").trim();
+    if (!safeRepository) return [];
+    const normalizedQuery = normalizeOpenPullRequestSearchQuery({ repository: safeRepository, query });
+    await waitForSearchSlot();
+    const data = await readRequest(
+      installationId,
+      `/search/issues?q=${encodeURIComponent(normalizedQuery)}&sort=updated&order=desc&per_page=${safeLimit}`,
+      { signal }
+    );
+    const results = (data.items || [])
+      .filter((item) => item.pull_request)
+      .map((pullRequest) => ({
+        number: pullRequest.number,
+        title: pullRequest.title || "",
+        body: pullRequest.body || "",
+        state: pullRequest.state || "open",
+        htmlUrl: pullRequest.html_url || "",
+        updatedAt: pullRequest.updated_at || ""
+      }));
+    Object.defineProperty(results, "incompleteResults", {
+      value: Boolean(data.incomplete_results),
+      enumerable: false
+    });
+    Object.defineProperty(results, "totalCount", {
+      value: Number(data.total_count) || 0,
+      enumerable: false
+    });
+    return results;
+  }
+
+  async function searchOpenIssues({ query, limit = 20, installationId = "", signal = null }) {
+    const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
+    const normalizedQuery = normalizeOpenIssueSearchQuery(query);
+    await waitForSearchSlot();
+    const data = await readRequest(
+      installationId,
+      `/search/issues?q=${encodeURIComponent(normalizedQuery)}&sort=updated&order=desc&per_page=${safeLimit}`,
+      { signal }
+    );
+    return {
+      query: normalizedQuery,
+      totalCount: Number(data.total_count) || 0,
+      incompleteResults: Boolean(data.incomplete_results),
+      items: (data.items || [])
+        .filter((item) => !item.pull_request)
+        .map((item) => ({
+          id: item.id || "",
+          repository: repositoryFromSearchItem(item),
+          repository_url: item.repository_url || "",
+          number: item.number || "",
+          title: item.title || "",
+          body: item.body || "",
+          author: item.user ? {
+            login: item.user.login || "",
+            type: item.user.type || ""
+          } : null,
+          author_association: item.author_association || "",
+          labels: item.labels || [],
+          state: item.state || "",
+          assignee: item.assignee || null,
+          assignees: item.assignees || [],
+          html_url: item.html_url || "",
+          updated_at: item.updated_at || "",
+          created_at: item.created_at || ""
+        }))
+    };
+  }
+
   async function ensureLabel({ owner, repo, label, installationId }) {
     const definition = labelDefinitionFor(label);
     const encoded = encodeURIComponent(label);
@@ -311,6 +381,8 @@ export function createGitHubClient(config = {}) {
     collectRepositoryContext,
     collectRepositoryQueue,
     searchOpenPullRequestsForIssue,
+    searchOpenPullRequests,
+    searchOpenIssues,
     request
   };
 
@@ -563,6 +635,38 @@ function normalizeSearchItem(item, scope = "local") {
     mergedAt: item.pull_request?.merged_at || "",
     updatedAt: item.updated_at || ""
   };
+}
+
+function normalizeOpenIssueSearchQuery(query = "") {
+  const parts = String(query || "").trim().split(/\s+/).filter(Boolean);
+  const hasIssueQualifier = parts.some((part) => /^is:issue$/i.test(part));
+  const hasOpenQualifier = parts.some((part) => /^is:open$/i.test(part));
+  const normalized = [
+    ...(!hasIssueQualifier ? ["is:issue"] : []),
+    ...(!hasOpenQualifier ? ["is:open"] : []),
+    ...parts
+  ];
+  return normalized.join(" ");
+}
+
+function normalizeOpenPullRequestSearchQuery({ repository, query = "" } = {}) {
+  const parts = String(query || "").trim().split(/\s+/).filter(Boolean);
+  const hasRepoQualifier = parts.some((part) => /^repo:/i.test(part));
+  const hasPrQualifier = parts.some((part) => /^is:pr$/i.test(part));
+  const hasOpenQualifier = parts.some((part) => /^is:open$/i.test(part));
+  const normalized = [
+    ...(!hasRepoQualifier ? [`repo:${repository}`] : []),
+    ...(!hasPrQualifier ? ["is:pr"] : []),
+    ...(!hasOpenQualifier ? ["is:open"] : []),
+    ...parts
+  ];
+  return normalized.join(" ");
+}
+
+function repositoryFromSearchItem(item = {}) {
+  const apiUrl = String(item.repository_url || "");
+  const match = apiUrl.match(/\/repos\/([^/\s]+\/[^/\s]+)$/);
+  return match ? match[1] : "";
 }
 
 function extractIssueRefs(text, repository = "") {

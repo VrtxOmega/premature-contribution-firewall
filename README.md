@@ -204,7 +204,7 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Builds an auditable feedback calibration profile from local corrections and promoted candidates, then attaches close matches to future evaluations and queue items without hiding the base heuristic status or score.
 - Evaluates plain-text patch or mbox submissions with `evaluate-patch`, defaulting to `kernel-grade` discipline for email-style review.
 - Ships a deterministic maintainer benchmark corpus with 77 reproducible cases across PRs, issues, feature requests, large-maintainer process issues, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
-- Ships a separate adversarial red-test corpus with 15 cases that preserve breakage residue for negated verification, suspicious paths, secret evasion, generated artifact churn, skipped-only CI, prompt-injection text, duplicate/context laundering, malformed batch input, and empty patch bodies.
+- Ships a separate adversarial red-test corpus with 29 cases that preserve breakage residue across contribution evaluation, Unicode/control-text evasion, serious-scout authority, repository context, lane gates, repro evidence, and malformed API input.
 - Exposes callable API endpoints for single, patch, batch, spec, and benchmark evaluation.
 - Includes a stricter `kernel-grade` profile for projects that want Linux-kernel-style patch discipline: concise subsystem subjects, human DCO sign-off, Fixes/stable discipline, maintainer routing, build/test evidence, review-budget control, and transparent tool provenance.
 
@@ -293,14 +293,19 @@ npm run redtest:write
 
 Current generated results live in [`docs/adversarial-red-team-results.md`](docs/adversarial-red-team-results.md):
 
-- 15/15 adversarial cases passing
+- 29/29 adversarial cases passing
 - negated test/verification claims no longer count as proof
 - suspicious repository paths are blocked before docs-only logic can bless them
 - AWS-style secret material is caught
 - generated/minified bundles need a source/rationale
 - skipped-only CI is treated as weak signal, not green signal
 - prompt-injection or review-bypass language is quarantined
+- zero-width and bidirectional controls cannot split prompt-injection or claimed-work phrases around analysis checks
 - malformed batch API payloads fail closed
+- incomplete or metadata-free serious-scout searches cannot authorize promotion
+- failed or unchecked open-PR overlap cannot be laundered into a clean handoff
+- empty repository context stays unchecked instead of passing duplicate search
+- bare, evidence-free, placeholder, or self-verified lane passes and verdict-only repro claims do not count as evidence
 - mixed queue labels cannot make a context or wait-state action explain itself as a reporter-evidence request
 - maintainer-owned queue items cannot be sent back to a generic reporter when maintainer judgment is the next action
 
@@ -578,12 +583,15 @@ npm run pilot:public -- --repository owner/repo --limit 10 --capture /tmp/pcf-ow
 npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --write /tmp/pcf-owner-repo-replay.md
 npm run pilot:public:markdown -- --fixture /tmp/pcf-owner-repo-capture.json --bundle /tmp/pcf-owner-repo-export.md
 npm run pilot:scout -- --repository owner/repo --limit 10 --write /tmp/pcf-owner-repo-scout.md
+npm run scout:serious -- --write /tmp/pcf-serious-scout.md
 npm run pilot:watch -- --config config/watchlist.json --write /tmp/pcf-watchlist.md
 ```
 
 The public pilot artifact leads with `review-now` versus `send-repair-request`, breaks non-ready work into `nextAction` buckets, preserves repository-context findings such as duplicates, concurrent work, and upstream fixes, and records collection errors. `--capture` writes the normalized queue payload that PCF actually evaluated so future before/after comparisons can replay the same input with `--fixture` instead of depending on a live queue that may have changed. Captures include third-party issue/PR bodies and repository-context results; keep them private and do not commit them without maintainer consent. Set `GITHUB_TOKEN` or `GH_TOKEN` to a public-read token for larger pilots or repeated search-heavy runs; the guide reports only whether a token is configured and never returns the token value. PCF spaces GitHub search calls with `PCF_GITHUB_SEARCH_DELAY_MS` so multi-repo pilots do not collapse into secondary rate-limit noise.
 
 `npm run pilot:scout` is the contributor-scouting path. It runs the issue queue only, keeps the read-only/no-write posture, and adds `--contributor-preflight` so each `review-now` issue candidate is checked for exact open PR ownership signals such as an open PR body that references `#123`. A blocked result means another PR path needs inspection before cloning or coding. A candidate result is not permission to code; contribution policy and current-upstream behavior still need separate gates.
+
+`npm run scout:serious` is the broad GitHub-search path for finding serious upstream contribution leads outside a curated watchlist. It ranks open issue-search results by impact, reproduction evidence, scope, and maintainer signal, then blocks or down-ranks cosmetic/docs-only work, feature requests, duplicates, stale labels, assigned issues, and thin reports. `PROMOTE` additionally requires explicit complete collection integrity; requested open-PR overlap must be complete for every promotable row. It is documented in [docs/SERIOUS_SCOUT.md](docs/SERIOUS_SCOUT.md). A serious-scout candidate is permission to spend preflight time, not permission to code.
 
 `npm run pilot:watch` runs that same scout path across a curated watchlist and produces one contribution-radar report. It is documented in [docs/WATCHLIST.md](docs/WATCHLIST.md). Watchlist mode does not search all of GitHub, clone repositories, write patches, open pull requests, or contact maintainers.
 

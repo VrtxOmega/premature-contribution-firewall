@@ -27,6 +27,8 @@ test("ready pull request passes as reviewable", async () => {
   assert.ok(result.strengths.some((item) => item.includes("test")));
   assert.equal(result.profile.id, "standard");
   assert.ok(result.reviewBudget.minutes > 0);
+  assert.match(result.comment, /- unchecked: Repository duplicate, concurrent, and upstream context/);
+  assert.doesNotMatch(result.comment, /- undefined:/);
 });
 
 test("unready issue requires reproducer and real evidence", async () => {

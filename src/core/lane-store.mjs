@@ -1,37 +1,73 @@
+import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { PCF_LANE_SCHEMA_VERSION } from "./lane-schema.mjs";
+import { buildLaneStatus } from "./lane-status.mjs";
 
 export const LANE_STORE_VERSION = PCF_LANE_SCHEMA_VERSION;
 
 const DEFAULT_DATA_DIR = join(homedir(), ".local", "share", "pcf");
 const DEFAULT_LANE_LIMIT = 25;
+const GATE_AUTHORITY_FIELDS = new Set([
+  "id", "status", "verdict", "state", "classification", "reason", "summary",
+  "evidence", "artifacts", "updatedAt", "timestamp", "verified", "verification"
+]);
 
 export function laneStoreRoot() {
   return join(process.env.PCF_DATA_DIR || DEFAULT_DATA_DIR, "lanes");
 }
 
 export function laneIdFor(input = {}) {
-  const explicit = sanitizeSegment(input.laneId || input.id || "");
-  if (explicit) return explicit;
-  const repository = sanitizeSegment(input.repository || input.lane?.repository || "unknown-repo");
-  const issue = sanitizeSegment(input.issue || input.issueNumber || input.lane?.issue || "no-issue");
-  const branch = sanitizeSegment(input.branch || input.lane?.branch || "");
-  return [repository, issue, branch].filter(Boolean).join("__").slice(0, 180) || "lane";
+  input = plainObject(input);
+  const explicitRaw = canonicalSegment(input.laneId || input.id || "");
+  const explicit = identitySegment(explicitRaw);
+  if (explicit) {
+    const scope = [
+      canonicalSegment(input.repository || input.lane?.repository || ""),
+      canonicalSegment(input.issue || input.issueNumber || input.lane?.issue || "")
+    ].filter(Boolean).join("\u0000");
+    const scoped = scope ? `${explicit}--${createHash("sha256").update(scope).digest("hex").slice(0, 10)}` : explicit;
+    return boundLaneId(scoped, `${explicitRaw}\u0000${scope}`);
+  }
+  const rawParts = [
+    canonicalSegment(input.repository || input.lane?.repository || "unknown-repo"),
+    canonicalSegment(input.issue || input.issueNumber || input.lane?.issue || "no-issue"),
+    canonicalSegment(input.branch || input.lane?.branch || "")
+  ].filter(Boolean);
+  const readable = rawParts.map(identitySegment).filter(Boolean).join("__") || "lane";
+  return boundLaneId(readable, rawParts.join("\u0000"));
 }
 
 export async function saveLaneRecord(input = {}) {
+  input = plainObject(input);
   const laneId = laneIdFor(input);
   const root = laneStoreRoot();
   await mkdir(root, { recursive: true });
   const now = new Date().toISOString();
-  const record = normalizeLaneRecord({
+  const normalized = normalizeLaneRecord({
     ...(input.record || input),
     id: laneId,
     updatedAt: now,
     createdAt: input.createdAt || input.record?.createdAt || now
   });
+  const evaluated = buildLaneStatus({
+    ...normalized,
+    gateOrder: Object.keys(normalized.gates)
+  });
+  const record = {
+    ...normalized,
+    status: evaluated.status,
+    summary: evaluated.summary,
+    gates: Object.fromEntries(Object.entries(evaluated.gates).map(([id, gate]) => [
+      id,
+      {
+        ...supplementalGateFields(normalized.gates[id]),
+        ...gate
+      }
+    ])),
+    artifacts: evaluated.artifacts
+  };
   const filePath = laneFilePath(laneId);
   const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
   await writeFile(tmpPath, `${JSON.stringify(record, null, 2)}\n`, "utf8");
@@ -50,9 +86,18 @@ export async function saveLaneRecord(input = {}) {
 }
 
 export async function readLaneRecord(input = {}) {
+  input = plainObject(input);
   const laneId = laneIdFor(input);
-  const filePath = laneFilePath(laneId);
-  const text = await readFile(filePath, "utf8");
+  let filePath = laneFilePath(laneId);
+  let text;
+  try {
+    text = await readFile(filePath, "utf8");
+  } catch (error) {
+    const legacyId = legacyLaneIdFor(input);
+    if (error?.code !== "ENOENT" || legacyId === laneId) throw error;
+    filePath = laneFilePath(legacyId);
+    text = await readFile(filePath, "utf8");
+  }
   return {
     ok: true,
     id: laneId,
@@ -61,7 +106,18 @@ export async function readLaneRecord(input = {}) {
   };
 }
 
+function legacyLaneIdFor(input = {}) {
+  input = plainObject(input);
+  const explicit = sanitizeSegment(input.laneId || input.id || "");
+  if (explicit) return explicit;
+  const repository = sanitizeSegment(input.repository || input.lane?.repository || "unknown-repo");
+  const issue = sanitizeSegment(input.issue || input.issueNumber || input.lane?.issue || "no-issue");
+  const branch = sanitizeSegment(input.branch || input.lane?.branch || "");
+  return [repository, issue, branch].filter(Boolean).join("__").slice(0, 180) || "lane";
+}
+
 export async function listLaneRecords(input = {}) {
+  input = plainObject(input);
   const root = laneStoreRoot();
   const limit = clampNumber(input.limit, DEFAULT_LANE_LIMIT, 1, 200);
   let entries = [];
@@ -114,6 +170,7 @@ export async function listLaneRecords(input = {}) {
 }
 
 export async function saveEvidenceBundle(input = {}) {
+  input = plainObject(input);
   const laneId = laneIdFor(input);
   const kind = sanitizeSegment(input.kind || "repro");
   const root = join(laneStoreRoot(), laneId, "evidence");
@@ -150,6 +207,7 @@ export async function saveEvidenceBundle(input = {}) {
 }
 
 function normalizeLaneRecord(record = {}) {
+  record = plainObject(record);
   return {
     version: LANE_STORE_VERSION,
     id: String(record.id || ""),
@@ -161,7 +219,7 @@ function normalizeLaneRecord(record = {}) {
       branch: String(record.lane?.branch || record.branch || ""),
       pr: String(record.lane?.pr || record.pr || record.pullRequest || "")
     },
-    gates: record.gates || {},
+    gates: plainObject(record.gates),
     artifacts: normalizeArtifacts(record.artifacts || []),
     decisions: normalizeStrings(record.decisions || []),
     nextSteps: normalizeStrings(record.nextSteps || record.next_steps || []),
@@ -172,23 +230,28 @@ function normalizeLaneRecord(record = {}) {
 
 function normalizeArtifacts(values) {
   return (Array.isArray(values) ? values : [])
-    .map((artifact) => ({
-      path: String(artifact.path || artifact.uri || artifact.url || "").trim(),
-      kind: String(artifact.kind || artifact.type || "evidence"),
-      summary: String(artifact.summary || artifact.note || "")
-    }))
+    .map((value) => {
+      const artifact = plainObject(value);
+      return ({
+        path: String(artifact.path || artifact.uri || artifact.url || "").trim(),
+        kind: String(artifact.kind || artifact.type || "evidence"),
+        summary: String(artifact.summary || artifact.note || "")
+      });
+    })
     .filter((artifact) => artifact.path || artifact.summary);
 }
 
 function normalizeCommands(values) {
   return (Array.isArray(values) ? values : [values])
-    .map((command) => typeof command === "string"
-      ? { command, exitCode: null, outputPath: "" }
-      : {
-          command: String(command.command || ""),
-          exitCode: command.exitCode ?? command.code ?? null,
-          outputPath: String(command.outputPath || command.path || "")
-        })
+    .map((value) => {
+      if (typeof value === "string") return { command: value, exitCode: null, outputPath: "" };
+      const command = plainObject(value);
+      return {
+        command: String(command.command || ""),
+        exitCode: command.exitCode ?? command.code ?? null,
+        outputPath: String(command.outputPath || command.path || "")
+      };
+    })
     .filter((command) => command.command || command.outputPath);
 }
 
@@ -196,6 +259,12 @@ function normalizeStrings(values) {
   return (Array.isArray(values) ? values : [values])
     .map((value) => String(value || "").trim())
     .filter(Boolean);
+}
+
+function supplementalGateFields(value) {
+  return Object.fromEntries(
+    Object.entries(plainObject(value)).filter(([key]) => !GATE_AUTHORITY_FIELDS.has(key))
+  );
 }
 
 function laneFilePath(laneId) {
@@ -209,6 +278,31 @@ function sanitizeSegment(value) {
     .replace(/[^\w.-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 180);
+}
+
+function identitySegment(value) {
+  const raw = canonicalSegment(value);
+  const safe = sanitizeSegment(raw);
+  if (!safe || raw === safe) return safe;
+  const suffix = createHash("sha256").update(raw).digest("hex").slice(0, 10);
+  return `${safe.slice(0, 169)}-${suffix}`;
+}
+
+function canonicalSegment(value) {
+  return String(value || "")
+    .trim()
+    .replace(/^https?:\/\/github\.com\//i, "")
+    .replace(/\.git$/i, "");
+}
+
+function plainObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function boundLaneId(readable, identity) {
+  if (readable.length <= 180) return readable;
+  const suffix = createHash("sha256").update(identity).digest("hex").slice(0, 12);
+  return `${readable.slice(0, 167)}-${suffix}`;
 }
 
 function clampNumber(value, fallback, min, max) {

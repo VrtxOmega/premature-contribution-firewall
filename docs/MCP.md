@@ -70,6 +70,7 @@ pcf://mcp/server-card
 | `pcf_contributor_preflight` | read-only | Classify supplied contributor candidates and overlap checks. |
 | `pcf_ai_contribution_posture` | read-only | Classify AI-assisted contribution risk from the posture index and supplied policy text. |
 | `pcf_scout` | read-only | Rank supplied contribution candidates by PCF gates. |
+| `pcf_serious_scout` | read-only | Rank supplied serious issue candidates; promotion requires explicit collection/overlap integrity metadata. |
 | `pcf_repository_context` | read-only | Analyze supplied duplicate/concurrent/upstream context. |
 | `pcf_duplicate_assist` | read-only | Run deterministic duplicate-assist token overlap. |
 | `pcf_policy_profile` | read-only | Extract policy requirements from supplied policy file contents. |
@@ -87,6 +88,9 @@ pcf://mcp/server-card
 | `pcf_evidence_bundle_save` | local write | Save caller-supplied evidence under a local lane. |
 
 The save tools write local evidence only. They do not contact maintainers or GitHub.
+`pcf_lane_save` recomputes lane status from all mandatory gates; caller-supplied `status: ready` cannot override missing evidence. A passing gate needs a concrete artifact path. Placeholder objects, summary-only claims, and caller-controlled `verified` timestamps remain review-only.
+
+Top-level lane artifacts may be descriptive notes with a non-empty summary and no file path. Gate evidence is stricter: every passing gate needs a non-empty path. Custom gate IDs and non-authoritative audit fields such as `owner` or `details` survive save/read/resume, while authority-bearing fields (`status`, classification, reason, evidence, timestamps, and caller `verified` flags) are normalized by PCF.
 
 ## Resources
 
@@ -134,7 +138,11 @@ scout -> overlap -> policy -> repro -> diffShape -> preflight -> pr -> provenanc
 
 `pcf_lane_resume` reads one saved lane from this store and returns the current status plus next gate. It does not verify live GitHub state, local git state, or command output freshness.
 
-`pcf_evidence_bundle_save` does not automatically merge the saved evidence back into a lane status. Agents should call `pcf_lane_save` or `pcf_lane_status` after saving a bundle when the lane status should change.
+Mandatory gates cannot be removed with a caller-supplied `gateOrder`. Custom ordering is accepted, then omitted default gates are appended. Bare `"pass"` strings, boolean `true` values, and `{ "status": "pass" }` objects without evidence are review signals, not proof-bearing passes. A structured pass needs at least one concrete evidence or artifact path; caller-controlled `verified` and timestamp fields are not a substitute.
+
+Lane IDs use deterministic hashes when sanitization or length limits would otherwise collapse distinct repository/issue identities. Reads retain a legacy fallback for records written with the older sanitized ID scheme. Explicit lane IDs are scoped by repository and issue when those fields are supplied.
+
+`pcf_evidence_bundle_save` does not automatically merge the saved evidence back into a lane status. Saved bundles remain caller-supplied and unverified until a gate evaluates them. Agents should call `pcf_lane_save` or `pcf_lane_status` after saving a bundle when the lane status should change.
 
 ## Agent Config Snippet
 
@@ -189,6 +197,8 @@ PCF MCP is a local stdio server for agent decision support. Its threat model is 
 - It does not execute shell commands.
 - It does not perform arbitrary filesystem reads.
 - It does not claim that supplied evidence is true.
+- `pcf_repro_gate` blocks verdict-only before/after assertions unless a command result or phase-tagged artifact substantiates them.
+- The stdio transport rejects frames above 2,000,000 bytes and returns JSON-RPC parse errors for malformed bounded frames without losing the following valid frame.
 - It does not make network-egress claims for Node itself, package installation, or the surrounding MCP client; it claims only that PCF MCP tools do not perform live collection or public writes.
 - Local write tools are limited to the PCF lane/evidence store and are annotated as non-destructive but not read-only.
 
