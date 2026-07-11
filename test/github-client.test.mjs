@@ -333,11 +333,159 @@ test("GitHub client searches open pull requests that reference an issue with sea
   }
 });
 
+test("GitHub client retries a safe read after the advertised secondary-limit delay", async () => {
+  const originalFetch = globalThis.fetch;
+  const callTimes = [];
+  globalThis.fetch = async () => {
+    callTimes.push(Date.now());
+    if (callTimes.length === 1) {
+      return jsonErrorResponse(403, {
+        message: "You have exceeded a secondary rate limit. Please wait a few minutes before you try again."
+      }, { "retry-after": "0.01" });
+    }
+    return jsonResponse({ full_name: "owner/repo" });
+  };
+
+  try {
+    const client = createGitHubClient({
+      githubApiBase: "https://api.github.test",
+      githubRateLimitRetries: 1,
+      githubRateLimitFallbackMs: 1,
+      githubRateLimitMaxWaitMs: 100
+    });
+    const repository = await client.request("/repos/owner/repo");
+
+    assert.equal(repository.full_name, "owner/repo");
+    assert.equal(callTimes.length, 2);
+    assert.ok(callTimes[1] - callTimes[0] >= 5);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("GitHub client does not retry a rate-limited write", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return jsonErrorResponse(429, { message: "rate limit exceeded" }, { "retry-after": "0" });
+  };
+
+  try {
+    const client = createGitHubClient({
+      githubApiBase: "https://api.github.test",
+      githubRateLimitRetries: 2,
+      githubRateLimitFallbackMs: 1
+    });
+    await assert.rejects(
+      client.request("/repos/owner/repo/issues", { method: "POST", body: "{}" }),
+      /GitHub API 429/
+    );
+    assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("GitHub client fails closed instead of retrying before an over-cap Retry-After", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    if (calls === 1) {
+      return jsonErrorResponse(403, { message: "secondary rate limit" }, { "retry-after": "1" });
+    }
+    return jsonResponse({ full_name: "owner/repo" });
+  };
+
+  try {
+    const client = createGitHubClient({
+      githubApiBase: "https://api.github.test",
+      githubRateLimitRetries: 1,
+      githubRateLimitFallbackMs: 1,
+      githubRateLimitMaxWaitMs: 5
+    });
+    await assert.rejects(client.request("/repos/owner/repo"), /GitHub API 403/);
+    assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("GitHub client treats a generic 429 as retryable for a safe read", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return calls === 1
+      ? jsonErrorResponse(429, { message: "slow down" })
+      : jsonResponse({ full_name: "owner/repo" });
+  };
+
+  try {
+    const client = createGitHubClient({
+      githubApiBase: "https://api.github.test",
+      githubRateLimitRetries: 1,
+      githubRateLimitFallbackMs: 1,
+      githubRateLimitMaxWaitMs: 10
+    });
+    const repository = await client.request("/repos/owner/repo");
+    assert.equal(repository.full_name, "owner/repo");
+    assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("GitHub client does not retry before an over-cap x-ratelimit-reset", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return jsonErrorResponse(403, { message: "API rate limit reached" }, {
+      "x-ratelimit-remaining": "0",
+      "x-ratelimit-reset": String(Math.ceil(Date.now() / 1_000) + 60)
+    });
+  };
+
+  try {
+    const client = createGitHubClient({
+      githubApiBase: "https://api.github.test",
+      githubRateLimitRetries: 1,
+      githubRateLimitFallbackMs: 1,
+      githubRateLimitMaxWaitMs: 5
+    });
+    await assert.rejects(client.request("/repos/owner/repo"), /GitHub API 403/);
+    assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 function jsonResponse(data) {
   return {
     ok: true,
     status: 200,
     statusText: "OK",
+    async text() {
+      return JSON.stringify(data);
+    }
+  };
+}
+
+function jsonErrorResponse(status, data, headers = {}) {
+  const normalizedHeaders = Object.fromEntries(
+    Object.entries(headers).map(([key, value]) => [key.toLowerCase(), String(value)])
+  );
+  return {
+    ok: false,
+    status,
+    statusText: status === 429 ? "Too Many Requests" : "Forbidden",
+    headers: {
+      get(name) {
+        return normalizedHeaders[String(name).toLowerCase()] || null;
+      }
+    },
     async text() {
       return JSON.stringify(data);
     }
