@@ -317,6 +317,28 @@ test("serious scout fails closed when GitHub issue search is incomplete", async 
   assert.match(report.automation.reason, /partial search results/i);
 });
 
+test("serious scout stops remaining issue queries after an exhausted rate limit", async () => {
+  const calls = [];
+  const report = await runSeriousScout({
+    queries: ["first-query", "rate-limited-query", "must-not-run-query"],
+    githubClient: {
+      async searchOpenIssues({ query }) {
+        calls.push(query);
+        if (query === "rate-limited-query") {
+          throw new Error("GitHub API 403 Forbidden: You have exceeded a secondary rate limit.");
+        }
+        return { items: [seriousIssue()], incompleteResults: false };
+      }
+    }
+  });
+
+  assert.deepEqual(calls, ["first-query", "rate-limited-query"]);
+  assert.equal(report.collection.complete, false);
+  assert.equal(report.collection.errors.length, 1);
+  assert.match(report.collection.errors[0].message, /secondary rate limit/i);
+  assert.equal(report.automation.status, "NO_ACTION");
+});
+
 test("serious scout fails closed when open-PR overlap collection fails", async () => {
   const report = await runSeriousScout({
     queries: ["fixture-query"],
@@ -335,6 +357,35 @@ test("serious scout fails closed when open-PR overlap collection fails", async (
   assert.equal(report.overlap.failed, 1);
   assert.equal(report.candidates[0].status, "review");
   assert.ok(report.candidates[0].warnings.some((warning) => warning.id === "overlap-unverified"));
+  assert.equal(report.automation.status, "NO_ACTION");
+});
+
+test("serious scout stops later candidate overlap searches after an exhausted rate limit", async () => {
+  const calls = [];
+  const secondIssue = {
+    ...seriousIssue(),
+    repository: "runtime/other",
+    number: 102,
+    html_url: "https://github.example/runtime/other/issues/102"
+  };
+  const report = await runSeriousScout({
+    queries: ["fixture-query"],
+    checkPrOverlap: true,
+    maxOverlapChecks: 25,
+    githubClient: {
+      async searchOpenIssues() {
+        return { items: [seriousIssue(), secondIssue], incompleteResults: false };
+      },
+      async searchOpenPullRequests(args) {
+        calls.push(args);
+        throw new Error("GitHub API 403 Forbidden: You have exceeded a secondary rate limit.");
+      }
+    }
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(report.overlap.failed, 1);
+  assert.equal(report.overlap.unchecked, 1);
   assert.equal(report.automation.status, "NO_ACTION");
 });
 
@@ -445,7 +496,9 @@ test("serious scout live collector can enrich open PR overlap by code identifier
               number: 35312,
               title: "refreshNuxtData(key) can be delayed inside modal because it waits for requestIdleCallback",
               body: [
-                "Steps to reproduce are included.",
+                "Regression in Nuxt 4.4.7 with steps to reproduce.",
+                "The public utility hangs until timeout inside modal and portal UI work.",
+                "The affected path is packages/nuxt/src/app/composables/asyncData.ts.",
                 "Expected: `refreshNuxtData` starts promptly.",
                 "Actual: `refreshNuxtData` waits for `requestIdleCallback`.",
                 "The slow part is the `onNuxtReady` gate."
@@ -548,6 +601,62 @@ test("serious scout overlap budget ignores blocked filler after candidate covera
   assert.equal(report.overlap.checked, 1);
   assert.equal(report.overlap.unchecked, 0);
   assert.equal(report.automation.status, "PROMOTE");
+});
+
+test("serious scout never spends overlap searches on already-blocked rows", async () => {
+  const calls = [];
+  const report = await runSeriousScout({
+    queries: ["fixture-query"],
+    checkPrOverlap: true,
+    maxOverlapChecks: 25,
+    githubClient: {
+      async searchOpenIssues() {
+        return {
+          items: [seriousIssue(), cosmeticIssue()],
+          incompleteResults: false
+        };
+      },
+      async searchOpenPullRequests({ repository, query }) {
+        calls.push({ repository, query });
+        return [];
+      }
+    }
+  });
+
+  assert.ok(calls.length > 0);
+  assert.ok(calls.every((call) => call.repository === "runtime/core"));
+  assert.equal(report.overlap.checked, 1);
+  assert.equal(report.automation.status, "PROMOTE");
+});
+
+test("serious scout checks review rows only when no candidate exists", async () => {
+  const calls = [];
+  const reviewIssue = {
+    ...seriousIssue(),
+    repository: "runtime/review",
+    number: 103,
+    body: `${seriousIssue().body}\nThis was initially reported as a feature request.`,
+    html_url: "https://github.example/runtime/review/issues/103"
+  };
+  const report = await runSeriousScout({
+    queries: ["fixture-query"],
+    checkPrOverlap: true,
+    githubClient: {
+      async searchOpenIssues() {
+        return { items: [reviewIssue, cosmeticIssue()], incompleteResults: false };
+      },
+      async searchOpenPullRequests({ repository, query }) {
+        calls.push({ repository, query });
+        return [];
+      }
+    }
+  });
+
+  assert.ok(calls.length > 0);
+  assert.ok(calls.every((call) => call.repository === "runtime/review"));
+  assert.equal(report.overlap.checked, 1);
+  assert.equal(report.summary.candidate, 0);
+  assert.equal(report.automation.status, "NO_ACTION");
 });
 
 function seriousIssue() {

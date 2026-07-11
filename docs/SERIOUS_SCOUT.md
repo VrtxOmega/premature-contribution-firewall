@@ -19,9 +19,9 @@ npm run scout:serious -- --fixture /tmp/issues.json --format json
 
 The default preset searches discussed open GitHub issues for terms like crash, regression, data loss, deadlock, incorrect result, panic, memory leak, and wrong output. The `maintainer-grade` preset starts narrower: bug-labeled, discussed issues with reproduction evidence such as steps, expected/actual behavior, stack traces, bisects, versions, or minimal repros, while excluding obvious GitHub Actions bot authors. Neither preset requires a repository watchlist.
 
-Set `GITHUB_TOKEN` or `GH_TOKEN` for repeated runs so GitHub search rate limits do not distort the results.
+Set `GITHUB_TOKEN` or `GH_TOKEN` for repeated runs so GitHub search rate limits do not distort the results. Safe read requests honor GitHub's `retry-after` and `x-ratelimit-reset` headers, otherwise use bounded exponential backoff. After retry exhaustion, the scout stops the remaining query loop and records an incomplete collection instead of continuing to hammer the API.
 
-Use `--check-pr-overlap` for unattended contributor scouting. It performs bounded read-only open-PR searches for preliminary candidate/review rows first, using issue numbers and strong code identifiers from the issue text. This catches overlap such as an existing PR for the same `refreshNuxtData` fix even when the PR does not reference the issue number.
+Use `--check-pr-overlap` for unattended contributor scouting. It performs bounded read-only open-PR searches for preliminary candidate rows, or for review rows only as diagnostic fallback when no candidate exists, using issue numbers and strong code identifiers from the issue text. Already-blocked rows never spend overlap-search budget. This catches overlap such as an existing PR for the same `refreshNuxtData` fix even when the PR does not reference the issue number.
 
 ## Automation Verdict
 

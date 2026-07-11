@@ -137,6 +137,7 @@ async function collectIssuesFromGithub({ queries, perQueryLimit, githubClient })
       }
     } catch (error) {
       errors.push({ scope: query, message: error.message });
+      if (isRateLimitError(error)) break;
     }
   }
   return {
@@ -153,10 +154,13 @@ async function collectIssuesFromGithub({ queries, perQueryLimit, githubClient })
 
 async function enrichOpenPullRequestOverlap({ issues, githubClient, maxChecks, preliminaryReport = {} }) {
   const rows = [...issues];
-  const requiredKeys = new Set((preliminaryReport.candidates || [])
-    .filter((row) => row.status === "candidate")
-    .map((row) => issueKey(row)));
-  const checkKeys = new Set((preliminaryReport.candidates || []).map((row) => issueKey(row)));
+  const preliminaryRows = preliminaryReport.candidates || [];
+  const candidateRows = preliminaryRows.filter((row) => row.status === "candidate");
+  const overlapRows = candidateRows.length
+    ? candidateRows
+    : preliminaryRows.filter((row) => row.status === "review");
+  const requiredKeys = new Set(candidateRows.map((row) => issueKey(row)));
+  const checkKeys = new Set(overlapRows.map((row) => issueKey(row)));
   const orderedIssues = [
     ...issues.filter((issue) => requiredKeys.has(issueKey(issue))),
     ...issues.filter((issue) => !requiredKeys.has(issueKey(issue)) && checkKeys.has(issueKey(issue))),
@@ -168,9 +172,18 @@ async function enrichOpenPullRequestOverlap({ issues, githubClient, maxChecks, p
   let found = 0;
   let failed = 0;
   let unchecked = 0;
+  let rateLimitExhausted = false;
   for (const issue of orderedIssues) {
     const required = requiredKeys.has(issueKey(issue));
     if (!checkKeys.has(issueKey(issue))) continue;
+    if (rateLimitExhausted) {
+      if (required) unchecked += 1;
+      enrichedByKey.set(issueKey(issue), {
+        ...issue,
+        overlapStatus: "unchecked"
+      });
+      continue;
+    }
     if (checks >= maxChecks) {
       if (required) {
         unchecked += 1;
@@ -223,6 +236,7 @@ async function enrichOpenPullRequestOverlap({ issues, githubClient, maxChecks, p
         overlapStatus: "error",
         overlapCollectionError: error.message
       });
+      if (isRateLimitError(error)) rateLimitExhausted = true;
     }
   }
   const checked = checks - failed;
@@ -242,6 +256,11 @@ async function enrichOpenPullRequestOverlap({ issues, githubClient, maxChecks, p
 
 function searchWasTruncated(results) {
   return Number.isFinite(Number(results?.totalCount)) && Number(results.totalCount) > results.length;
+}
+
+function isRateLimitError(error) {
+  return error?.rateLimited === true
+    || /GitHub API (?:403|429).*rate limit|secondary rate limit|rate limit exceeded|abuse detection/i.test(String(error?.message || error));
 }
 
 async function readFixtureIssues(fixturePath) {

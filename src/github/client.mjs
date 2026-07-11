@@ -10,11 +10,30 @@ export function createGitHubClient(config = {}) {
   const tokenCache = new Map();
   const readCache = new Map();
   const readCacheTtlMs = Number.isFinite(Number(config.githubCacheTtlMs)) ? Number(config.githubCacheTtlMs) : 60_000;
-  const searchDelayMs = Number.isFinite(Number(config.githubSearchDelayMs)) ? Math.max(0, Number(config.githubSearchDelayMs)) : 2_000;
+  const searchDelayMs = Number.isFinite(Number(config.githubSearchDelayMs)) ? Math.max(0, Number(config.githubSearchDelayMs)) : 3_000;
+  const rateLimitRetries = Number.isFinite(Number(config.githubRateLimitRetries)) ? Math.floor(Math.max(0, Math.min(5, Number(config.githubRateLimitRetries)))) : 2;
+  const rateLimitFallbackMs = Number.isFinite(Number(config.githubRateLimitFallbackMs)) ? Math.max(0, Number(config.githubRateLimitFallbackMs)) : 60_000;
+  const rateLimitMaxWaitMs = Number.isFinite(Number(config.githubRateLimitMaxWaitMs)) ? Math.max(0, Number(config.githubRateLimitMaxWaitMs)) : 5 * 60_000;
   const requestTimeoutMs = Number.isFinite(Number(config.githubRequestTimeoutMs)) ? Math.max(0, Number(config.githubRequestTimeoutMs)) : 20_000;
   let nextSearchAt = 0;
 
   async function request(path, options = {}) {
+    const method = String(options.method || "GET").toUpperCase();
+    const maxRetries = ["GET", "HEAD"].includes(method) ? rateLimitRetries : 0;
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await requestOnce(path, options);
+      } catch (error) {
+        if (!error?.rateLimited || attempt >= maxRetries) throw error;
+        const advertisedWaitMs = Number.isFinite(error.retryAfterMs) ? error.retryAfterMs : null;
+        if (advertisedWaitMs !== null && advertisedWaitMs > rateLimitMaxWaitMs) throw error;
+        const waitMs = advertisedWaitMs ?? Math.min(rateLimitMaxWaitMs, rateLimitFallbackMs * (2 ** attempt));
+        if (waitMs > 0) await delay(waitMs);
+      }
+    }
+  }
+
+  async function requestOnce(path, options = {}) {
     const url = `${apiBase}${path}`;
     const { signal: upstreamSignal, timeoutMs: optionTimeoutMs, ...fetchOptions } = options;
     const timeoutMs = Number.isFinite(Number(optionTimeoutMs)) ? Math.max(0, Number(optionTimeoutMs)) : requestTimeoutMs;
@@ -48,7 +67,11 @@ export function createGitHubClient(config = {}) {
       const data = text ? safeJson(text) : null;
       if (!response.ok) {
         const detail = data?.message || text || response.statusText;
-        throw new Error(`GitHub API ${response.status} ${response.statusText}: ${detail}`);
+        const error = new Error(`GitHub API ${response.status} ${response.statusText}: ${detail}`);
+        error.status = response.status;
+        error.rateLimited = isRateLimitResponse(response, detail);
+        error.retryAfterMs = rateLimitRetryDelayMs(response);
+        throw error;
       }
       return data;
     } catch (error) {
@@ -593,6 +616,31 @@ export function createGitHubClient(config = {}) {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRateLimitResponse(response, detail = "") {
+  const status = Number(response?.status);
+  if (status === 429) return true;
+  if (status !== 403) return false;
+  const remaining = response?.headers?.get?.("x-ratelimit-remaining");
+  return remaining === "0"
+    || Boolean(response?.headers?.get?.("retry-after"))
+    || /secondary rate limit|rate limit exceeded|abuse detection/i.test(String(detail));
+}
+
+function rateLimitRetryDelayMs(response) {
+  const retryAfter = response?.headers?.get?.("retry-after");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds)) return Math.max(0, Math.ceil(seconds * 1_000));
+    const retryAt = Date.parse(retryAfter);
+    if (Number.isFinite(retryAt)) return Math.max(0, retryAt - Date.now());
+  }
+  if (response?.headers?.get?.("x-ratelimit-remaining") === "0") {
+    const resetSeconds = Number(response?.headers?.get?.("x-ratelimit-reset"));
+    if (Number.isFinite(resetSeconds)) return Math.max(0, resetSeconds * 1_000 - Date.now() + 1_000);
+  }
+  return null;
 }
 
 export async function createAppJwt(appId, privateKeyPath, nowSeconds = Math.floor(Date.now() / 1000)) {
