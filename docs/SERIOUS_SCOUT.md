@@ -21,7 +21,7 @@ The default preset searches discussed open GitHub issues for terms like crash, r
 
 Set `GITHUB_TOKEN` or `GH_TOKEN` for repeated runs so GitHub search rate limits do not distort the results. Safe read requests honor GitHub's `retry-after` and `x-ratelimit-reset` headers, otherwise use bounded exponential backoff. After retry exhaustion, the scout stops the remaining query loop and records an incomplete collection instead of continuing to hammer the API.
 
-Use `--check-pr-overlap` for unattended contributor scouting. It performs bounded read-only open-PR searches for preliminary candidate rows, or for review rows only as diagnostic fallback when no candidate exists, using issue numbers and strong code identifiers from the issue text. Already-blocked rows never spend overlap-search budget. This catches overlap such as an existing PR for the same `refreshNuxtData` fix even when the PR does not reference the issue number.
+Use `--check-pr-overlap` for unattended contributor scouting. It performs bounded read-only open-PR searches for preliminary candidate rows, or for review rows only as diagnostic fallback when no candidate exists, using issue numbers and strong code identifiers from the issue text. Already-blocked rows never spend overlap-search budget. One returned matching open PR is conclusive overlap evidence and stops later identifier searches for that issue. A zero-result search with incomplete or contradictory result metadata still fails closed. This catches overlap such as an existing PR for the same `refreshNuxtData` fix even when the PR does not reference the issue number.
 
 ## Automation Verdict
 
@@ -54,6 +54,8 @@ The standard for a successful unattended run is not volume. It is a small number
 - assigned issues, maintainer-owned issues without an explicit invitation label, and supplied open-PR overlap
 - reporter-claimed work where the issue body says the reporter plans to submit or has started a PR
 - thin serious-sounding reports with no reproduction evidence
+
+Cosmetic vocabulary in a template, documentation URL, integration metadata, or real operation name such as version cleanup does not by itself demote an otherwise strong bug. Explicit cosmetic intent in the issue title or labels still warns or blocks the row.
 
 Negated ownership such as "nobody is working on this" is not treated as claimed work. Legitimate agent/runtime bugs are not generated tracker noise merely because they contain the word "agent".
 
