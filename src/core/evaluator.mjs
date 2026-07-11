@@ -7,6 +7,7 @@ import {
 import { analyzeRepositoryContext, normalizeRepositoryContext } from "./repository-context.mjs";
 import { applyFeedbackCalibration } from "./calibration.mjs";
 import { enrichWithMaintainerStack } from "./maintainer-stack.mjs";
+import { canonicalizeAnalysisText } from "./text-safety.mjs";
 
 const GENERIC_TITLES = new Set([
   "fix",
@@ -116,6 +117,7 @@ export function availableProfiles() {
 }
 
 export function normalizeInput(rawInput = {}) {
+  rawInput = rawInput && typeof rawInput === "object" && !Array.isArray(rawInput) ? rawInput : {};
   const files = Array.isArray(rawInput.files) ? rawInput.files : [];
   const additions = numberOrSum(rawInput.additions, files, "additions");
   const deletions = numberOrSum(rawInput.deletions, files, "deletions");
@@ -125,8 +127,8 @@ export function normalizeInput(rawInput = {}) {
 
   return {
     kind: rawInput.kind || rawInput.type || "pull_request",
-    title: String(rawInput.title || ""),
-    body: String(rawInput.body || ""),
+    title: canonicalizeAnalysisText(rawInput.title),
+    body: canonicalizeAnalysisText(rawInput.body),
     authorAssociation: String(rawInput.authorAssociation || rawInput.author_association || ""),
     draft: Boolean(rawInput.draft),
     labels: normalizeLabels(rawInput.labels),
@@ -137,7 +139,7 @@ export function normalizeInput(rawInput = {}) {
     checks: Array.isArray(rawInput.checks) ? rawInput.checks : [],
     commits: normalizeCommits(rawInput.commits),
     profile: String(rawInput.profile || rawInput.reviewProfile || ""),
-    contributingText: String(rawInput.contributingText || rawInput.contributing || ""),
+    contributingText: canonicalizeAnalysisText(rawInput.contributingText || rawInput.contributing),
     repositoryFiles: normalizeRepositoryFiles(rawInput.repositoryFiles || rawInput.policyFiles),
     repositoryContext: normalizeRepositoryContext(rawInput.repositoryContext || rawInput.repoContext),
     submissionFormat: String(rawInput.submissionFormat || rawInput.format || ""),
@@ -1086,7 +1088,7 @@ export function renderMarkdownReport(result) {
     ? result.repairSteps.map((step) => `- ${step}`).join("\n")
     : "- No repair steps.";
   const checkLines = result.checks
-    .map((check) => `- ${STATUS_COPY[check.status]}: ${check.title} - ${check.reason}`)
+    .map((check) => `- ${STATUS_COPY[check.status] || check.status || "unknown"}: ${check.title} - ${check.reason}`)
     .join("\n");
 
   const lines = [

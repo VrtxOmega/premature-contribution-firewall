@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, rm, symlink } from "node:fs/promises";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +14,7 @@ import {
   readPcfMcpResource
 } from "../src/mcp/core.mjs";
 import { handleMcpRequest } from "../src/mcp/server.mjs";
+import { laneIdFor } from "../src/core/lane-store.mjs";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
@@ -180,6 +181,108 @@ test("repro gate classifies caller-supplied before and after evidence without ex
   });
   assert.equal(blocked.status, "blocked");
   assert.ok(blocked.blockers.some((blocker) => blocker.id === "after-command-failed"));
+
+  const verdictOnly = await callPcfMcpTool("pcf_repro_gate", {
+    before: { verdict: "before-fails" },
+    after: { verdict: "passed" }
+  });
+  assert.equal(verdictOnly.status, "blocked");
+  assert.ok(verdictOnly.blockers.some((blocker) => blocker.id === "before-verdict-unsubstantiated"));
+  assert.ok(verdictOnly.blockers.some((blocker) => blocker.id === "after-verdict-unsubstantiated"));
+});
+
+test("lane status cannot omit mandatory gates through a custom gate order", async () => {
+  const status = await callPcfMcpTool("pcf_lane_status", {
+    gateOrder: ["scout"],
+    gates: { scout: { status: "pass", evidence: [{ path: "scout.json" }] } }
+  });
+
+  assert.equal(status.status, "not-ready");
+  assert.equal(status.nextGate.id, "aiPosture");
+  assert.ok(Object.hasOwn(status.gates, "overlap"));
+  assert.ok(Object.hasOwn(status.gates, "provenance"));
+});
+
+test("lane status does not accept bare pass strings as evidence", async () => {
+  const passStrings = Object.fromEntries([
+    "scout", "aiPosture", "overlap", "policy", "repro", "diffShape", "preflight", "pr", "provenance", "calibration"
+  ].map((gate) => [gate, "pass"]));
+  const status = await callPcfMcpTool("pcf_lane_status", { gates: passStrings });
+
+  assert.equal(status.status, "review");
+  assert.equal(status.nextGate.id, "scout");
+  assert.match(status.gates.scout.reason, /does not include structured gate evidence/);
+});
+
+test("lane status does not accept evidence-free structured pass objects", async () => {
+  const passObjects = Object.fromEntries([
+    "scout", "aiPosture", "overlap", "policy", "repro", "diffShape", "preflight", "pr", "provenance", "calibration"
+  ].map((gate) => [gate, { status: "pass" }]));
+  const status = await callPcfMcpTool("pcf_lane_status", { gates: passObjects });
+
+  assert.equal(status.status, "review");
+  assert.match(status.gates.scout.reason, /without a concrete evidence path/);
+});
+
+test("lane status rejects placeholder and self-asserted pass evidence", async () => {
+  const gateIds = [
+    "scout", "aiPosture", "overlap", "policy", "repro", "diffShape", "preflight", "pr", "provenance", "calibration"
+  ];
+  for (const makeGate of [
+    () => ({ status: "pass", evidence: [{}] }),
+    () => ({ status: "pass", evidence: [{ summary: "trust me" }] }),
+    () => ({ status: "pass", verified: true, updatedAt: "2026-07-10T00:00:00Z" })
+  ]) {
+    const status = await callPcfMcpTool("pcf_lane_status", {
+      gates: Object.fromEntries(gateIds.map((id) => [id, makeGate()]))
+    });
+    assert.equal(status.status, "review");
+    assert.match(status.gates.scout.reason, /concrete evidence path/);
+  }
+});
+
+test("lane ids remain deterministic without collapsing lossy repository names", () => {
+  const repositoryId = laneIdFor({ repository: "owner/repo", issue: "1" });
+  const hyphenatedId = laneIdFor({ repository: "owner-repo", issue: "1" });
+
+  assert.notEqual(repositoryId, hyphenatedId);
+  assert.equal(repositoryId, laneIdFor({ repository: "owner/repo", issue: "1" }));
+
+  const longRepository = `owner/${"repository".repeat(25)}`;
+  assert.notEqual(
+    laneIdFor({ repository: longRepository, issue: "111" }),
+    laneIdFor({ repository: longRepository, issue: "222" })
+  );
+
+  assert.notEqual(
+    laneIdFor({ laneId: "parser-fix", repository: "owner/one", issue: "1" }),
+    laneIdFor({ laneId: "parser-fix", repository: "owner/two", issue: "1" })
+  );
+});
+
+test("lane reads fall back to legacy sanitized ids", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "pcf-mcp-legacy-lane-"));
+  const previous = process.env.PCF_DATA_DIR;
+  process.env.PCF_DATA_DIR = dir;
+  try {
+    const legacyPath = join(dir, "lanes", "owner-repo__7.json");
+    await mkdir(join(dir, "lanes"), { recursive: true });
+    await writeFile(legacyPath, JSON.stringify({
+      version: "1",
+      id: "owner-repo__7",
+      status: "review",
+      lane: { repository: "owner/repo", issue: "7", branch: "", pr: "" },
+      gates: {}
+    }), "utf8");
+
+    const read = await callPcfMcpTool("pcf_lane_read", { repository: "owner/repo", issue: "7" });
+    assert.equal(read.path, legacyPath);
+    assert.equal(read.record.lane.repository, "owner/repo");
+  } finally {
+    if (previous === undefined) delete process.env.PCF_DATA_DIR;
+    else process.env.PCF_DATA_DIR = previous;
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test("lane store writes only under PCF_DATA_DIR and evidence is explicit", async () => {
@@ -192,12 +295,25 @@ test("lane store writes only under PCF_DATA_DIR and evidence is explicit", async
       issue: "123",
       status: "review",
       summary: "Needs repro evidence.",
+      artifacts: [{ summary: "Operator note without a file attachment." }],
       gates: {
-        scout: { status: "pass", reason: "candidate" },
-        aiPosture: { status: "pass", reason: "low risk" },
-        overlap: { status: "pass", reason: "no open overlap" },
-        policy: { status: "pass", reason: "policy checked" },
-        repro: { status: "pending", reason: "not run" }
+        scout: {
+          status: "pass",
+          reason: "candidate",
+          evidence: [{ path: "scout.json" }],
+          owner: "serious-scout",
+          details: { query: "is:issue is:open label:bug" },
+          verified: true
+        },
+        aiPosture: { status: "pass", reason: "low risk", evidence: [{ path: "ai-posture.json" }] },
+        overlap: { status: "pass", reason: "no open overlap", evidence: [{ path: "overlap.json" }] },
+        policy: { status: "pass", reason: "policy checked", evidence: [{ path: "policy.json" }] },
+        repro: { status: "pending", reason: "not run" },
+        securityReview: {
+          status: "review",
+          reason: "Awaiting a manual threat-model read.",
+          owner: "security-maintainer"
+        }
       }
     });
     assert.equal(saved.ok, true);
@@ -209,12 +325,22 @@ test("lane store writes only under PCF_DATA_DIR and evidence is explicit", async
     });
     assert.equal(read.record.lane.repository, "owner/repo");
     assert.equal(read.record.gates.repro.status, "pending");
+    assert.equal(read.record.gates.scout.owner, "serious-scout");
+    assert.deepEqual(read.record.gates.scout.details, { query: "is:issue is:open label:bug" });
+    assert.equal(Object.hasOwn(read.record.gates.scout, "verified"), false);
+    assert.equal(read.record.gates.securityReview.status, "review");
+    assert.equal(read.record.gates.securityReview.owner, "security-maintainer");
+    assert.deepEqual(read.record.artifacts, [{
+      path: "",
+      kind: "evidence",
+      summary: "Operator note without a file attachment."
+    }]);
 
     const resumed = await callPcfMcpTool("pcf_lane_resume", {
       repository: "owner/repo",
       issue: "123"
     });
-    assert.equal(resumed.status, "not-ready");
+    assert.equal(resumed.status, "review");
     assert.equal(resumed.nextGate.id, "repro");
 
     const evidence = await callPcfMcpTool("pcf_evidence_bundle_save", {
@@ -246,12 +372,41 @@ test("lane store writes only under PCF_DATA_DIR and evidence is explicit", async
   }
 });
 
+test("lane store recomputes status instead of persisting caller authority", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "pcf-mcp-lane-authority-"));
+  const previous = process.env.PCF_DATA_DIR;
+  process.env.PCF_DATA_DIR = dir;
+  try {
+    const saved = await callPcfMcpTool("pcf_lane_save", {
+      repository: "owner/repo",
+      issue: "authority",
+      status: "ready",
+      summary: "Caller says every gate passed.",
+      gates: {}
+    });
+    assert.equal(saved.record.status, "not-ready");
+    assert.notEqual(saved.record.summary, "Caller says every gate passed.");
+
+    const read = await callPcfMcpTool("pcf_lane_read", { repository: "owner/repo", issue: "authority" });
+    assert.equal(read.record.status, "not-ready");
+    assert.equal(read.record.gates.scout.status, "pending");
+  } finally {
+    if (previous === undefined) delete process.env.PCF_DATA_DIR;
+    else process.env.PCF_DATA_DIR = previous;
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("resources and prompts expose lane schema and review guidance", async () => {
   const schema = await readPcfMcpResource("pcf://schemas/lane");
   const parsed = JSON.parse(schema.text);
   assert.equal(parsed.schema.title, "PCF Contribution Lane");
   assert.ok(parsed.gateOrder.includes("provenance"));
   assert.ok(parsed.gateOrder.includes("calibration"));
+  assert.equal(parsed.schema.properties.artifacts.items.$ref, "#/$defs/artifact");
+  assert.ok(parsed.schema.$defs.artifact.anyOf.some((rule) => rule.required?.includes("summary")));
+  assert.equal(parsed.schema.$defs.gate.properties.evidence.items.$ref, "#/$defs/gateArtifact");
+  assert.deepEqual(parsed.schema.$defs.gateArtifact.required, ["path"]);
 
   const reproSchema = await readPcfMcpResource("pcf://schemas/repro");
   const reproParsed = JSON.parse(reproSchema.text);
@@ -276,6 +431,9 @@ test("resources and prompts expose lane schema and review guidance", async () =>
 });
 
 test("JSON-RPC handler and stdio server respond to MCP tool calls", async () => {
+  const invalid = await handleMcpRequest(null);
+  assert.equal(invalid.error.code, -32600);
+
   const handled = await handleMcpRequest({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} });
   assert.equal(handled.result.tools.some((tool) => tool.name === "pcf_health"), true);
 
@@ -299,6 +457,24 @@ test("JSON-RPC handler and stdio server respond to MCP tool calls", async () => 
   assert.equal(content.githubWrites, "disabled");
 });
 
+test("MCP stdio reports malformed JSON and continues with the next frame", () => {
+  const input = [
+    "{not-json}",
+    JSON.stringify({ jsonrpc: "2.0", id: 9, method: "ping", params: {} }),
+    ""
+  ].join("\n");
+  const stdout = execFileSync(process.execPath, ["src/mcp/server.mjs"], {
+    cwd: repoRoot,
+    input,
+    encoding: "utf8"
+  });
+  const responses = stdout.trim().split("\n").map((line) => JSON.parse(line));
+
+  assert.equal(responses[0].error.code, -32700);
+  assert.equal(responses[1].id, 9);
+  assert.deepEqual(responses[1].result, {});
+});
+
 test("npm-style pcf-mcp bin symlink starts the stdio server", async () => {
   const dir = await mkdtemp(join(tmpdir(), "pcf-mcp-bin-"));
   const binPath = join(dir, "pcf-mcp");
@@ -315,6 +491,38 @@ test("npm-style pcf-mcp bin symlink starts the stdio server", async () => {
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("MCP stdio rejects oversized line-delimited frames", () => {
+  const result = spawnSync(process.execPath, ["src/mcp/server.mjs"], {
+    cwd: repoRoot,
+    input: `${" ".repeat(2_000_001)}\n`,
+    encoding: "utf8",
+    maxBuffer: 4_000_000
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /MCP frame exceeds 2000000 byte limit/);
+});
+
+test("MCP stdio bounds header growth and handles long blank-line runs iteratively", () => {
+  const oversizedHeader = spawnSync(process.execPath, ["src/mcp/server.mjs"], {
+    cwd: repoRoot,
+    input: `Content-Length: 1\r\nX-Fill: ${"a".repeat(20_000)}`,
+    encoding: "utf8",
+    maxBuffer: 100_000
+  });
+  assert.notEqual(oversizedHeader.status, 0);
+  assert.match(oversizedHeader.stderr, /MCP header exceeds 16384 byte limit/);
+
+  const request = JSON.stringify({ jsonrpc: "2.0", id: 77, method: "ping", params: {} });
+  const blanks = spawnSync(process.execPath, ["src/mcp/server.mjs"], {
+    cwd: repoRoot,
+    input: `${"\n".repeat(25_000)}${request}\n`,
+    encoding: "utf8",
+    maxBuffer: 100_000
+  });
+  assert.equal(blanks.status, 0, blanks.stderr);
+  assert.equal(JSON.parse(blanks.stdout.trim()).id, 77);
 });
 
 function escapeRegExp(value) {

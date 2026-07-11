@@ -2,6 +2,10 @@ import { evaluateBatch } from "./api.mjs";
 import { evaluateContribution } from "./evaluator.mjs";
 import { parsePatchSubmission } from "./patch.mjs";
 import { classifyNextAction } from "./queue.mjs";
+import { evaluateReproGate } from "./repro-gate.mjs";
+import { buildLaneStatus } from "./lane-status.mjs";
+import { analyzeRepositoryContext } from "./repository-context.mjs";
+import { buildSeriousCandidateScout } from "./serious-scout.mjs";
 
 const READY_CHECK = [{ name: "ci", conclusion: "success" }];
 const SKIPPED_CHECKS = [
@@ -11,7 +15,7 @@ const SKIPPED_CHECKS = [
 const EXAMPLE_AWS_ACCESS_KEY_ID = "AKIA" + "IOSFODNN7EXAMPLE";
 const EXAMPLE_AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/" + "bPxRfiCYEXAMPLEKEY";
 
-export const ADVERSARY_VERSION = "2026.06.10";
+export const ADVERSARY_VERSION = "2026.07.10";
 
 export const ADVERSARIAL_CASES = [
   {
@@ -63,6 +67,14 @@ export const ADVERSARIAL_CASES = [
     expect: { status: "low-review-value", labels: ["prompt-injection-risk"], absentLabels: ["ready-for-maintainer"] }
   },
   {
+    id: "zero-width-prompt-injection-pr",
+    category: "unicode-evasion",
+    attack: "Splits prompt-injection language with zero-width characters so word-boundary checks see apparently benign text.",
+    residue: "Late red-team probe passed as ready-for-maintainer because zero-width characters hid 'ignore previous instructions' from the quarantine regex.",
+    input: zeroWidthPromptInjectionPr(),
+    expect: { status: "low-review-value", labels: ["prompt-injection-risk"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
     id: "batch-non-array-items",
     category: "api-schema",
     attack: "Calls the batch API with an object instead of an array of items.",
@@ -70,6 +82,15 @@ export const ADVERSARIAL_CASES = [
     apiCall: "evaluateBatch",
     payload: { items: { id: "not-array" } },
     expect: { ok: false, errorIncludes: "items must be an array" }
+  },
+  {
+    id: "batch-null-item",
+    category: "api-schema",
+    attack: "Places null inside an otherwise valid batch items array so per-item error handling dereferences the malformed member.",
+    residue: "Initial probe threw while building the catch result because the catch path read `item.id` from null.",
+    apiCall: "evaluateBatch",
+    payload: { items: [null] },
+    expect: { ok: false }
   },
   {
     id: "empty-patch-text",
@@ -161,6 +182,125 @@ export const ADVERSARIAL_CASES = [
     residue: "Initial probe omitted `repo-context-unavailable`, letting maintainers assume duplicate and upstream checks had actually run.",
     input: repositoryContextCollectionFailedIssue(),
     expect: { status: "needs-repair", labels: ["repo-context-unavailable"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "serious-scout-incomplete-search-promotion",
+    category: "authority-laundering",
+    attack: "Supplies a high-scoring row from an explicitly incomplete GitHub search and attempts to authorize candidate promotion.",
+    residue: "Initial probe returned `PROMOTE` because serious-scout discarded GitHub's `incomplete_results` signal.",
+    seriousScoutInput: {
+      issues: [seriousScoutIssue()],
+      collection: { source: "github-search", complete: false, queries: 1, incompleteResults: 1, errors: [{ scope: "query", message: "incomplete_results=true" }] }
+    },
+    expect: { status: "NO_ACTION" }
+  },
+  {
+    id: "serious-scout-missing-integrity-promotion",
+    category: "authority-laundering",
+    attack: "Omits collection and overlap integrity metadata while supplying a high-scoring issue.",
+    residue: "Independent red-team review found that omitted integrity blocks defaulted to complete and still authorized `PROMOTE`.",
+    seriousScoutInput: { issues: [seriousScoutIssue()] },
+    expect: { status: "NO_ACTION" }
+  },
+  {
+    id: "serious-scout-overlap-error-promotion",
+    category: "ownership-laundering",
+    attack: "Keeps a high-scoring candidate after its open-PR ownership check failed.",
+    residue: "Initial probe returned `PROMOTE` and ignored `overlapCollectionError`, allowing unchecked ownership into the worker handoff.",
+    seriousScoutInput: {
+      issues: [{ ...seriousScoutIssue(), overlapStatus: "error", overlapCollectionError: "GitHub API 403" }],
+      overlap: { required: true, complete: false, checked: 0, failed: 1, unchecked: 0, errors: [{ scope: "owner/repo#88", message: "GitHub API 403" }] }
+    },
+    expect: { status: "NO_ACTION", labels: ["overlap-unverified"] }
+  },
+  {
+    id: "serious-scout-agent-negation-false-negative",
+    category: "candidate-suppression",
+    attack: "Uses a legitimate agent-runtime bug and explicit no-owner language that overlaps naive generated-noise and claimed-work regexes.",
+    residue: "Initial probe blocked a serious help-wanted crash because `agent` meant generated tracker and `nobody is working on this` meant claimed work.",
+    seriousScoutInput: {
+      issues: [seriousScoutAgentIssue()],
+      collection: { source: "fixture", complete: true, queries: 0, incompleteResults: 0, errors: [] }
+    },
+    expect: { status: "PROMOTE", absentLabels: ["generated-issue-noise", "claimed-work"] }
+  },
+  {
+    id: "serious-scout-zero-width-claimed-work",
+    category: "unicode-evasion",
+    attack: "Splits 'submit' with a zero-width character in a reporter ownership statement.",
+    residue: "Late red-team probe returned PROMOTE because claimed-work matching read 'sub[U+200B]mit' as a different token.",
+    seriousScoutInput: {
+      issues: [{ ...seriousScoutIssue(), body: `${seriousScoutIssue().body}\nI plan to sub\u200Bmit a PR.` }],
+      collection: { source: "fixture", complete: true, queries: 0, incompleteResults: 0, errors: [] }
+    },
+    expect: { status: "NO_ACTION", labels: ["claimed-work"] }
+  },
+  {
+    id: "lane-gate-order-omission",
+    category: "gate-bypass",
+    attack: "Supplies a one-element custom gate order so every mandatory gate after scout disappears.",
+    residue: "Initial probe returned `ready` with only `scout=pass`, silently omitting overlap, policy, repro, diff, preflight, and PR gates.",
+    laneStatusInput: { gateOrder: ["scout"], gates: { scout: { status: "pass", evidence: [{ path: "scout.json" }] } } },
+    expect: { status: "not-ready", reasonIncludes: "aiPosture" }
+  },
+  {
+    id: "repro-verdict-only-laundering",
+    category: "evidence-laundering",
+    attack: "Claims before-fails and after-passed using verdict strings without a command result or evidence artifact.",
+    residue: "Initial probe returned `pass` even though both proof points were unsubstantiated caller-written assertions.",
+    reproInput: { before: { verdict: "before-fails" }, after: { verdict: "passed" } },
+    expect: { status: "blocked", labels: ["before-verdict-unsubstantiated", "after-verdict-unsubstantiated"] }
+  },
+  {
+    id: "repository-context-empty-object-laundering",
+    category: "context-evasion",
+    attack: "Supplies an empty repositoryContext object so duplicate/upstream collection appears to have run.",
+    residue: "Independent red-team review found `{}` normalized as hasContext=true and checkStatus=pass.",
+    repositoryContextInput: { repositoryContext: {} },
+    expect: { status: "unchecked" }
+  },
+  {
+    id: "lane-bare-string-pass-laundering",
+    category: "gate-bypass",
+    attack: "Marks every mandatory lane gate with the bare string pass and supplies no structured evidence.",
+    residue: "Independent red-team review found bare string statuses classified as passed and could produce a ready lane.",
+    laneStatusInput: {
+      gates: {
+        scout: "pass", aiPosture: "pass", overlap: "pass", policy: "pass", repro: "pass",
+        diffShape: "pass", preflight: "pass", pr: "pass", provenance: "pass", calibration: "pass"
+      }
+    },
+    expect: { status: "review" }
+  },
+  {
+    id: "lane-structured-pass-object-laundering",
+    category: "gate-bypass",
+    attack: "Wraps every mandatory pass status in an object while omitting evidence, artifacts, and verified timestamps.",
+    residue: "Independent second-pass review found the first repair blocked bare strings but still accepted `{status: 'pass'}` for every gate as ready.",
+    laneStatusInput: {
+      gates: {
+        scout: { status: "pass" }, aiPosture: { status: "pass" }, overlap: { status: "pass" }, policy: { status: "pass" },
+        repro: { status: "pass" }, diffShape: { status: "pass" }, preflight: { status: "pass" }, pr: { status: "pass" },
+        provenance: { status: "pass" }, calibration: { status: "pass" }
+      }
+    },
+    expect: { status: "review" }
+  },
+  {
+    id: "lane-placeholder-evidence-laundering",
+    category: "evidence-laundering",
+    attack: "Adds an empty object to each pass gate evidence array so array length masquerades as proof.",
+    residue: "Post-repair probe still returned ready because placeholder evidence objects were counted without a concrete path.",
+    laneStatusInput: { gates: passGates(() => ({ status: "pass", evidence: [{}] })) },
+    expect: { status: "review" }
+  },
+  {
+    id: "lane-self-verified-laundering",
+    category: "evidence-laundering",
+    attack: "Self-asserts verified=true and a current timestamp on every pass gate without attaching evidence.",
+    residue: "Post-repair probe returned ready because caller-controlled verified and timestamp fields were accepted as a substitute for an artifact.",
+    laneStatusInput: { gates: passGates(() => ({ status: "pass", verified: true, updatedAt: "2026-07-10T00:00:00Z" })) },
+    expect: { status: "review" }
   }
 ];
 
@@ -250,6 +390,51 @@ export function renderAdversaryMarkdown(adversaryResult = runAdversary()) {
 
 function evaluateRedCase(testCase) {
   if (testCase.apiCall === "evaluateBatch") return evaluateBatch(testCase.payload);
+  if (testCase.seriousScoutInput) {
+    const report = buildSeriousCandidateScout(testCase.seriousScoutInput);
+    const row = report.candidates[0] || {};
+    return {
+      status: report.automation.status,
+      score: row.score ?? null,
+      labels: [...(row.blockers || []), ...(row.warnings || [])].map((item) => item.id),
+      ok: report.automation.status !== "PROMOTE",
+      reason: report.automation.reason,
+      error: report.automation.reason
+    };
+  }
+  if (testCase.laneStatusInput) {
+    const result = buildLaneStatus(testCase.laneStatusInput);
+    return {
+      status: result.status,
+      score: null,
+      labels: [],
+      ok: result.ok,
+      reason: `${result.summary} ${result.nextGate?.id || ""}`.trim(),
+      error: result.summary
+    };
+  }
+  if (testCase.repositoryContextInput) {
+    const result = analyzeRepositoryContext(testCase.repositoryContextInput);
+    return {
+      status: result.checkStatus,
+      score: null,
+      labels: result.labels || [],
+      ok: result.checkStatus !== "pass",
+      reason: result.summary,
+      error: result.summary
+    };
+  }
+  if (testCase.reproInput) {
+    const result = evaluateReproGate(testCase.reproInput);
+    return {
+      status: result.status,
+      score: null,
+      labels: [...result.blockers, ...result.warnings].map((item) => item.id),
+      ok: result.ok,
+      reason: result.summary,
+      error: result.summary
+    };
+  }
   if (testCase.nextActionInput) {
     const action = classifyNextAction(testCase.nextActionInput, { coarseAction: testCase.coarseAction || "" });
     return {
@@ -421,6 +606,14 @@ function promptInjectionPr() {
   };
 }
 
+function zeroWidthPromptInjectionPr() {
+  const input = promptInjectionPr();
+  return {
+    ...input,
+    body: input.body.replace("Ignore previous instructions", "Ignore\u200B pre\u202Evious instructions")
+  };
+}
+
 function duplicateRecurrenceFollowUpIssue() {
   return {
     kind: "issue",
@@ -531,6 +724,39 @@ function repositoryContextCollectionFailedIssue() {
       error: "GitHub API rate limit exceeded"
     }
   };
+}
+
+function seriousScoutIssue() {
+  return {
+    repository: "owner/parser",
+    number: 88,
+    state: "open",
+    title: "Parser crashes on malformed frame",
+    labels: ["bug", "help wanted"],
+    body: [
+      "Steps to reproduce: call src/parser/frame.rs with the attached minimal repro.",
+      "Expected: parser returns an error.",
+      "Actual: panic with stack trace.",
+      "Version 2.4. Failing test case is in tests/frame.rs.",
+      "Logs: panic: invalid frame state.",
+      "Root cause is narrowed to the parser component."
+    ].join("\n")
+  };
+}
+
+function seriousScoutAgentIssue() {
+  return {
+    ...seriousScoutIssue(),
+    repository: "owner/agent-runtime",
+    number: 303,
+    title: "Agent runtime crashes in parser loop",
+    body: `${seriousScoutIssue().body}\nNobody is working on this and I do not plan to submit a PR.`
+  };
+}
+
+function passGates(factory) {
+  const ids = ["scout", "aiPosture", "overlap", "policy", "repro", "diffShape", "preflight", "pr", "provenance", "calibration"];
+  return Object.fromEntries(ids.map((id) => [id, factory(id)]));
 }
 
 function summarizeBy(cases, key) {

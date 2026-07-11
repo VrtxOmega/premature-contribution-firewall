@@ -16,8 +16,15 @@ const SERVER_INFO = {
   name: PCF_MCP_SERVER_NAME,
   version: PCF_MCP_PROTOCOL_VERSION
 };
+const MAX_MCP_FRAME_BYTES = 2_000_000;
+const MAX_MCP_HEADER_BYTES = 16_384;
+const EMPTY_FRAME = Symbol("pcf-mcp-empty-frame");
+const PARSE_ERROR = Symbol("pcf-mcp-parse-error");
 
 export async function handleMcpRequest(message) {
+  if (!message || typeof message !== "object" || Array.isArray(message)) {
+    return errorResult(null, -32600, "Invalid Request");
+  }
   if (message.method === "initialize") {
     return result(message.id, {
       protocolVersion: message.params?.protocolVersion || "2025-06-18",
@@ -64,7 +71,9 @@ export async function runPcfMcpServer({ input = process.stdin, output = process.
   for await (const message of reader.messages()) {
     let response = null;
     try {
-      response = await handleMcpRequest(message);
+      response = message?.[PARSE_ERROR]
+        ? errorResult(null, -32700, `Parse error: ${message[PARSE_ERROR]}`)
+        : await handleMcpRequest(message);
     } catch (error) {
       response = errorResult(message.id, -32603, error.message);
     }
@@ -92,10 +101,13 @@ class JsonRpcStreamReader {
   }
 
   readOne() {
-    if (this.buffer.length === 0) return null;
-    const prefix = this.buffer.subarray(0, Math.min(this.buffer.length, 15)).toString("ascii").toLowerCase();
-    if (prefix.startsWith("content-length:")) return this.readHeaderFramed();
-    return this.readLineDelimited();
+    while (this.buffer.length > 0) {
+      const prefix = this.buffer.subarray(0, Math.min(this.buffer.length, 15)).toString("ascii").toLowerCase();
+      const parsed = prefix.startsWith("content-length:") ? this.readHeaderFramed() : this.readLineDelimited();
+      if (parsed === EMPTY_FRAME) continue;
+      return parsed;
+    }
+    return null;
   }
 
   readHeaderFramed() {
@@ -105,26 +117,45 @@ class JsonRpcStreamReader {
       separator = this.buffer.indexOf("\n\n");
       separatorLength = 2;
     }
-    if (separator < 0) return null;
+    if (separator < 0) {
+      if (this.buffer.length > MAX_MCP_HEADER_BYTES) throw new Error(`MCP header exceeds ${MAX_MCP_HEADER_BYTES} byte limit`);
+      return null;
+    }
+    if (separator > MAX_MCP_HEADER_BYTES) throw new Error(`MCP header exceeds ${MAX_MCP_HEADER_BYTES} byte limit`);
     const header = this.buffer.subarray(0, separator).toString("ascii");
     const match = /^content-length:\s*(\d+)/im.exec(header);
     if (!match) throw new Error("Missing Content-Length header");
     const length = Number(match[1]);
+    if (!Number.isSafeInteger(length) || length < 0 || length > MAX_MCP_FRAME_BYTES) {
+      throw new Error(`MCP frame exceeds ${MAX_MCP_FRAME_BYTES} byte limit`);
+    }
     const bodyStart = separator + separatorLength;
     const bodyEnd = bodyStart + length;
     if (this.buffer.length < bodyEnd) return null;
     const body = this.buffer.subarray(bodyStart, bodyEnd).toString("utf8");
     this.buffer = this.buffer.subarray(bodyEnd);
-    return { mode: "header", message: JSON.parse(body) };
+    return { mode: "header", message: parseMessage(body) };
   }
 
   readLineDelimited() {
     const newline = this.buffer.indexOf("\n");
-    if (newline < 0) return null;
+    if (newline < 0) {
+      if (this.buffer.length > MAX_MCP_FRAME_BYTES) throw new Error(`MCP frame exceeds ${MAX_MCP_FRAME_BYTES} byte limit`);
+      return null;
+    }
+    if (newline > MAX_MCP_FRAME_BYTES) throw new Error(`MCP frame exceeds ${MAX_MCP_FRAME_BYTES} byte limit`);
     const line = this.buffer.subarray(0, newline).toString("utf8").trim();
     this.buffer = this.buffer.subarray(newline + 1);
-    if (!line) return this.readOne();
-    return { mode: "line", message: JSON.parse(line) };
+    if (!line) return EMPTY_FRAME;
+    return { mode: "line", message: parseMessage(line) };
+  }
+}
+
+function parseMessage(text) {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return { [PARSE_ERROR]: error.message };
   }
 }
 

@@ -16,7 +16,9 @@ const BLOCK_STATUSES = new Set(["blocked", "fail", "failed", "rejected", "closed
 const REVIEW_STATUSES = new Set(["review", "warn", "warning", "partial", "unchecked"]);
 
 export function buildLaneStatus(input = {}) {
-  const order = normalizeGateOrder(input.gateOrder || DEFAULT_GATE_ORDER);
+  input = plainObject(input);
+  const suppliedGates = plainObject(input.gates);
+  const order = normalizeGateOrder(input.gateOrder, Object.keys(suppliedGates));
   const gates = Object.fromEntries(order.map((gate) => [gate, normalizeGate(gate, input.gates?.[gate] || input[gate])]));
   const blockers = Object.values(gates).filter((gate) => gate.classification === "blocked");
   const reviews = Object.values(gates).filter((gate) => gate.classification === "review");
@@ -44,19 +46,39 @@ export function buildLaneStatus(input = {}) {
   };
 }
 
-function normalizeGateOrder(values) {
-  const order = (Array.isArray(values) ? values : DEFAULT_GATE_ORDER)
+function plainObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function normalizeGateOrder(values, discovered = []) {
+  const requested = (Array.isArray(values) ? values : [])
     .map((value) => String(value || "").trim())
     .filter(Boolean);
-  return [...new Set(order.length ? order : DEFAULT_GATE_ORDER)];
+  const supplied = (Array.isArray(discovered) ? discovered : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  return [...new Set([...requested, ...supplied, ...DEFAULT_GATE_ORDER])];
 }
 
 function normalizeGate(id, raw) {
-  if (raw === true) return gate(id, "pass", "Gate was marked true.");
+  if (raw === true) return gate(id, "review", "A boolean true does not include structured gate evidence.");
   if (raw === false) return gate(id, "pending", "Gate has not passed yet.");
-  if (typeof raw === "string") return gate(id, raw, "");
+  if (typeof raw === "string") {
+    if (PASS_STATUSES.has(raw.toLowerCase())) {
+      return gate(id, "review", `Bare string '${raw}' does not include structured gate evidence.`);
+    }
+    return gate(id, raw, "");
+  }
   if (!raw || typeof raw !== "object") return gate(id, "pending", "No evidence supplied.");
-  return gate(id, raw.status || raw.verdict || raw.state || "pending", raw.reason || raw.summary || "", raw);
+  const status = String(raw.status || raw.verdict || raw.state || "pending").toLowerCase();
+  if (PASS_STATUSES.has(status) && !hasStructuredGateEvidence(raw)) {
+    return gate(id, "review", "A structured pass without a concrete evidence path cannot satisfy this gate.", raw);
+  }
+  return gate(id, status, raw.reason || raw.summary || "", raw);
+}
+
+function hasStructuredGateEvidence(raw) {
+  return gateEvidence(raw).some((artifact) => artifact.path);
 }
 
 function gate(id, status, reason = "", raw = {}) {
@@ -66,9 +88,16 @@ function gate(id, status, reason = "", raw = {}) {
     status: normalizedStatus,
     classification: classifyStatus(normalizedStatus),
     reason: reason || defaultReason(id, normalizedStatus),
-    evidence: raw.evidence || raw.artifacts || [],
+    evidence: gateEvidence(raw),
     updatedAt: raw.updatedAt || raw.timestamp || ""
   };
+}
+
+function gateEvidence(raw) {
+  return normalizeArtifacts([
+    ...(Array.isArray(raw.evidence) ? raw.evidence : []),
+    ...(Array.isArray(raw.artifacts) ? raw.artifacts : [])
+  ]);
 }
 
 function classifyStatus(status) {
@@ -80,11 +109,14 @@ function classifyStatus(status) {
 
 function normalizeArtifacts(values) {
   return (Array.isArray(values) ? values : [])
-    .map((artifact) => ({
-      path: String(artifact.path || artifact.uri || artifact.url || "").trim(),
-      kind: String(artifact.kind || artifact.type || "evidence"),
-      summary: String(artifact.summary || artifact.note || "")
-    }))
+    .map((value) => {
+      const artifact = plainObject(value);
+      return ({
+        path: String(artifact.path || artifact.uri || artifact.url || "").trim(),
+        kind: String(artifact.kind || artifact.type || "evidence"),
+        summary: String(artifact.summary || artifact.note || "")
+      });
+    })
     .filter((artifact) => artifact.path || artifact.summary);
 }
 
