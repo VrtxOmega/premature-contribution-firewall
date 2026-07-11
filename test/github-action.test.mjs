@@ -28,9 +28,12 @@ test("GitHub Action is a read-only composite dry-run queue runner", async () => 
 test("GitHub Action documentation shows least-privilege dry-run usage", async () => {
   const docs = await readFile(new URL("../docs/GITHUB_ACTION.md", import.meta.url), "utf8");
   const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
+  const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const escapedVersion = packageJson.version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const currentActionRef = new RegExp(`VrtxOmega/premature-contribution-firewall@v${escapedVersion}`);
 
   for (const content of [docs, readme]) {
-    assert.match(content, /VrtxOmega\/premature-contribution-firewall@v0\.1\.0/);
+    assert.match(content, currentActionRef);
     assert.match(content, /contents: read/);
     assert.match(content, /issues: read/);
     assert.match(content, /pull-requests: read/);

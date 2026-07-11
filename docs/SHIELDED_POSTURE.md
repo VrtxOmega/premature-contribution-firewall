@@ -37,7 +37,7 @@ PCF_MAINTAINER_STACK=true
 ## GitHub Action
 
 ```yaml
-- uses: VrtxOmega/premature-contribution-firewall@v0.1.1
+- uses: VrtxOmega/premature-contribution-firewall@v0.1.3
   with:
     shielded: "true"
     assurance-level: high

@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run PCF shielded PR gate
-        uses: VrtxOmega/premature-contribution-firewall@v0.1.1
+        uses: VrtxOmega/premature-contribution-firewall@v0.1.3
         with:
           mode: pr-gate
           shielded: "true"
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run PCF shielded queue
-        uses: VrtxOmega/premature-contribution-firewall@v0.1.1
+        uses: VrtxOmega/premature-contribution-firewall@v0.1.3
         with:
           mode: queue
           shielded: "true"

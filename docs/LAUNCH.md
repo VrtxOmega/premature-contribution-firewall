@@ -14,18 +14,20 @@ All gates must pass: repo hygiene, workflow contract, syntax, unit tests, curren
 
 The package is npx-ready: `bin` exposes `pcf`, `premature-contribution-firewall`, and `pcf-mcp`. The `files` whitelist includes `src`, `fixtures`, MCP docs, the MCP smoke script, the pilot/PR-gate scripts, `action.yml`, README, changelog, Glama metadata, and LICENSE.
 
-OPERATOR steps:
+Publish from `.github/workflows/npm-publish.yml`; do not create or paste a reusable npm token. The workflow verifies the requested version is unpublished, runs every proof gate, checks package contents, and uses GitHub OIDC trusted publishing.
 
 ```bash
-npm login
-npm publish --access public --provenance
+VERSION=0.1.3
+gh workflow run npm-publish.yml --ref main -f version="$VERSION" -f dry-run=true
+# Inspect and require a successful dry-run workflow before continuing.
+gh workflow run npm-publish.yml --ref main -f version="$VERSION" -f dry-run=false
 ```
 
 Notes:
 
-- `--provenance` requires publishing from a GitHub Actions workflow with `id-token: write`; if publishing locally, omit `--provenance` and record that provenance is absent for that patch release.
+- The npm trusted publisher must match this repository and the exact workflow filename `npm-publish.yml`.
+- The workflow has `id-token: write`; npm records provenance and the GitHub trusted-publisher identity on the package version.
 - npm does not allow republishing an existing version. If package metadata changes after publication, bump a new patch version before publishing.
-- Verify the package name is available; if `premature-contribution-firewall` is taken, the fallback scope is `@vrtxomega/premature-contribution-firewall` (update `bin` consumers in docs).
 - Smoke test after publish:
 
 ```bash
@@ -43,12 +45,14 @@ The Action supports two modes:
 - `queue` (default on non-PR events): read-only markdown queue artifact.
 - `pr-gate` (default on `pull_request` events): evaluates the triggering PR, writes the verdict to the step summary, exposes `status`/`score`/`ready` outputs, optional `fail-on` blocking.
 
-OPERATOR steps:
+OPERATOR steps for each new Action release:
 
-1. Tag a release: `git tag v0.1.2 && git push origin v0.1.2` after the package and Action docs are verified.
-2. Create a GitHub Release from the tag; paste `docs/RELEASE_POST_V0_1_0.md` content.
+1. Tag the exact commit recorded as the npm version's `gitHead`; do not move the tag to a later documentation-only commit.
+2. Create a GitHub Release from the tag with release-specific verification links and non-claims.
 3. On the release page, check "Publish this Action to the GitHub Marketplace".
 4. Category: "Continuous integration" + "Code review". The `branding` block (filter icon, blue) is already in `action.yml`.
+
+Current release: [`v0.1.3`](https://github.com/VrtxOmega/premature-contribution-firewall/releases/tag/v0.1.3), published from npm `gitHead` `b2bd5e4083045d69f4f5a2dab13527ae393bebfa`.
 
 ## 3. PR Gate Rollout Guidance (what to tell adopters)
 
