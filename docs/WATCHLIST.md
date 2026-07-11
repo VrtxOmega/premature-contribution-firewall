@@ -4,6 +4,8 @@ PCF watchlist mode runs the contributor-scouting path across a curated list of r
 
 It is for finding possible upstream contribution targets without wasting maintainer attention.
 
+For broad GitHub issue search, use [SERIOUS_SCOUT.md](SERIOUS_SCOUT.md). Watchlist mode is intentionally curated; serious scout is impact-first and searches outside a fixed repository list.
+
 ## Run
 
 ```bash

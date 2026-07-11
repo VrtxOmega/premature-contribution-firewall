@@ -28,6 +28,7 @@ import { analyzeRepositoryContext } from "../core/repository-context.mjs";
 import { evaluateReproGate } from "../core/repro-gate.mjs";
 import { buildContributorScout } from "../core/scout.mjs";
 import { buildSemanticDuplicateAssist } from "../core/semantic-duplicate-assist.mjs";
+import { buildSeriousCandidateScout } from "../core/serious-scout.mjs";
 import { buildWatchlistReport } from "../core/watchlist.mjs";
 import { loadConfig } from "../config.mjs";
 
@@ -146,6 +147,19 @@ const TOOLS = [
       profile: { type: "string", default: "contributor" },
       minScore: { type: "integer", default: 0 },
       requireInvitation: { type: "boolean", default: true },
+      generatedAt: { type: "string" }
+    }),
+    annotations: TOOL_ANNOTATIONS
+  },
+  {
+    name: "pcf_serious_scout",
+    title: "Serious Candidate Scout",
+    description: "Rank supplied broad GitHub issue-search results by impact, reproduction evidence, scope, and cosmetic/process blockers. This tool does not collect GitHub data or mutate anything.",
+    inputSchema: objectSchema({
+      issues: { type: "array", items: { type: "object" }, description: "Open issue search results with repository, title, body, labels, and overlap signals." },
+      sourceQueries: { type: "array", items: { type: "string" }, description: "Optional query strings used by the caller." },
+      minScore: { type: "integer", default: 70 },
+      maxReturned: { type: "integer", default: 50 },
       generatedAt: { type: "string" }
     }),
     annotations: TOOL_ANNOTATIONS
@@ -490,6 +504,8 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
       return evaluateAiContributionPostureGate(args);
     case "pcf_scout":
       return buildContributorScout(args);
+    case "pcf_serious_scout":
+      return buildSeriousCandidateScout(args);
     case "pcf_repository_context":
       return analyzeRepositoryContext(args.input || {});
     case "pcf_duplicate_assist":
