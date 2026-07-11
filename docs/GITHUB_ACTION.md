@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run PCF
-        uses: VrtxOmega/premature-contribution-firewall@v0.1.0
+        uses: VrtxOmega/premature-contribution-firewall@v0.1.3
         with:
           github-token: ${{ github.token }}
           limit: 25
@@ -36,7 +36,7 @@ jobs:
 ## Options
 
 ```yaml
-- uses: VrtxOmega/premature-contribution-firewall@v0.1.0
+- uses: VrtxOmega/premature-contribution-firewall@v0.1.3
   with:
     repository: owner/repo
     github-token: ${{ github.token }}

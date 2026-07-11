@@ -17,7 +17,7 @@ The output is a maintainer queue, not a vibe score: labels, repair checklists, r
 
 ## Status
 
-PCF's public npm release is v0.1.2, including the `pcf-mcp` stdio server bin. Local main is preparing the next v0.1.3 readiness surface with the AI-assisted contribution posture gate and Agent Bus console contract scaffold. The recommended adoption path remains read-only first: run the GitHub Action or MCP smoke path, read one artifact, and decide whether it is useful before enabling anything else.
+PCF v0.1.3 is published on [npm](https://www.npmjs.com/package/premature-contribution-firewall/v/0.1.3) and as a [GitHub release](https://github.com/VrtxOmega/premature-contribution-firewall/releases/tag/v0.1.3). It adds impact-first serious candidate scouting, the AI-assisted contribution posture gate, and stricter authority boundaries for repository context, overlap checks, lane evidence, repro claims, and MCP framing. The recommended adoption path remains read-only first: run the GitHub Action or MCP smoke path, read one artifact, and decide whether it is useful before enabling anything else.
 
 Try it in one command, no install:
 
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run PCF
-        uses: VrtxOmega/premature-contribution-firewall@v0.1.1
+        uses: VrtxOmega/premature-contribution-firewall@v0.1.3
         with:
           github-token: ${{ github.token }}
           limit: 25
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: PCF readiness check
-        uses: VrtxOmega/premature-contribution-firewall@v0.1.0
+        uses: VrtxOmega/premature-contribution-firewall@v0.1.3
         with:
           fail-on: never
 ```

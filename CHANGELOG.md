@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.3 - Unreleased
+## v0.1.3 - 2026-07-11
 
 ### AI-Assisted Contribution Posture Gate
 
@@ -27,7 +27,7 @@
 
 ### Release Hygiene
 
-- Bumped local package metadata to `0.1.3` because npm already serves `0.1.2`; do not publish, tag, or push this release surface until final approval.
+- Published `0.1.3` through GitHub OIDC trusted publishing with npm provenance, then tagged the exact published `gitHead` as `v0.1.3`.
 - Included the AI posture index and Agent Bus contract scaffold in the package dry-run surface.
 
 ## v0.1.2
