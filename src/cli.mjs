@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 import { evaluateContribution, renderMarkdownReport } from "./core/evaluator.mjs";
 import { parsePatchSubmission } from "./core/patch.mjs";
 import { normalizeRepositoryFiles } from "./core/policy.mjs";
 import { buildMaintainerQueue } from "./core/queue.mjs";
 import { buildSetupGuide, renderSetupGuideMarkdown, renderSetupGuideText } from "./core/setup-guide.mjs";
+import {
+  CorpusValidationError,
+  renderCorpusValidationMarkdown,
+  renderCorpusValidationSummary,
+  validateCorpusText
+} from "./core/corpus-validation.mjs";
 import { loadConfig } from "./config.mjs";
 
 const args = process.argv.slice(2);
@@ -15,7 +22,7 @@ if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
 }
 
 const command = args[0];
-if (!["evaluate", "evaluate-patch", "queue", "setup", "setup-pilot", "preflight"].includes(command)) {
+if (!["evaluate", "evaluate-patch", "queue", "setup", "setup-pilot", "preflight", "validate-corpus"].includes(command)) {
   console.error(`Unknown command: ${command}`);
   printHelp();
   process.exit(2);
@@ -38,6 +45,44 @@ if (command === "setup" || command === "setup-pilot") {
     console.log(renderSetupGuideText(guide));
   }
   process.exit(0);
+}
+
+if (command === "validate-corpus") {
+  const file = args[1];
+  if (!file) {
+    console.error("Missing corpus file.");
+    printHelp();
+    process.exit(2);
+  }
+  const format = readFlag(args, "--format") || "pretty";
+  if (!["pretty", "json", "markdown"].includes(format)) {
+    console.error(`Unsupported format: ${format}. Use pretty, json, or markdown.`);
+    process.exit(2);
+  }
+  const inputFormat = readFlag(args, "--input-format");
+  try {
+    const text = file === "-" ? await readStdin() : await readFile(file, "utf8");
+    const result = validateCorpusText(text, {
+      inputFormat,
+      sourceName: file === "-" ? "stdin" : basename(file)
+    });
+    if (format === "json") {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (format === "markdown") {
+      process.stdout.write(renderCorpusValidationMarkdown(result));
+    } else {
+      process.stdout.write(renderCorpusValidationSummary(result));
+    }
+    process.exit(0);
+  } catch (error) {
+    const message = error instanceof CorpusValidationError
+      ? error.message
+      : error?.code === "ENOENT"
+        ? `Cannot read corpus file '${basename(file)}'.`
+        : "Unexpected corpus validation error.";
+    console.error(`PCF corpus validation failed: ${message}`);
+    process.exit(1);
+  }
 }
 
 const file = args[1];
@@ -215,7 +260,9 @@ function printHelp() {
   node src/cli.mjs evaluate <payload.json> [--format pretty|json|markdown] [--profile standard|kernel-grade]
   node src/cli.mjs evaluate-patch <patch-or-mbox> [--format pretty|json|markdown] [--profile kernel-grade] [--policy policy-files.json]
   node src/cli.mjs preflight <payload.json|patch-or-mbox> [--allow-repair] [--format pretty|json|markdown] [--profile standard|kernel-grade] [--policy policy-files.json]
+  node src/cli.mjs validate-corpus <consented.jsonl|consented.csv|-> [--input-format jsonl|csv] [--format pretty|json|markdown]
   cat queue-payload.json | node src/cli.mjs queue - --format json
 
-Preflight exit codes: 0 = ready to submit, 1 = not ready, 2 = usage error.`);
+Preflight exit codes: 0 = ready to submit, 1 = not ready, 2 = usage error.
+Corpus validation exit codes: 0 = corpus measured, 1 = validation failed closed, 2 = usage error.`);
 }
