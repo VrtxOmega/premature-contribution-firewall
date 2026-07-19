@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run PCF
-        uses: VrtxOmega/premature-contribution-firewall@v0.1.3
+        uses: VrtxOmega/premature-contribution-firewall@v0.2.0
         with:
           github-token: ${{ github.token }}
           limit: 25
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: PCF readiness check
-        uses: VrtxOmega/premature-contribution-firewall@v0.1.3
+        uses: VrtxOmega/premature-contribution-firewall@v0.2.0
         with:
           fail-on: never
 ```
