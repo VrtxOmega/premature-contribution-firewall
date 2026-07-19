@@ -17,7 +17,7 @@ The package is npx-ready: `bin` exposes `pcf`, `premature-contribution-firewall`
 Publish from `.github/workflows/npm-publish.yml`; do not create or paste a reusable npm token. The workflow verifies the requested version is unpublished, runs every proof gate, checks package contents, and uses GitHub OIDC trusted publishing.
 
 ```bash
-VERSION=0.1.3
+VERSION=0.2.0
 gh workflow run npm-publish.yml --ref main -f version="$VERSION" -f dry-run=true
 # Inspect and require a successful dry-run workflow before continuing.
 gh workflow run npm-publish.yml --ref main -f version="$VERSION" -f dry-run=false
@@ -34,7 +34,7 @@ Notes:
 npx premature-contribution-firewall@latest --help
 npx premature-contribution-firewall@latest evaluate fixtures/pr-ready.json
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
-  | npx -y -p premature-contribution-firewall@latest pcf-mcp
+  | npm exec --yes --package=premature-contribution-firewall@latest -- pcf-mcp
 npm view premature-contribution-firewall version bin
 ```
 
@@ -52,7 +52,7 @@ OPERATOR steps for each new Action release:
 3. On the release page, check "Publish this Action to the GitHub Marketplace".
 4. Category: "Continuous integration" + "Code review". The `branding` block (filter icon, blue) is already in `action.yml`.
 
-Current release: [`v0.1.3`](https://github.com/VrtxOmega/premature-contribution-firewall/releases/tag/v0.1.3), published from npm `gitHead` `b2bd5e4083045d69f4f5a2dab13527ae393bebfa`.
+Current release: [`v0.2.0`](https://github.com/VrtxOmega/premature-contribution-firewall/releases/tag/v0.2.0), published from npm `gitHead` `8739108af4055c9ac72b033a7da4df770aa43272`.
 
 ## 3. PR Gate Rollout Guidance (what to tell adopters)
 
