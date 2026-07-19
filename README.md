@@ -17,7 +17,7 @@ The output is a maintainer queue, not a vibe score: labels, repair checklists, r
 
 ## Status
 
-PCF v0.1.3 is published on [npm](https://www.npmjs.com/package/premature-contribution-firewall/v/0.1.3) and as a [GitHub release](https://github.com/VrtxOmega/premature-contribution-firewall/releases/tag/v0.1.3). It adds impact-first serious candidate scouting, the AI-assisted contribution posture gate, and stricter authority boundaries for repository context, overlap checks, lane evidence, repro claims, and MCP framing. The recommended adoption path remains read-only first: run the GitHub Action or MCP smoke path, read one artifact, and decide whether it is useful before enabling anything else.
+PCF v0.2.0 is published on [npm](https://www.npmjs.com/package/premature-contribution-firewall/v/0.2.0) and as a [GitHub release](https://github.com/VrtxOmega/premature-contribution-firewall/releases/tag/v0.2.0). It adds the offline contribution lifecycle and salvage gate while preserving the impact-first serious scout, AI-assisted contribution posture gate, and fail-closed authority boundaries. The recommended adoption path remains read-only first: run one command, inspect one artifact, and decide whether it is useful before enabling anything else.
 
 Try it in one command, no install:
 
@@ -27,7 +27,7 @@ npx premature-contribution-firewall preflight your-pr-draft.json
 
 Current public state:
 
-- Published on npm: [`premature-contribution-firewall`](https://www.npmjs.com/package/premature-contribution-firewall) with `pcf` CLI (`evaluate`, `queue`, `preflight`, `setup`) and the `pcf-mcp` stdio server bin.
+- Published on npm: [`premature-contribution-firewall`](https://www.npmjs.com/package/premature-contribution-firewall) with the `pcf` CLI, including `lifecycle`, and the `pcf-mcp` stdio server bin.
 - Published on the GitHub Marketplace as a read-only Action with two modes: `workflow_dispatch` queue artifact and `pull_request` PR gate (step-summary verdict, optional `fail-on` blocking, no GitHub writes).
 - MCP server: `pcf-mcp` / `npm run mcp` exposes default-safe agent tools for scout, policy, repro, diff-shape, lane status/resume, evidence drafts, fixed local lane storage, and registry-readiness self-audit. The release gate verifies `npm pack` includes the bin before publish. See [docs/MCP.md](docs/MCP.md).
 - Contributor preflight: `pcf preflight` checks a draft PR or patch before submission, with a stable exit-code contract for hooks and CI.
