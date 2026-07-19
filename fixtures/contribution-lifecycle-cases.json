@@ -1,0 +1,217 @@
+{
+  "artifact": "pcf-contribution-lifecycle-fixtures",
+  "version": "2026.07.19",
+  "cases": [
+    {
+      "id": "hermes-two-claim-refactor-salvage",
+      "input": {
+        "artifact": "pcf-contribution-lifecycle-input",
+        "version": "2026.07.19",
+        "assessmentMode": "retrospective",
+        "repository": "NousResearch/hermes-agent",
+        "observedAt": "2026-07-16T14:19:36.000Z",
+        "originalContribution": {
+          "url": "https://github.com/NousResearch/hermes-agent/pull/43861",
+          "number": 43861,
+          "title": "fix(tui): fall back on primary AuthError during agent creation",
+          "state": "open"
+        },
+        "currentUpstream": {
+          "ref": "main",
+          "commit": "c3b2af95e3f556ed28c4bf2a2a28cb1cd092278a",
+          "checkedAt": "2026-07-16T14:19:36.000Z"
+        },
+        "claimUnits": [
+          {
+            "id": "provider-model-pairing",
+            "title": "Switch fallback provider and model as one route",
+            "invariant": "A fallback route must switch provider and model together on every execution surface.",
+            "originalReproduction": "A failed primary route could select the fallback provider while retaining the primary model.",
+            "defectState": "resolved",
+            "patchState": "not-needed",
+            "upstreamCoverage": "equivalent",
+            "evidence": [
+              "Maintainer PR https://github.com/NousResearch/hermes-agent/pull/65656 records that it overlaps the TUI half of #43861 and resolves provider/model fallback pairing."
+            ]
+          },
+          {
+            "id": "per-entry-key-env",
+            "title": "Resolve per-entry fallback credentials consistently",
+            "invariant": "A fallback entry naming key_env or api_key_env must resolve that credential on every surface where the entry can execute.",
+            "originalReproduction": "The fallback credential path worked on only one surface, leaving TUI, cron, and CLI setup unable to resolve a non-standard environment variable.",
+            "defectState": "present",
+            "patchState": "stale",
+            "upstreamCoverage": "none",
+            "evidence": [
+              "The original branch predated the fallback restructuring and could not be directly cherry-picked.",
+              "Maintainer PR https://github.com/NousResearch/hermes-agent/pull/65682 records key_env as the remaining uncovered half of #43861."
+            ]
+          }
+        ],
+        "outcome": {
+          "recordedAt": "2026-07-16T14:19:37.000Z",
+          "state": "partially-salvaged",
+          "landingContribution": "https://github.com/NousResearch/hermes-agent/pull/65682",
+          "landingCommit": "998e35313a42f7d4fb82646ee57d0aea57f077c0",
+          "credit": "commit-author",
+          "summary": "The remaining key_env claim was reapplied on current main, centralized across four fallback surfaces, tested, and landed with commit authorship preserved."
+        }
+      },
+      "expected": {
+        "classification": "PARTIALLY_SUPERSEDED",
+        "nextAction": "extract-surviving-claim",
+        "claimStates": ["SUPERSEDED_EQUIVALENT", "SALVAGEABLE_INVARIANT"]
+      }
+    },
+    {
+      "id": "current-and-applicable",
+      "input": {
+        "artifact": "pcf-contribution-lifecycle-input",
+        "version": "2026.07.19",
+        "assessmentMode": "live",
+        "repository": "example/current",
+        "observedAt": "2026-07-19T12:00:00.000Z",
+        "originalContribution": { "url": "https://example.test/current/pull/1", "number": 1, "state": "open" },
+        "currentUpstream": { "ref": "main", "commit": "1111111111111111111111111111111111111111", "checkedAt": "2026-07-19T11:59:00.000Z" },
+        "claimUnits": [
+          {
+            "id": "current-gap",
+            "title": "Current gap",
+            "invariant": "The current path must preserve the configured value.",
+            "originalReproduction": "Current main still drops the configured value.",
+            "defectState": "present",
+            "patchState": "applies",
+            "upstreamCoverage": "none",
+            "evidence": ["Focused reproduction passed before and fails after removing the patch."]
+          }
+        ]
+      },
+      "expected": { "classification": "CURRENT_AND_APPLICABLE", "nextAction": "review-current-patch", "claimStates": ["CURRENT_AND_APPLICABLE"] }
+    },
+    {
+      "id": "drifted-but-rebaseable",
+      "input": {
+        "artifact": "pcf-contribution-lifecycle-input",
+        "version": "2026.07.19",
+        "assessmentMode": "live",
+        "repository": "example/rebase",
+        "observedAt": "2026-07-19T12:00:00.000Z",
+        "originalContribution": { "url": "https://example.test/rebase/pull/2", "number": 2, "state": "open" },
+        "currentUpstream": { "ref": "main", "commit": "2222222222222222222222222222222222222222", "checkedAt": "2026-07-19T11:59:00.000Z" },
+        "claimUnits": [
+          {
+            "id": "moved-symbol",
+            "title": "Moved symbol",
+            "invariant": "The moved helper must keep the same failure handling.",
+            "originalReproduction": "Current main still exposes the failure after the helper moved.",
+            "defectState": "present",
+            "patchState": "needs-rebase",
+            "upstreamCoverage": "none",
+            "evidence": ["The target symbol moved without changing the reproduced behavior."]
+          }
+        ]
+      },
+      "expected": { "classification": "DRIFTED_BUT_REBASEABLE", "nextAction": "refresh-against-current-main", "claimStates": ["DRIFTED_BUT_REBASEABLE"] }
+    },
+    {
+      "id": "salvageable-invariant",
+      "input": {
+        "artifact": "pcf-contribution-lifecycle-input",
+        "version": "2026.07.19",
+        "assessmentMode": "live",
+        "repository": "example/salvage",
+        "observedAt": "2026-07-19T12:00:00.000Z",
+        "originalContribution": { "url": "https://example.test/salvage/pull/3", "number": 3, "state": "open" },
+        "currentUpstream": { "ref": "main", "commit": "3333333333333333333333333333333333333333", "checkedAt": "2026-07-19T11:59:00.000Z" },
+        "claimUnits": [
+          {
+            "id": "stale-patch-live-gap",
+            "title": "Stale patch, live gap",
+            "invariant": "All entry points must enforce the same credential rule.",
+            "originalReproduction": "The current implementation still omits the credential on one entry point.",
+            "defectState": "present",
+            "patchState": "stale",
+            "upstreamCoverage": "none",
+            "evidence": ["The old target file was replaced, but the current replacement still reproduces the gap."]
+          }
+        ]
+      },
+      "expected": { "classification": "SALVAGEABLE_INVARIANT", "nextAction": "prepare-salvage-packet", "claimStates": ["SALVAGEABLE_INVARIANT"] }
+    },
+    {
+      "id": "superseded-equivalent",
+      "input": {
+        "artifact": "pcf-contribution-lifecycle-input",
+        "version": "2026.07.19",
+        "assessmentMode": "live",
+        "repository": "example/superseded",
+        "observedAt": "2026-07-19T12:00:00.000Z",
+        "originalContribution": { "url": "https://example.test/superseded/pull/4", "number": 4, "state": "open" },
+        "currentUpstream": { "ref": "main", "commit": "4444444444444444444444444444444444444444", "checkedAt": "2026-07-19T11:59:00.000Z" },
+        "claimUnits": [
+          {
+            "id": "covered-gap",
+            "title": "Covered gap",
+            "invariant": "The parser must reject the invalid state.",
+            "originalReproduction": "The parser previously accepted the invalid state.",
+            "defectState": "resolved",
+            "patchState": "not-needed",
+            "upstreamCoverage": "equivalent",
+            "evidence": ["A current-upstream test now rejects the original reproducer without the submitted patch."]
+          }
+        ]
+      },
+      "expected": { "classification": "SUPERSEDED_EQUIVALENT", "nextAction": "document-superseding-work", "claimStates": ["SUPERSEDED_EQUIVALENT"] }
+    },
+    {
+      "id": "invalidated",
+      "input": {
+        "artifact": "pcf-contribution-lifecycle-input",
+        "version": "2026.07.19",
+        "assessmentMode": "live",
+        "repository": "example/invalidated",
+        "observedAt": "2026-07-19T12:00:00.000Z",
+        "originalContribution": { "url": "https://example.test/invalidated/pull/5", "number": 5, "state": "open" },
+        "currentUpstream": { "ref": "main", "commit": "5555555555555555555555555555555555555555", "checkedAt": "2026-07-19T11:59:00.000Z" },
+        "claimUnits": [
+          {
+            "id": "incorrect-assumption",
+            "title": "Incorrect assumption",
+            "invariant": "The state was assumed to be forbidden.",
+            "originalReproduction": "The report treated documented behavior as a defect.",
+            "defectState": "invalidated",
+            "patchState": "not-needed",
+            "upstreamCoverage": "none",
+            "evidence": ["Current maintainer documentation explicitly defines the observed state as supported behavior."]
+          }
+        ]
+      },
+      "expected": { "classification": "INVALIDATED", "nextAction": "close-as-invalidated", "claimStates": ["INVALIDATED"] }
+    },
+    {
+      "id": "uncertain-evidence",
+      "input": {
+        "artifact": "pcf-contribution-lifecycle-input",
+        "version": "2026.07.19",
+        "assessmentMode": "live",
+        "repository": "example/uncertain",
+        "observedAt": "2026-07-19T12:00:00.000Z",
+        "originalContribution": { "url": "https://example.test/uncertain/pull/6", "number": 6, "state": "open" },
+        "currentUpstream": { "ref": "main", "commit": "6666666666666666666666666666666666666666", "checkedAt": "2026-07-19T11:59:00.000Z" },
+        "claimUnits": [
+          {
+            "id": "unverified-current-state",
+            "title": "Unverified current state",
+            "invariant": "The current path may still violate the ordering rule.",
+            "originalReproduction": "The original base violated the ordering rule.",
+            "defectState": "unknown",
+            "patchState": "unknown",
+            "upstreamCoverage": "unknown",
+            "evidence": ["Current-upstream reproduction could not be completed."]
+          }
+        ]
+      },
+      "expected": { "classification": "NEEDS_MAINTAINER_DECISION", "nextAction": "request-maintainer-decision", "claimStates": ["NEEDS_MAINTAINER_DECISION"] }
+    }
+  ]
+}
