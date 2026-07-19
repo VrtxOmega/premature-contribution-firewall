@@ -136,6 +136,34 @@ node src/cli.mjs preflight my-pr-draft.json --allow-repair
 
 Exit code 0 means ready to submit, 1 means not ready (with a fix-first checklist), 2 means usage error. Patch and mbox files are auto-detected and use the kernel-grade profile. The preflight is advisory: it does not guarantee acceptance and makes no GitHub writes.
 
+## Contribution Lifecycle And Salvage Gate
+
+Contributor preflight asks whether work is ready before submission. The lifecycle gate asks a different question after upstream has moved:
+
+> Did the defect disappear, did the patch merely drift, or is there a surviving invariant worth salvaging?
+
+```bash
+node src/cli.mjs lifecycle lifecycle-input.json
+node src/cli.mjs lifecycle lifecycle-input.json --format json
+node src/cli.mjs lifecycle lifecycle-input.json --format markdown
+```
+
+The input decomposes a contribution into atomic claim units. Each unit records its invariant, original reproduction, current defect state, patch applicability, upstream coverage, and observation-time evidence. PCF then emits one deterministic classification and controlled next action:
+
+| Lifecycle classification | Next action |
+| --- | --- |
+| `CURRENT_AND_APPLICABLE` | `review-current-patch` |
+| `DRIFTED_BUT_REBASEABLE` | `refresh-against-current-main` |
+| `SALVAGEABLE_INVARIANT` | `prepare-salvage-packet` |
+| `PARTIALLY_SUPERSEDED` | `extract-surviving-claim` |
+| `SUPERSEDED_EQUIVALENT` | `document-superseding-work` |
+| `INVALIDATED` | `close-as-invalidated` |
+| `NEEDS_MAINTAINER_DECISION` | `request-maintainer-decision` |
+
+Later outcomes and attribution can be recorded, but they are cryptographically excluded from the assessment fingerprint and never change the observation-time classification. This keeps lifecycle learning separate from the blinded prospective study and prevents hindsight leakage. The command is offline and read-only: it makes no network requests or GitHub writes, does not infer authorship, and does not certify correctness, mergeability, endorsement, or permission to publish.
+
+The fixture corpus at [`fixtures/contribution-lifecycle-cases.json`](fixtures/contribution-lifecycle-cases.json) includes a public-evidence Hermes Agent case where one atomic claim had been covered upstream while a second invariant survived a restructuring and required surgical salvage. The recorded later outcome remains provenance only; it is not classification evidence.
+
 ## Feedback Loop
 
 PCF is not only a static rule set. When a maintainer says PCF was too harsh, too lenient, or missed duplicate/upstream/concurrent context, the correction can become a local evidence case file.

@@ -25,6 +25,12 @@ import {
   submitStudyRating,
   withdrawStudyParticipant
 } from "./core/prospective-study.mjs";
+import {
+  ContributionLifecycleError,
+  assessContributionLifecycle,
+  renderContributionLifecycleMarkdown,
+  renderContributionLifecycleSummary
+} from "./core/contribution-lifecycle.mjs";
 import { loadConfig } from "./config.mjs";
 
 const args = process.argv.slice(2);
@@ -35,7 +41,7 @@ if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
 }
 
 const command = args[0];
-if (!["evaluate", "evaluate-patch", "queue", "setup", "setup-pilot", "preflight", "validate-corpus", "study"].includes(command)) {
+if (!["evaluate", "evaluate-patch", "queue", "setup", "setup-pilot", "preflight", "validate-corpus", "study", "lifecycle"].includes(command)) {
   console.error(`Unknown command: ${command}`);
   printHelp();
   process.exit(2);
@@ -43,6 +49,10 @@ if (!["evaluate", "evaluate-patch", "queue", "setup", "setup-pilot", "preflight"
 
 if (command === "study") {
   await runProspectiveStudy(args.slice(1));
+}
+
+if (command === "lifecycle") {
+  await runContributionLifecycle(args.slice(1));
 }
 
 if (command === "setup" || command === "setup-pilot") {
@@ -364,6 +374,41 @@ async function readJsonFile(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
+async function runContributionLifecycle(lifecycleArgs) {
+  const file = lifecycleArgs[0];
+  if (!file) {
+    console.error("PCF contribution lifecycle failed: input file is required.");
+    process.exit(2);
+  }
+  const format = readFlag(lifecycleArgs, "--format") || "pretty";
+  if (!["pretty", "json", "markdown"].includes(format)) {
+    console.error(`PCF contribution lifecycle failed: unsupported format '${format}'.`);
+    process.exit(2);
+  }
+  try {
+    const text = file === "-" ? await readStdin() : await readFile(file, "utf8");
+    const result = assessContributionLifecycle(JSON.parse(text));
+    if (format === "json") {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (format === "markdown") {
+      process.stdout.write(renderContributionLifecycleMarkdown(result));
+    } else {
+      process.stdout.write(renderContributionLifecycleSummary(result));
+    }
+    process.exit(0);
+  } catch (error) {
+    const message = error instanceof ContributionLifecycleError
+      ? error.message
+      : error?.code === "ENOENT"
+        ? "Required lifecycle input file is missing."
+        : error instanceof SyntaxError
+          ? "Lifecycle input file contains invalid JSON."
+          : "Unexpected contribution-lifecycle error.";
+    console.error(`PCF contribution lifecycle failed: ${message}`);
+    process.exit(1);
+  }
+}
+
 function printStudyResult(result, format) {
   if (format === "json") {
     console.log(JSON.stringify(result, null, 2));
@@ -387,6 +432,7 @@ function printHelp() {
   node src/cli.mjs evaluate <payload.json> [--format pretty|json|markdown] [--profile standard|kernel-grade]
   node src/cli.mjs evaluate-patch <patch-or-mbox> [--format pretty|json|markdown] [--profile kernel-grade] [--policy policy-files.json]
   node src/cli.mjs preflight <payload.json|patch-or-mbox> [--allow-repair] [--format pretty|json|markdown] [--profile standard|kernel-grade] [--policy policy-files.json]
+  node src/cli.mjs lifecycle <lifecycle-input.json|-> [--format pretty|json|markdown]
   node src/cli.mjs validate-corpus <consented.jsonl|consented.csv|-> [--input-format jsonl|csv] [--format pretty|json|markdown]
   node src/cli.mjs study init --root <absolute-path> --protocol <protocol.json> --sampling-frame <frame.json> [--mode production|synthetic] [--format pretty|json|markdown]
   node src/cli.mjs study consent|observe|freeze|rate --root <absolute-path> --input <record.json> [--format pretty|json|markdown]
@@ -396,5 +442,6 @@ function printHelp() {
   cat queue-payload.json | node src/cli.mjs queue - --format json
 
 Preflight exit codes: 0 = ready to submit, 1 = not ready, 2 = usage error.
+Lifecycle exit codes: 0 = assessment produced, 1 = evidence failed closed, 2 = usage error.
 Corpus validation exit codes: 0 = corpus measured, 1 = validation failed closed, 2 = usage error.`);
 }
