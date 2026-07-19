@@ -1,6 +1,6 @@
 {
   "name": "premature-contribution-firewall",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "type": "module",
   "description": "A GitHub-oriented maintainer firewall that gates inbound PRs and issues by review readiness instead of AI detection.",
   "license": "MIT",

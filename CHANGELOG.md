@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.2.0 - 2026-07-19
+
+### Contribution Lifecycle And Salvage Gate
+
+- Added the offline `pcf lifecycle` command to distinguish current patches, bounded rebase drift, salvageable invariants, partial or equivalent supersession, invalidated claims, and evidence that needs a maintainer decision.
+- Added atomic claim decomposition, controlled next actions, and salvage packets while keeping every public-write boundary disabled.
+- Added JSON, Markdown, and plain-text renderers plus a seven-case fixture corpus covering every deterministic classification.
+- Added a retrospective Hermes Agent case that keeps observation-time evidence separate from later landing and attribution provenance.
+
+### Hindsight And Release Safety
+
+- Excluded later outcomes from both classification and the assessment SHA-256 so removing an outcome produces the same decision and fingerprint.
+- Kept contradictory, incomplete, and unsupported evidence fail-closed and documented that lifecycle assessments do not prove correctness, mergeability, endorsement, or permission to publish.
+- Preserved the existing `pcf`, `premature-contribution-firewall`, and `pcf-mcp` package bins with no dependency changes.
+
 ## v0.1.3 - 2026-07-11
 
 ### AI-Assisted Contribution Posture Gate
