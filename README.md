@@ -164,6 +164,15 @@ Later outcomes and attribution can be recorded, but they are cryptographically e
 
 The fixture corpus at [`fixtures/contribution-lifecycle-cases.json`](fixtures/contribution-lifecycle-cases.json) includes a public-evidence Hermes Agent case where one atomic claim had been covered upstream while a second invariant survived a restructuring and required surgical salvage. The recorded later outcome remains provenance only; it is not classification evidence.
 
+### Public Lifecycle Evidence
+
+The lifecycle gate is calibrated against observed upstream outcomes as well as synthetic fixtures:
+
+- [Hermes Agent #69696](https://github.com/NousResearch/hermes-agent/pull/69696) is an open, maintainer-authored broader solution that explicitly subsumes and credits my still-open [#43834](https://github.com/NousResearch/hermes-agent/pull/43834) for independently mapping the desktop login-shell `PATH` bug family. Neither PR is counted as a merge. The event demonstrates the difference between an aging point patch and a diagnosis that survives into a better system-wide design.
+- [Karakeep #2864](https://github.com/karakeep-app/karakeep/pull/2864) merged on July 26, 2026 and is scheduled for the next release. It was a one-line, component-local overflow fix for tall screenshot previews, validated by the project's format, lint, typecheck, test, diff-check, and pre-commit gates. The long review queue did not broaden the patch or produce a requested technical rework.
+
+These are author-run contribution outcomes, not maintainer endorsements of PCF or proof of product validity. The detailed evidence and retained gates are recorded in the [Upstream Contribution Learning Ledger](docs/UPSTREAM_CONTRIBUTION_LEDGER.md).
+
 ## Feedback Loop
 
 PCF is not only a static rule set. When a maintainer says PCF was too harsh, too lenient, or missed duplicate/upstream/concurrent context, the correction can become a local evidence case file.

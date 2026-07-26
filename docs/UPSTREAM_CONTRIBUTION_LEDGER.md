@@ -21,6 +21,26 @@ Before any public PR or comment, the contribution lane must pass these checks:
 
 ## Ledger
 
+### 2026-07-26 - Accepted - `karakeep-app/karakeep#2864`
+
+- PR: <https://github.com/karakeep-app/karakeep/pull/2864>
+- Related issue: <https://github.com/karakeep-app/karakeep/issues/2817>
+- Outcome: merged on 2026-07-26 as commit `595392a9e706a7b93951cb9a7deea70ba00cadb4`; the maintainer confirmed it is scheduled for the next release.
+- What was wanted: tall screenshot previews were clipped because the preview container did not allow vertical scrolling.
+- What changed: the screenshot preview container now uses vertical overflow scrolling while keeping horizontal overflow hidden. The contribution was a one-line Tailwind class change that followed the component's existing layout.
+- Evidence: the PR was authored by `VrtxOmega` and merged directly. The submitted verification covered oxfmt, web lint, web typecheck, tests under `TZ=UTC`, diff-check, and the repository's pre-commit Turbo checks. Automated review rated the change safe to merge, and the maintainer's release comment confirmed the delayed review was queue time rather than a requested technical rework.
+- Gate retained: when a visible UI defect has a one-line component-local correction that follows an existing pattern, keep the diff at that exact surface, run the repository's complete web checks, and do not broaden the change while waiting for review.
+
+### 2026-07-23 - Open Credit / Broader Upstream Solution - `NousResearch/hermes-agent#43834` and `#69696`
+
+- Original contribution: <https://github.com/NousResearch/hermes-agent/pull/43834>
+- Broader maintainer solution: <https://github.com/NousResearch/hermes-agent/pull/69696>
+- Outcome: both PRs remain open. Maintainer-authored #69696 explicitly subsumes and credits `VrtxOmega`'s #43834 for independently mapping the desktop login-shell `PATH` bug family. This outcome is not counted as a merge or commit-authorship claim.
+- What was wanted: Hermes Desktop launched from a GUI could inherit a reduced `PATH`, making the `hermes` CLI available in a terminal but undiscoverable from the desktop application on Linux/NixOS.
+- What changed: #43834 proposed a narrow login-shell fallback for locating the Hermes CLI. The broader #69696 resolves the user's login-shell `PATH` once during desktop startup so the backend process tree can discover Hermes and other locally installed tools consistently.
+- Evidence: the current #69696 body names #43834 and `@VrtxOmega`, describes the point fix as subsumed, and reports 12/12 shell-path tests, 6/6 backend-environment tests, clean TypeScript, ESLint, and Prettier checks, plus live desktop validation. Current GitHub readback still reports #43834 and #69696 as open.
+- Gate retained: separate patch state from diagnosis quality. When upstream architecture broadens beyond a point patch, preserve exact credit, mark the original and superseding work accurately, and do not treat explicit subsumption as a merge until GitHub records one.
+
 ### 2026-06-11 - Accepted - `ansvisor/ansvisor#235`
 
 - PR: <https://github.com/ansvisor/ansvisor/pull/235>
