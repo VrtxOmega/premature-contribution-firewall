@@ -118,15 +118,16 @@ Before any public PR or comment, the contribution lane must pass these checks:
 - Gate retained: for bucket issues, choose exactly one current warning class, prove it on current `staging`, leave unrelated warning classes for separate PRs, and avoid claiming the whole bucket is closed.
 - Follow-up: after merge, left one short thank-you/provenance comment explaining that PCF helped keep the Amber contribution narrow, check overlap, and verify generated output before opening.
 
-### 2026-06-11 - Open PR - `KaotoIO/forms#104`
+### 2026-07-27 - Accepted - `KaotoIO/forms#104`
 
 - PR: <https://github.com/KaotoIO/forms/pull/104>
 - Related issue: <https://github.com/KaotoIO/kaoto/issues/3281>
-- Outcome: opened as a narrow bugfix PR against the `1.x` forms branch; initial GitHub readback reported it as open, mergeable, and not draft. CodeRabbit review was pending at closeout.
+- Outcome: merged into `1.x` at `2026-07-27T13:58:06Z` after project-member approval; the direct VrtxOmega contribution landed as merge commit `f76fee10dfd2cf84d1c209be41e8f9203f8c8339`.
 - What was wanted: a `bug` + `good first issue` + `help wanted` empty-state copy fix where the form already on the `All` tab should not tell the user to switch to `All`.
 - What changed: `NoFieldFound` now keeps the `Switch to All tab` action for filtered `Required` / `Modified` tabs, but shows a plain no-results message when `All` is already selected.
-- Evidence: `KaotoIO/kaoto#3283` was already merged and intentionally scoped to adding REST DSL search, while `#3281` was opened separately for this shared forms-library message. `@kaoto/forms@1.7.1` and `1.7.2` had identical `NoFieldFound` output, so the fix belonged in `KaotoIO/forms` rather than a Kaoto app dependency bump.
+- Evidence: `KaotoIO/kaoto#3283` was already merged and intentionally scoped to adding REST DSL search, while `#3281` was opened separately for this shared forms-library message. `@kaoto/forms@1.7.1` and `1.7.2` had identical `NoFieldFound` output, so the fix belonged in `KaotoIO/forms` rather than a Kaoto app dependency bump. The merged diff remained limited to `NoFieldFound.tsx` and its focused regression test; CodeRabbit generated no actionable review comments.
 - Gate retained: when a downstream app issue points at a shared library component, verify the library source/release branch first and open the PR in the owning repo/release line instead of patching around the symptom in the app.
+- Follow-up: after merge, left one short thank-you/provenance comment explaining that the contribution workflow helped trace the report to the shared package and keep the patch limited to the All-tab empty state.
 
 ### 2026-06-11 - Open PR - `StingraySoftware/stingray#978`
 
