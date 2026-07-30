@@ -1447,6 +1447,7 @@ function publicRepositoryContext(repositoryTriage) {
     status: repositoryTriage?.checkStatus || "pass",
     summary: repositoryTriage?.summary || "No repository context supplied.",
     labels: repositoryTriage?.labels || [],
+    linkedTargetIssues: repositoryTriage?.linkedTargetIssues || [],
     similarOpenIssues: repositoryTriage?.similarOpenIssues || [],
     similarClosedIssues: repositoryTriage?.similarClosedIssues || [],
     linkedClosedIssues: repositoryTriage?.linkedClosedIssues || [],

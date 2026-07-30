@@ -9,7 +9,8 @@ test("repository context detects similar open issues, concurrent PRs, and upstre
 
   assert.equal(analysis.hasContext, true);
   assert.equal(analysis.checkStatus, "fail");
-  assert.ok(analysis.similarOpenIssues.some((item) => item.number === "41"));
+  assert.ok(analysis.linkedTargetIssues.some((item) => item.number === "41"));
+  assert.ok(analysis.similarOpenIssues.some((item) => item.number === "42"));
   assert.ok(analysis.concurrentPullRequests.some((item) => item.number === "77"));
   assert.ok(analysis.upstreamSolved.some((item) => item.number === "300"));
   assert.ok(analysis.labels.includes("possibly-duplicate"));
@@ -27,6 +28,82 @@ test("repository context findings repair an otherwise ready pull request", () =>
   assert.equal(result.repositoryContext.hasContext, true);
   assert.ok(result.repositoryContext.findings.length >= 3);
   assert.ok(result.checks.some((check) => check.id === "repository-context" && check.status === "fail"));
+});
+
+test("a pull request target issue stays linkage evidence without duplicating itself", () => {
+  const result = evaluateContribution({
+    kind: "pull_request",
+    title: "mono: use resolved targets for method reachability",
+    body: [
+      "Fixes #258.",
+      "",
+      "Problem: instance calls make unrelated same-name methods reachable.",
+      "Change: use the type checker's resolved target and retain the untyped fallback.",
+      "Risk: limited to production reachability; standalone callers retain the fallback.",
+      "Verification: cargo test passed. Expected only the resolved method; actual all same-name methods were lowered."
+    ].join("\n"),
+    authorAssociation: "CONTRIBUTOR",
+    changedFiles: 3,
+    additions: 75,
+    deletions: 17,
+    files: [
+      { filename: "crates/rask-mono/src/lib.rs", additions: 40, deletions: 15 },
+      { filename: "crates/rask-compiler/src/lib.rs", additions: 2, deletions: 2 },
+      { filename: "crates/rask-compiler/tests/call_type_args.rs", additions: 33, deletions: 0 }
+    ],
+    checks: [{ name: "test", conclusion: "success" }],
+    repositoryContext: {
+      repository: "rask-lang/rask",
+      issues: [
+        {
+          number: 258,
+          title: "Instance method reachability lowers unrelated methods",
+          body: "Same-name methods become reachable and fail lowering.",
+          state: "open",
+          labels: ["bug"],
+          htmlUrl: "https://github.com/rask-lang/rask/issues/258"
+        }
+      ],
+      pullRequests: []
+    }
+  });
+
+  assert.equal(result.status, "ready-for-maintainer");
+  assert.equal(result.labels.includes("possibly-duplicate"), false);
+  assert.equal(result.repositoryContext.status, "pass");
+  assert.equal(result.repositoryContext.similarOpenIssues.length, 0);
+  assert.ok(result.repositoryContext.linkedTargetIssues.some((item) =>
+    item.number === "258"
+    && item.directReference
+    && item.relation === "linked-target-issue"
+  ));
+});
+
+test("negated closing language cannot suppress a duplicate warning", () => {
+  const analysis = analyzeRepositoryContext({
+    kind: "pull_request",
+    title: "mono: document the unresolved reachability defect",
+    body: "This does not fix #258. The same reachability defect remains.",
+    repositoryContext: {
+      repository: "rask-lang/rask",
+      issues: [
+        {
+          number: 258,
+          title: "Instance method reachability lowers unrelated methods",
+          body: "The same reachability defect remains unresolved.",
+          state: "open",
+          labels: ["bug"],
+          htmlUrl: "https://github.com/rask-lang/rask/issues/258"
+        }
+      ]
+    }
+  });
+
+  assert.ok(analysis.labels.includes("possibly-duplicate"));
+  assert.equal(analysis.linkedTargetIssues.length, 0);
+  assert.ok(analysis.similarOpenIssues.some((item) =>
+    item.number === "258" && item.directReference
+  ));
 });
 
 test("missing repository context stays missing after evaluator normalization", () => {
@@ -393,6 +470,14 @@ function readyPrWithContext() {
           state: "open",
           labels: ["bug"],
           htmlUrl: "https://github.example/issues/41"
+        },
+        {
+          number: 42,
+          title: "Dry-run webhook response should expose label previews",
+          body: "The dry-run response needs the labels that would be applied.",
+          state: "open",
+          labels: ["bug"],
+          htmlUrl: "https://github.example/issues/42"
         }
       ],
       pullRequests: [

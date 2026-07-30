@@ -38,7 +38,7 @@
       "kind": "pull_request",
       "number": 13,
       "title": "webhook: include labels in dry-run response",
-      "body": "Fixes #41.\n\nProblem: dry-run webhook responses omit the labels that would be applied.\n\nChange: return the maintainer labels beside the comment preview.\n\nRisk: low because this changes dry-run JSON only.\n\nVerification: npm test passed locally. Expected labels are present; actual before omitted labels.",
+      "body": "Related: #41.\n\nProblem: dry-run webhook responses omit the labels that would be applied.\n\nChange: return the maintainer labels beside the comment preview.\n\nRisk: low because this changes dry-run JSON only.\n\nVerification: npm test passed locally. Expected labels are present; actual before omitted labels.",
       "authorAssociation": "CONTRIBUTOR",
       "changedFiles": 2,
       "additions": 45,
