@@ -31,6 +31,55 @@ test("ready pull request passes as reviewable", async () => {
   assert.doesNotMatch(result.comment, /- undefined:/);
 });
 
+test("generated artifact wording is not treated as AI disclosure", () => {
+  const result = evaluateContribution({
+    kind: "pull_request",
+    title: "docs: update checked-in reference README",
+    body: [
+      "Closes #42.",
+      "",
+      "The generated README is checked in because repository policy requires the reference output to remain synchronized with its source."
+    ].join("\n"),
+    authorAssociation: "MEMBER",
+    draft: false,
+    changedFiles: 1,
+    additions: 4,
+    deletions: 2,
+    files: [
+      { filename: "docs/reference/README.md", additions: 4, deletions: 2 }
+    ],
+    checks: [
+      { name: "readme-consistency", conclusion: "success" }
+    ]
+  });
+
+  assert.ok(result.checks.some((check) => check.id === "accountability" && check.status === "pass"));
+  assert.equal(result.provenance.toolGenerated, false);
+});
+
+test("explicit tool generation without human verification still fails accountability", () => {
+  const result = evaluateContribution({
+    kind: "pull_request",
+    title: "fix: handle empty parser input",
+    body: "Closes #42.\n\nChatGPT generated this patch. It should work.",
+    authorAssociation: "CONTRIBUTOR",
+    draft: false,
+    changedFiles: 2,
+    additions: 12,
+    deletions: 3,
+    files: [
+      { filename: "src/parser.mjs", additions: 8, deletions: 3 },
+      { filename: "test/parser.test.mjs", additions: 4, deletions: 0 }
+    ],
+    checks: [
+      { name: "test", conclusion: "success" }
+    ]
+  });
+
+  assert.ok(result.labels.includes("needs-human-verification"));
+  assert.ok(result.checks.some((check) => check.id === "accountability" && check.status === "fail"));
+});
+
 test("unready issue requires reproducer and real evidence", async () => {
   const result = evaluateContribution(await fixture("issue-unready"));
   assert.equal(result.kind, "issue");
