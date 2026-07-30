@@ -361,6 +361,31 @@ test("serious scout fails closed when GitHub issue search is incomplete", async 
   assert.match(report.automation.reason, /partial search results/i);
 });
 
+test("serious scout preserves canonical repository redirects in collection evidence", async () => {
+  const report = await runSeriousScout({
+    queries: ["repo:old-owner/old-repo is:issue is:open"],
+    githubClient: {
+      async searchOpenIssues() {
+        return {
+          items: [seriousIssue()],
+          incompleteResults: false,
+          repositoryRedirects: [{
+            from: "old-owner/old-repo",
+            to: "new-owner/new-repo"
+          }]
+        };
+      }
+    }
+  });
+
+  assert.equal(report.collection.complete, true);
+  assert.deepEqual(report.collection.repositoryRedirects, [{
+    from: "old-owner/old-repo",
+    to: "new-owner/new-repo"
+  }]);
+  assert.equal(report.automation.status, "PROMOTE");
+});
+
 test("serious scout stops remaining issue queries after an exhausted rate limit", async () => {
   const calls = [];
   const report = await runSeriousScout({

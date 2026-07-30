@@ -558,6 +558,7 @@ function normalizeCollectionIntegrity(value = null) {
       complete: false,
       queries: 0,
       incompleteResults: 0,
+      repositoryRedirects: [],
       errors: [{ scope: "integrity", message: "Collection integrity metadata was not supplied." }]
     };
   }
@@ -568,8 +569,17 @@ function normalizeCollectionIntegrity(value = null) {
     complete: value.complete !== false && errors.length === 0 && incompleteResults === 0,
     queries: clampNumber(value.queries, 0, 0, 10_000),
     incompleteResults,
+    repositoryRedirects: Array.isArray(value.repositoryRedirects)
+      ? value.repositoryRedirects.map(normalizeRepositoryRedirect).filter(Boolean)
+      : [],
     errors
   };
+}
+
+function normalizeRepositoryRedirect(value) {
+  const from = String(value?.from || "");
+  const to = String(value?.to || "");
+  return from && to ? { from, to } : null;
 }
 
 function normalizeOverlapIntegrity(value = null, issues = []) {
