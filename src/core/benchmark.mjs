@@ -2438,6 +2438,7 @@ function repoContextPr({ mode }) {
   if (mode === "similar-open") {
     return {
       ...base,
+      body: base.body.replace("Fixes #41.", "Related: #41."),
       repositoryContext: {
         repository: "VrtxOmega/premature-contribution-firewall",
         issues: [

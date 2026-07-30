@@ -136,14 +136,30 @@ export function analyzeRepositoryContext(input = {}) {
     .filter((item) => item.number && current.issueRefs.has(String(item.number)))
     .filter((item) => !current.contextualIssueRefs.has(String(item.number)))
     .map((item) => enrichMatch(item, current, "linked-issue"));
-  const linkedOpenIssues = linkedIssues.filter((item) => isOpen(item));
+  const linkedTargetIssues = linkedIssues
+    .filter((item) => current.targetIssueRefs.has(String(item.number)))
+    .map((item) => ({ ...item, relation: "linked-target-issue" }));
+  const linkedOpenIssues = linkedIssues
+    .filter((item) => isOpen(item))
+    .filter((item) => !current.targetIssueRefs.has(String(item.number)));
   const linkedClosedIssues = linkedIssues.filter((item) => isClosed(item) || isSolved(item));
 
   const similarOpenIssues = uniqueMatches([
     ...linkedOpenIssues,
-    ...rankMatches(localIssues.filter((item) => isOpen(item)), current, "similar-open-issue")
+    ...rankMatches(
+      localIssues.filter((item) => isOpen(item) && !current.targetIssueRefs.has(String(item.number))),
+      current,
+      "similar-open-issue"
+    )
   ]).filter((item) => !isContextualDirectReference(item, current));
-  const similarClosedIssues = rankMatches(localIssues.filter((item) => isClosed(item) || isSolved(item)), current, "similar-closed-issue")
+  const similarClosedIssues = rankMatches(
+    localIssues.filter((item) =>
+      (isClosed(item) || isSolved(item))
+      && !current.targetIssueRefs.has(String(item.number))
+    ),
+    current,
+    "similar-closed-issue"
+  )
     .filter((item) => !isContextualDirectReference(item, current));
   const concurrentPullRequests = rankMatches(localPullRequests.filter((item) => isOpen(item)), current, "concurrent-pr", { requireOverlap: false })
     .filter((item) => item.fileOverlap.length > 0 || item.score >= 0.24);
@@ -157,7 +173,7 @@ export function analyzeRepositoryContext(input = {}) {
   ).filter((item) => isSolved(item) || item.score >= 0.2 || item.fileOverlap.length > 0);
 
   const labels = [];
-  if (similarOpenIssues.length || linkedIssues.some((item) => isOpen(item))) labels.push("possibly-duplicate");
+  if (similarOpenIssues.length) labels.push("possibly-duplicate");
   if (similarClosedIssues.length || linkedClosedIssues.length || similarClosedPullRequests.length) labels.push("possibly-solved");
   if (linkedClosedIssues.length) labels.push("linked-issue-closed");
   if (concurrentPullRequests.length) labels.push("concurrent-work");
@@ -183,7 +199,16 @@ export function analyzeRepositoryContext(input = {}) {
     upstreamRepository: context.upstreamRepository,
     checkStatus,
     labels: [...new Set(labels)],
-    summary: summarizeFindings({ similarOpenIssues, similarClosedIssues, linkedClosedIssues, similarClosedPullRequests, concurrentPullRequests, upstreamSolved }),
+    summary: summarizeFindings({
+      linkedTargetIssues,
+      similarOpenIssues,
+      similarClosedIssues,
+      linkedClosedIssues,
+      similarClosedPullRequests,
+      concurrentPullRequests,
+      upstreamSolved
+    }),
+    linkedTargetIssues: linkedTargetIssues.slice(0, 5),
     similarOpenIssues: similarOpenIssues.slice(0, 5),
     similarClosedIssues: similarClosedIssues.slice(0, 5),
     linkedClosedIssues: linkedClosedIssues.slice(0, 5),
@@ -257,6 +282,9 @@ function currentFingerprint(input, context = {}) {
   const text = [input.title, input.body, ...(input.commits || [])].filter(Boolean).join("\n");
   const issueRefs = extractIssueRefs(text, context.repository);
   const contextualIssueRefs = extractContextualIssueRefs(text, context.repository);
+  const targetIssueRefs = input.kind === "pull_request"
+    ? extractTargetIssueRefs(text, context.repository)
+    : new Set();
   for (const ref of context.currentIssueRefs || []) issueRefs.add(String(ref));
   return {
     number: input.number === undefined || input.number === null ? "" : String(input.number),
@@ -265,7 +293,8 @@ function currentFingerprint(input, context = {}) {
     titleTokens: tokenize(input.title || ""),
     files: normalizeFiles(input.files || []),
     issueRefs,
-    contextualIssueRefs
+    contextualIssueRefs,
+    targetIssueRefs
   };
 }
 
@@ -326,8 +355,10 @@ function isContextualDirectReference(item, current) {
   return Boolean(item.directReference && item.number && current.contextualIssueRefs?.has(String(item.number)));
 }
 
-function summarizeFindings({ similarOpenIssues, similarClosedIssues, linkedClosedIssues, similarClosedPullRequests, concurrentPullRequests, upstreamSolved }) {
+function summarizeFindings({ linkedTargetIssues, similarOpenIssues, similarClosedIssues, linkedClosedIssues, similarClosedPullRequests, concurrentPullRequests, upstreamSolved }) {
   const parts = [];
+  const openTargetIssues = linkedTargetIssues.filter((item) => isOpen(item));
+  if (openTargetIssues.length) parts.push(`${openTargetIssues.length} directly linked open target issue(s)`);
   if (similarOpenIssues.length) parts.push(`${similarOpenIssues.length} similar open issue(s)`);
   if (similarClosedIssues.length) parts.push(`${similarClosedIssues.length} similar closed/solved issue(s)`);
   if (linkedClosedIssues.length) parts.push(`${linkedClosedIssues.length} linked issue(s) already closed`);
@@ -346,6 +377,7 @@ function emptyAnalysis(overrides = {}) {
     checkStatus: "unchecked",
     labels: [],
     summary: "",
+    linkedTargetIssues: [],
     similarOpenIssues: [],
     similarClosedIssues: [],
     linkedClosedIssues: [],
@@ -392,6 +424,45 @@ function extractIssueRefs(text, repository = "") {
     if (/github\.com\/[^/\s]+\/[^/\s]+\/$/i.test(prefix)) continue;
     refs.add(match[1]);
   }
+  return refs;
+}
+
+function extractTargetIssueRefs(text, repository = "") {
+  const refs = new Set();
+  const source = String(text || "");
+  const [currentOwner, currentRepo] = String(repository || "").split("/");
+  const closingReference = new RegExp(
+    String.raw`\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+`
+      + String.raw`(?:#(\d+)|([a-z0-9_.-]+)\/([a-z0-9_.-]+)#(\d+)`
+      + String.raw`|https?:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/issues\/(\d+))`,
+    "gi"
+  );
+
+  for (const match of source.matchAll(closingReference)) {
+    const prefix = source.slice(Math.max(0, (match.index || 0) - 24), match.index || 0);
+    if (/\b(?:not|does\s+not|doesn't|won't|will\s+not)\s*$/i.test(prefix)) {
+      continue;
+    }
+
+    if (match[1]) {
+      refs.add(match[1]);
+      continue;
+    }
+
+    const owner = match[2] || match[5] || "";
+    const repo = match[3] || match[6] || "";
+    const number = match[4] || match[7] || "";
+    if (
+      number
+      && currentOwner
+      && currentRepo
+      && owner.toLowerCase() === currentOwner.toLowerCase()
+      && repo.toLowerCase() === currentRepo.toLowerCase()
+    ) {
+      refs.add(number);
+    }
+  }
+
   return refs;
 }
 
