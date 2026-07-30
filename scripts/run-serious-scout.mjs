@@ -123,11 +123,13 @@ export async function runSeriousScoutCli(args = process.argv.slice(2)) {
 async function collectIssuesFromGithub({ queries, perQueryLimit, githubClient }) {
   const issues = [];
   const errors = [];
+  const repositoryRedirects = [];
   let incompleteResults = 0;
   for (const query of queries) {
     try {
       const result = await githubClient.searchOpenIssues({ query, limit: perQueryLimit });
       issues.push(...(result.items || []));
+      repositoryRedirects.push(...(result.repositoryRedirects || []));
       if (result.incompleteResults) {
         incompleteResults += 1;
         errors.push({
@@ -147,9 +149,20 @@ async function collectIssuesFromGithub({ queries, perQueryLimit, githubClient })
       complete: errors.length === 0 && incompleteResults === 0,
       queries: queries.length,
       incompleteResults,
+      repositoryRedirects: dedupeRepositoryRedirects(repositoryRedirects),
       errors
     }
   };
+}
+
+function dedupeRepositoryRedirects(redirects = []) {
+  const seen = new Set();
+  return redirects.filter((redirect) => {
+    const key = `${redirect?.from || ""}->${redirect?.to || ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return Boolean(redirect?.from && redirect?.to);
+  });
 }
 
 async function enrichOpenPullRequestOverlap({ issues, githubClient, maxChecks, preliminaryReport = {} }) {

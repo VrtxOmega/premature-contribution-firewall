@@ -339,14 +339,22 @@ export function createGitHubClient(config = {}) {
   async function searchOpenIssues({ query, limit = 20, installationId = "", signal = null }) {
     const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
     const normalizedQuery = normalizeOpenIssueSearchQuery(query);
-    await waitForSearchSlot();
-    const data = await readRequest(
-      installationId,
-      `/search/issues?q=${encodeURIComponent(normalizedQuery)}&sort=updated&order=desc&per_page=${safeLimit}`,
-      { signal }
-    );
+    let searchQuery = normalizedQuery;
+    let repositoryRedirects = [];
+    let data;
+    try {
+      data = await searchOpenIssueData({ query: searchQuery, limit: safeLimit, installationId, signal });
+    } catch (error) {
+      if (error?.status !== 422) throw error;
+      const resolution = await resolveSearchRepositoryQualifiers({ query: searchQuery, installationId, signal });
+      if (resolution.query === searchQuery) throw error;
+      searchQuery = resolution.query;
+      repositoryRedirects = resolution.redirects;
+      data = await searchOpenIssueData({ query: searchQuery, limit: safeLimit, installationId, signal });
+    }
     return {
-      query: normalizedQuery,
+      query: searchQuery,
+      repositoryRedirects,
       totalCount: Number(data.total_count) || 0,
       incompleteResults: Boolean(data.incomplete_results),
       items: (data.items || [])
@@ -372,6 +380,37 @@ export function createGitHubClient(config = {}) {
           created_at: item.created_at || ""
         }))
     };
+  }
+
+  async function searchOpenIssueData({ query, limit, installationId, signal }) {
+    await waitForSearchSlot();
+    return readRequest(
+      installationId,
+      `/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc&per_page=${limit}`,
+      { signal }
+    );
+  }
+
+  async function resolveSearchRepositoryQualifiers({ query, installationId, signal }) {
+    const repositories = [...new Set(
+      [...String(query || "").matchAll(/(?:^|\s)repo:([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?=\s|$)/g)]
+        .map((match) => match[1])
+    )];
+    let resolvedQuery = query;
+    const redirects = [];
+    for (const repository of repositories) {
+      try {
+        const data = await readRequest(installationId, `/repos/${repository}`, { signal });
+        const canonical = String(data?.full_name || "");
+        if (!canonical || canonical.toLowerCase() === repository.toLowerCase()) continue;
+        const token = new RegExp(`(^|\\s)repo:${escapeRegExp(repository)}(?=\\s|$)`, "g");
+        resolvedQuery = resolvedQuery.replace(token, `$1repo:${canonical}`);
+        redirects.push({ from: repository, to: canonical });
+      } catch {
+        // Preserve the original 422 when repository identity cannot be resolved.
+      }
+    }
+    return { query: resolvedQuery, redirects };
   }
 
   async function ensureLabel({ owner, repo, label, installationId }) {

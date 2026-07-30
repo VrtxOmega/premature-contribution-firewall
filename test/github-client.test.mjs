@@ -128,6 +128,100 @@ test("GitHub client uses optional read token for public API calls", async () => 
   }
 });
 
+test("GitHub client retries issue search with a transferred repository's canonical name", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url) => {
+    const parsed = new URL(url);
+    const query = parsed.searchParams.get("q") || "";
+    calls.push({ pathname: parsed.pathname, query });
+    if (parsed.pathname === "/search/issues" && query.includes("repo:old-owner/old-repo")) {
+      return jsonErrorResponse(422, { message: "Validation Failed" });
+    }
+    if (parsed.pathname === "/repos/old-owner/old-repo") {
+      return jsonResponse({ full_name: "new-owner/new-repo" });
+    }
+    if (parsed.pathname === "/search/issues" && query.includes("repo:new-owner/new-repo")) {
+      return jsonResponse({
+        total_count: 1,
+        incomplete_results: false,
+        items: [{
+          id: 42,
+          repository_url: "https://api.github.test/repos/new-owner/new-repo",
+          number: 9,
+          title: "Parser crashes on nested input",
+          body: "Steps to reproduce the parser crash.",
+          user: { login: "reporter", type: "User" },
+          labels: [{ name: "bug" }],
+          state: "open",
+          assignees: [],
+          html_url: "https://github.test/new-owner/new-repo/issues/9"
+        }]
+      });
+    }
+    throw new Error(`unexpected fetch ${parsed.pathname} ${query}`);
+  };
+
+  try {
+    const client = createGitHubClient({
+      githubApiBase: "https://api.github.test",
+      githubCacheTtlMs: 0,
+      githubSearchDelayMs: 0
+    });
+    const result = await client.searchOpenIssues({
+      query: "repo:old-owner/old-repo is:issue is:open label:bug"
+    });
+
+    assert.equal(result.query, "repo:new-owner/new-repo is:issue is:open label:bug");
+    assert.deepEqual(result.repositoryRedirects, [{
+      from: "old-owner/old-repo",
+      to: "new-owner/new-repo"
+    }]);
+    assert.equal(result.items[0].repository, "new-owner/new-repo");
+    assert.deepEqual(calls.map(({ pathname }) => pathname), [
+      "/search/issues",
+      "/repos/old-owner/old-repo",
+      "/search/issues"
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("GitHub client preserves a 422 when repository identity did not change", async () => {
+  const originalFetch = globalThis.fetch;
+  let searches = 0;
+  globalThis.fetch = async (url) => {
+    const parsed = new URL(url);
+    if (parsed.pathname === "/search/issues") {
+      searches += 1;
+      return jsonErrorResponse(422, { message: "Validation Failed" });
+    }
+    if (parsed.pathname === "/repos/owner/repo") {
+      return jsonResponse({ full_name: "owner/repo" });
+    }
+    throw new Error(`unexpected fetch ${parsed.pathname}`);
+  };
+
+  try {
+    const client = createGitHubClient({
+      githubApiBase: "https://api.github.test",
+      githubCacheTtlMs: 0,
+      githubSearchDelayMs: 0
+    });
+
+    await assert.rejects(
+      client.searchOpenIssues({
+        query: "repo:owner/repo is:issue is:open malformed:qualifier"
+      }),
+      /GitHub API 422/
+    );
+    assert.equal(searches, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("GitHub client spaces repository-context search requests when configured", async () => {
   const originalFetch = globalThis.fetch;
   const searchTimes = [];
