@@ -12,6 +12,10 @@ Before any public PR or comment, the contribution lane must pass these checks:
 - Search open and closed PRs by issue number and by title/body overlap.
 - Check the repository contribution route, including whether fork PRs are accepted.
 - Verify local reproduction and platform fit before implementation.
+- Trace the reported failure to its declared root cause before choosing a patch
+  surface. If the proposed change only suppresses a downstream symptom while
+  leaving the named collision, identity, ownership, or lifecycle mechanism
+  intact, stop and re-scope before implementation.
 - Scan nearby TODO, FIXME, and architecture comments in every touched file. If a TODO names the same behavior being changed, stop and align before coding.
 - Prefer explicit maintainer invitation signals such as `help wanted`, a direct request for a fix, or a clear test-only gap.
 - Keep one issue per branch, one fix per PR, and no broad cleanup.
@@ -20,6 +24,27 @@ Before any public PR or comment, the contribution lane must pass these checks:
 - Before investing implementation time, check the repo's **AI-assisted contribution posture** in [AI_CONTRIBUTION_POSTURE_INDEX.md](AI_CONTRIBUTION_POSTURE_INDEX.md). Search `CONTRIBUTING.md`, issue/PR discussions, and prior closures for maintainer trust/provenance signals — not just technical review readiness.
 
 ## Ledger
+
+### 2026-07-30 - Rejected - `rask-lang/rask#469`
+
+- PR: <https://github.com/rask-lang/rask/pull/469>
+- Related issue: <https://github.com/rask-lang/rask/issues/258>
+- Outcome: closed without merge. Repository actor `dritory` identified the
+  missed root cause after closure: the patch addressed the symptom rather than
+  the mangling collision.
+- What was wanted: issue #258 described a collision in mangled identities that
+  made a function and method share one generated name.
+- What changed: the contribution narrowed a spurious reachability path exposed
+  by the issue reproducer, but did not repair the collision that created the
+  ambiguous identity.
+- Evidence: the pull request closed at `2026-07-30T16:34:13Z`; the immutable
+  root-cause comment followed at `2026-07-30T16:34:33Z`. This is an unfavorable
+  technical review, not evidence that the patch was correct, accepted, merged,
+  released, or endorsed.
+- Gate changed: before patching a downstream reachability or emission symptom,
+  reproduce and isolate the failure at the identity-formation boundary named
+  by the issue. A green downstream regression is insufficient when the root
+  collision remains possible.
 
 ### 2026-07-26 - Accepted - `karakeep-app/karakeep#2864`
 
