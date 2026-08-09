@@ -25,6 +25,33 @@ Before any public PR or comment, the contribution lane must pass these checks:
 
 ## Ledger
 
+### 2026-08-05 - Accepted - `github/awesome-copilot#2476`
+
+- PR: <https://github.com/github/awesome-copilot/pull/2476>
+- Outcome: merged into `main` after human approval by `aaronpowell` and passing required checks. The direct VrtxOmega contribution landed as merge commit `f83a8a942cfeaec67a6159d10e92bcfcc2d7f683`.
+- What was wanted: a bounded Copilot skill that verifies whether a consequential agent action still matches its evidence, approval, parameters, independence, and monitoring state without performing or authorizing the action.
+- What changed: `skills/verify-agent-action/SKILL.md` and the generated skills index now expose an installable exact-action review workflow whose required output keeps `execution_authorized` false.
+- Evidence: the repository's skill-spec, reference, risk, spelling, line-ending, and build checks passed; the merged index publishes `gh skills install github/awesome-copilot verify-agent-action`.
+- Gate retained: a large assurance framework is easier for an external project to evaluate when compressed into one non-executing skill with an explicit output contract and nonclaims. A community collection merge is an integration, not certification or endorsement.
+
+### 2026-08-04 - Accepted - `freedesktop-rs/nmrs#521`
+
+- PR: <https://github.com/freedesktop-rs/nmrs/pull/521>
+- Related issue: <https://github.com/freedesktop-rs/nmrs/issues/478>
+- Outcome: merged into `master` as `f459910b8d906dc8d13095adc07ab7a2a098b8e2`. The maintainer compared the contributor's initial error-return design with a requested typed `EapCertSource` redesign, then selected the original approach for the current release and implemented the final revision on the contributor branch.
+- What was wanted: conflicting EAP certificate or private-key path/blob inputs should return `ConnectionError::InvalidInput` instead of panicking.
+- What changed: the invalid combination now returns a normal input error that callers can handle. VrtxOmega authored the PR and both reviewed approaches; maintainer `cachebag` authored final commit `c9b052c1efb70f49712d729ebb3384f678ebbdf7`.
+- Evidence: original contributor commits `389e5beb64df3521b276dd63a31242be1bc093d6` and `f644fff6c3a6901cc5407053e246ad8fbc0abcb0` preserve both solutions and their tests. The maintainer thanked the contributor, approved the chosen shape, and merged the PR.
+- Gate retained: implement a requested alternative completely when review changes direction, but preserve the smaller original design as evidence. The maintainer may legitimately choose the smallest non-breaking repair after comparing both.
+
+### 2026-08-03 - Rejected - `agentrust-io/awesome-ai-governance#48`
+
+- PR: <https://github.com/agentrust-io/awesome-ai-governance/pull/48>
+- Outcome: closed without merge because the Trust Lab repository was created the same day, had one star, and did not yet show independent adoption. Curator `imran-siddique` explicitly described the decision as timing rather than a verdict on the work and invited a fresh submission after real users exist.
+- What was wanted: the catalog requires evidence that a governance project has been adopted beyond its author before listing it.
+- Evidence: immutable comment `5161877198` and close event `28865558467` record the criterion and zero-weight outcome.
+- Gate changed: catalog fit can depend on adoption maturity even when the artifact is technically ready. Do not submit a same-day project to an adoption-curated list; establish independently attributable users first, then open a fresh PR.
+
 ### 2026-07-30 - Rejected - `rask-lang/rask#469`
 
 - PR: <https://github.com/rask-lang/rask/pull/469>
@@ -50,10 +77,10 @@ Before any public PR or comment, the contribution lane must pass these checks:
 
 - PR: <https://github.com/karakeep-app/karakeep/pull/2864>
 - Related issue: <https://github.com/karakeep-app/karakeep/issues/2817>
-- Outcome: merged on 2026-07-26 as commit `595392a9e706a7b93951cb9a7deea70ba00cadb4`; the maintainer confirmed it is scheduled for the next release.
+- Outcome: merged on 2026-07-26 as commit `595392a9e706a7b93951cb9a7deea70ba00cadb4`, then shipped in Karakeep 0.33.1 with `VrtxOmega` credited in the official release notes.
 - What was wanted: tall screenshot previews were clipped because the preview container did not allow vertical scrolling.
 - What changed: the screenshot preview container now uses vertical overflow scrolling while keeping horizontal overflow hidden. The contribution was a one-line Tailwind class change that followed the component's existing layout.
-- Evidence: the PR was authored by `VrtxOmega` and merged directly. The submitted verification covered oxfmt, web lint, web typecheck, tests under `TZ=UTC`, diff-check, and the repository's pre-commit Turbo checks. Automated review rated the change safe to merge, and the maintainer's release comment confirmed the delayed review was queue time rather than a requested technical rework.
+- Evidence: the PR was authored by `VrtxOmega` and merged directly. The submitted verification covered oxfmt, web lint, web typecheck, tests under `TZ=UTC`, diff-check, and the repository's pre-commit Turbo checks. Automated review rated the change safe to merge, the maintainer confirmed the delayed review was queue time rather than a requested technical rework, and release 0.33.1 records the shipped fix.
 - Gate retained: when a visible UI defect has a one-line component-local correction that follows an existing pattern, keep the diff at that exact surface, run the repository's complete web checks, and do not broaden the change while waiting for review.
 
 ### 2026-07-23 - Open Credit / Broader Upstream Solution - `NousResearch/hermes-agent#43834` and `#69696`
@@ -63,7 +90,7 @@ Before any public PR or comment, the contribution lane must pass these checks:
 - Outcome: both PRs remain open. Maintainer-authored #69696 explicitly subsumes and credits `VrtxOmega`'s #43834 for independently mapping the desktop login-shell `PATH` bug family. This outcome is not counted as a merge or commit-authorship claim.
 - What was wanted: Hermes Desktop launched from a GUI could inherit a reduced `PATH`, making the `hermes` CLI available in a terminal but undiscoverable from the desktop application on Linux/NixOS.
 - What changed: #43834 proposed a narrow login-shell fallback for locating the Hermes CLI. The broader #69696 resolves the user's login-shell `PATH` once during desktop startup so the backend process tree can discover Hermes and other locally installed tools consistently.
-- Evidence: the current #69696 body names #43834 and `@VrtxOmega`, describes the point fix as subsumed, and reports 12/12 shell-path tests, 6/6 backend-environment tests, clean TypeScript, ESLint, and Prettier checks, plus live desktop validation. Current GitHub readback still reports #43834 and #69696 as open.
+- Evidence: the current #69696 body names #43834 and `@VrtxOmega`, describes the point fix as subsumed, and reports 12/12 shell-path tests, 6/6 backend-environment tests, clean TypeScript, ESLint, and Prettier checks, plus live desktop validation. After startup moved from `startHermes()` into `runPrimaryBackendStartup()`, Teknium's August 6 refresh removed a redundant wait while preserving `ensureLoginShellPath()` before backend resolution and spawn. The refresh reports clean TypeScript and 12/12 shell-path tests, and required CI is green. Current GitHub readback still reports #43834 and #69696 as open.
 - Gate retained: separate patch state from diagnosis quality. When upstream architecture broadens beyond a point patch, preserve exact credit, mark the original and superseding work accurately, and do not treat explicit subsumption as a merge until GitHub records one.
 
 ### 2026-06-11 - Accepted - `ansvisor/ansvisor#235`
@@ -90,7 +117,7 @@ Before any public PR or comment, the contribution lane must pass these checks:
 
 - PR: <https://github.com/karakeep-app/karakeep/pull/2863>
 - Related issue: <https://github.com/karakeep-app/karakeep/issues/2766>
-- Outcome: merged on 2026-06-13; linked issue closed.
+- Outcome: merged on 2026-06-13; linked issue closed. The fix later shipped in Karakeep 0.33.1 with `VrtxOmega` credited in the official release notes.
 - What was wanted: a `bug` + `status/approved` issue where `BROWSER_WEB_URL` failed on IPv6-enabled Docker networks because WHATWG `URL.hostname` silently rejects unbracketed IPv6 literals.
 - What changed: a shared helper now brackets IPv6 literals before assigning resolved addresses into `URL.hostname`; crawler CDP and admin browser status paths both use it. Focused Vitest coverage covers IPv4, IPv6, and path/query preservation.
 - Evidence: issue #2766 was open with `status/approved` before implementation. PR body included explicit LLM disclosure (Codex-assisted identification/implementation with human review and listed validation). Local validation spanned shared, workers, and trpc packages (Vitest, typecheck, lint, format) plus commit-hook `turbo run typecheck lint format`. Upstream merge readback: `MERGED` at 2026-06-13T09:55:21Z, four files, `+40/-2`.
