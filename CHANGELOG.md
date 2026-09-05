@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased - evidence refresh 2026-09-05
+
+### Upstream contribution calibration
+
+- Added a September 5 continuation of the public upstream contribution ledger covering four closed-without-merge lanes and the current open external contribution census.
+- Preserved the direct external merge totals at **22 overall / 16 PCF-era** because the post-August census found no newly merged external VrtxOmega PRs.
+- Added fail-closed learning gates for stale existing-PR overlap, contribution-route ownership, final branch ancestry/diff shape, and repository AI/first-time-contributor policy.
+- Kept every open PR, author-side test claim, private inbound inquiry, and self-repository change at zero outcome weight.
+- Evidence: [September 5 ledger addendum](docs/UPSTREAM_CONTRIBUTION_LEDGER_ADDENDUM_20260905.md) and [machine-readable census](docs/upstream-contribution-refresh-20260905.json).
+
 ## v0.2.0 - 2026-07-19
 
 ### Contribution Lifecycle And Salvage Gate
