@@ -1,0 +1,132 @@
+{
+  "schema_version": "1.0.0",
+  "as_of": "2026-09-05T05:45:00Z",
+  "baseline": {
+    "source": "docs/UPSTREAM_CONTRIBUTION_LEDGER.md",
+    "last_public_refresh": "2026-08-09",
+    "direct_external_pr_merges": 22,
+    "pcf_era_direct_merges": 16
+  },
+  "current_merge_census": {
+    "direct_external_pr_merges": 22,
+    "pcf_era_direct_merges": 16,
+    "new_direct_merges_since_baseline": 0,
+    "verification": "GitHub PR search for author:VrtxOmega merged:>=2026-08-09 returned no newly merged external contribution; only VrtxOmega-owned evidence/profile repositories appeared.",
+    "boundary": "Open, closed-without-merge, maintainer-authored salvage, self-repository, bot, and fork-only activity is excluded from direct external merge totals."
+  },
+  "closed_without_merge_since_baseline": [
+    {
+      "subject": "python/cpython#156200",
+      "outcome": "closed_without_merge",
+      "external_actor": "picnixz",
+      "reason": "A stale but existing PR (#143907) already covered the issue; the repository actor asked that no second PR be opened.",
+      "source": "https://github.com/python/cpython/pull/156200#issuecomment-5373144178",
+      "gate_change": "All-state overlap search must treat stale existing PRs as live ownership/duplication signals. Issue-number search is not complete until existing PRs are checked explicitly.",
+      "count_effect": 0
+    },
+    {
+      "subject": "nginx/nginx#1674",
+      "outcome": "closed_without_merge",
+      "external_actor": "sbhowmikf5",
+      "reason": "The repository actor treated the submission as duplicate work and routed discussion back to #1194.",
+      "source": "https://github.com/nginx/nginx/pull/1674#issuecomment-5407482317",
+      "gate_change": "Before coding, distinguish a bug report or active discussion from an invitation to submit a patch. Route ownership and active discussion state are first-class preflight evidence.",
+      "count_effect": 0
+    },
+    {
+      "subject": "libgit2/libgit2#7355",
+      "outcome": "closed_without_merge",
+      "external_actor": "AHSauge",
+      "reason": "The proposed fix arrived as a 127-commit, 149-file PR because the branch was not based cleanly on current main; the external actor asked for the actual change to be condensed.",
+      "source": "https://github.com/libgit2/libgit2/pull/7355#issuecomment-5372643439",
+      "gate_change": "Immediately before publication, compare the candidate branch against upstream current main and fail closed on unexpected commit ancestry, file count, or diff shape even when the intended patch itself is small.",
+      "count_effect": 0
+    },
+    {
+      "subject": "pola-rs/polars#28920",
+      "outcome": "closed_without_merge",
+      "external_actor": "orlp",
+      "reason": "The reviewer required compliance with the repository AI policy and requested a more idiomatic checked_add/is_some_and repair instead of the submitted unused-result-plus-unwrap shape; the first-time-contribution policy was then linked at closure.",
+      "source": "https://github.com/pola-rs/polars/pull/28920#issuecomment-5373196565",
+      "policy_source": "https://github.com/pola-rs/polars/pull/28920#issuecomment-5407307470",
+      "gate_change": "Repository AI/contribution posture and local idiom are pre-publication constraints, not post-review cleanup. A technically plausible safety fix still fails readiness when it violates the project's contribution route or preferred expression of the invariant.",
+      "count_effect": 0
+    }
+  ],
+  "open_external_lanes": [
+    {
+      "subject": "IBM/mcp-context-forge#5992",
+      "title": "chore: show startup build provenance",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "dotnet/runtime#132602",
+      "title": "Fix JIT assertion for TYP_UINT constants exceeding int32_t range (#129099)",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "openssl/openssl#32457",
+      "title": "Fix integer overflow in evp_pkey_ctx_add1_octet_string()",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "openssl/openssl#32452",
+      "title": "Fix null session dereference in SSL_get0_group_name()",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "apache/arrow#50947",
+      "title": "Fix Gandiva integer overflow and UTF-8 OOB reads",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "apache/arrow#50948",
+      "title": "Fix out-of-bounds read in Gandiva soundex_utf8",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "tokio-rs/tokio#8376",
+      "title": "Fix UAF in io_uring submit: handle EAGAIN like EBUSY",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "rust-lang/regex#1388",
+      "title": "Fix panic in BoundedBacktracker when max_haystack_len returns 0",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "espressif/esp-hosted-mcu#231",
+      "title": "fix: cap ESP_TRANSPORT_SDIO_MAX_BUF_SIZE at 16384 to match ESP-IDF DMA limit (EHM-262)",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "LLMSecurity/awesome-agent-skills-security#43",
+      "title": "Add VERITAS Omega Agent Trust Lab",
+      "status": "open",
+      "count_effect": 0,
+      "boundary": "One-file catalogue proposal; not acceptance, adoption, endorsement, or Trust Lab validation while open."
+    }
+  ],
+  "new_prepublication_gates": [
+    "Search all-state PR overlap and explicitly inspect stale existing PRs before coding.",
+    "Resolve issue/discussion ownership and contribution route before assuming a public issue is an invitation for a patch.",
+    "Compare the final branch against current upstream main immediately before publication; reject unexpected ancestry, commit count, file count, or diff shape.",
+    "Read and satisfy repository AI-assistance and first-time-contributor policy before implementation, not after review begins.",
+    "Keep open PRs and author-claimed local validation at zero outcome weight until external repository state changes."
+  ],
+  "private_or_nonpublic_inputs": {
+    "excluded_from_public_evidence": [
+      "unsolicited private correspondence about PCF boundaries unless the sender explicitly consents to publication"
+    ],
+    "reason": "Private interest can inform product design but is not silently converted into public adoption, validation, attribution, or campaign evidence."
+  }
+}
