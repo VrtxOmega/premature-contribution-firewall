@@ -252,6 +252,29 @@ export const ADVERSARIAL_CASES = [
     expect: { status: "blocked", labels: ["before-verdict-unsubstantiated", "after-verdict-unsubstantiated"] }
   },
   {
+    id: "repro-notes-outcome-laundering",
+    category: "evidence-laundering",
+    attack: "Supplies negated reproduction and success notes alongside artifact paths without structured results.",
+    residue: "A local regression returned pass because failure/success keywords in narrative notes were treated as outcomes.",
+    reproInput: {
+      before: { notes: "No error or regression reproduced" },
+      after: { notes: "not fixed" },
+      artifacts: [{ path: "before.log", kind: "before-repro" }, { path: "after.log", kind: "after-validation" }]
+    },
+    expect: { status: "blocked", labels: ["missing-after-evidence"] }
+  },
+  {
+    id: "repro-notes-presence-laundering",
+    category: "evidence-laundering",
+    attack: "Adds a neutral narrative note to replace missing after-evidence without a structured result.",
+    residue: "A local regression changed blocked to review solely because a note was nonempty.",
+    reproInput: {
+      before: { commands: [{ command: "test-before", exitCode: 1 }] },
+      after: { notes: "Observed behavior" }
+    },
+    expect: { status: "blocked", labels: ["missing-after-evidence"] }
+  },
+  {
     id: "repository-context-empty-object-laundering",
     category: "context-evasion",
     attack: "Supplies an empty repositoryContext object so duplicate/upstream collection appears to have run.",
