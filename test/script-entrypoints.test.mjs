@@ -1,6 +1,8 @@
 import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -35,7 +37,13 @@ before(async () => {
   await mkdir(join(cwd, "captures"));
   await cp(join(cwd, "queue.json"), join(cwd, "captures", "owner__repo.capture.json"));
   // Fixture tests must never fall through to live collection.
-  await writeFile(join(sandbox, "offline.mjs"), "globalThis.fetch = () => { throw new Error('Unexpected network request'); };\n");
+  await writeFile(join(sandbox, "offline.mjs"), `
+    import { writeFileSync } from 'node:fs';
+    globalThis.fetch = () => {
+      writeFileSync(process.env.PCF_TEST_FETCH_MARKER, 'attempted');
+      throw new Error('Unexpected network request');
+    };
+  `);
   env = { ...process.env };
   delete env.PCF_CLI_ROOT_SENTINEL;
 });
@@ -44,11 +52,22 @@ after(async () => {
   if (sandbox) await rm(sandbox, { recursive: true, force: true });
 });
 
-function run(args) {
-  return execFileAsync(process.execPath, ["--import", pathToFileURL(join(sandbox, "offline.mjs")).href, ...args], {
-    cwd, env, timeout: 15_000
-  });
+async function run(args) {
+  const marker = join(sandbox, `fetch-${randomUUID()}`);
+  try {
+    return await execFileAsync(process.execPath, ["--import", pathToFileURL(join(sandbox, "offline.mjs")).href, ...args], {
+      cwd, env: { ...env, PCF_TEST_FETCH_MARKER: marker }, timeout: 15_000
+    });
+  } finally {
+    assert.equal(existsSync(marker), false, "Unexpected network attempt");
+  }
 }
+
+test("offline guard detects collection attempts even if the caller catches the error", async () => {
+  await assert.rejects(run(["--input-type=module", "--eval", `
+    try { await fetch('https://example.invalid/'); } catch {}
+  `]), /Unexpected network attempt/);
+});
 
 const cases = [
   {
