@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   callPcfMcpTool,
@@ -317,7 +317,8 @@ test("lane store writes only under PCF_DATA_DIR and evidence is explicit", async
       }
     });
     assert.equal(saved.ok, true);
-    assert.match(saved.path, new RegExp(`^${escapeRegExp(dir)}/lanes/`));
+    const expectedLaneId = laneIdFor({ repository: "owner/repo", issue: "123" });
+    assert.equal(saved.path, join(dir, "lanes", `${expectedLaneId}.json`));
 
     const read = await callPcfMcpTool("pcf_lane_read", {
       repository: "owner/repo",
@@ -351,7 +352,7 @@ test("lane store writes only under PCF_DATA_DIR and evidence is explicit", async
       commands: [{ command: "npm test", exitCode: 1, outputPath: "artifacts/before.txt" }]
     });
     assert.equal(evidence.ok, true);
-    assert.match(evidence.path, new RegExp(`^${escapeRegExp(dir)}/lanes/`));
+    assert.equal(dirname(evidence.path), join(dir, "lanes", expectedLaneId, "evidence"));
     const text = await readFile(evidence.path, "utf8");
     assert.match(text, /PCF MCP did not execute these commands/);
 
@@ -524,7 +525,3 @@ test("MCP stdio bounds header growth and handles long blank-line runs iterativel
   assert.equal(blanks.status, 0, blanks.stderr);
   assert.equal(JSON.parse(blanks.stdout.trim()).id, 77);
 });
-
-function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
