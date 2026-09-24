@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { buildMaintainerQueue, NEXT_ACTIONS } from "../src/core/queue.mjs";
 import { buildPublicPilotReport } from "../scripts/run-public-pilot.mjs";
 
@@ -44,7 +45,7 @@ test("replay capture preserves the public nextAction output contract", async () 
   const capturePath = join(dir, "capture.json");
   try {
     await buildPublicPilotReport({
-      fixturePath: new URL("../fixtures/queue-sample.json", import.meta.url).pathname,
+      fixturePath: fileURLToPath(fixtureUrl),
       capturePath,
       generatedAt: "2026-05-31T14:20:00Z"
     });
@@ -76,6 +77,25 @@ test("replay capture preserves the public nextAction output contract", async () 
     assert.ok(replayContract["issue-low-evidence"].nextAction.evidence.labels.includes("needs-clear-summary"));
     assert.ok(replayContract["issue-low-evidence"].nextAction.evidence.labels.includes("needs-reproducer"));
     assert.equal(replayContract["issue-low-evidence"].responseTemplate.channel, "github-comment-draft");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("replay capture reads fixture paths containing URL special characters", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "pcf replay #% "));
+  const inputUrl = pathToFileURL(join(dir, "queue sample #% .json"));
+  const capturePath = join(dir, "capture #% .json");
+  const generatedAt = "2026-05-31T14:20:00Z";
+  try {
+    await writeFile(inputUrl, await readFile(fixtureUrl));
+    const original = await buildPublicPilotReport({
+      fixturePath: fileURLToPath(inputUrl), capturePath, generatedAt
+    });
+    const replay = await buildPublicPilotReport({ fixturePath: capturePath, generatedAt });
+    assert.equal(original.ok, true);
+    assert.equal(replay.ok, true);
+    assert.deepEqual(replay.queue, original.queue);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
