@@ -2,6 +2,11 @@
 
 ## Unreleased - evidence refresh 2026-09-05
 
+### Repro note handling
+
+- Removed narrative-note inference from repro outcomes and evidence-presence checks. Notes remain visible as context; adding words such as "failed" or "fixed" no longer changes the gate decision.
+- Added controls for notes-only evidence, narrative aliases, missing command exits, and conflicting structured results. Existing caller-supplied artifact and command semantics remain unchanged.
+
 ### Upstream contribution calibration
 
 - Added a September 5 continuation of the public upstream contribution ledger covering four closed-without-merge lanes and the current open external contribution census.

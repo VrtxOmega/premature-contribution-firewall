@@ -198,6 +198,7 @@ PCF MCP is a local stdio server for agent decision support. Its threat model is 
 - It does not perform arbitrary filesystem reads.
 - It does not claim that supplied evidence is true.
 - `pcf_repro_gate` blocks verdict-only before/after assertions unless a command result or phase-tagged artifact substantiates them.
+- Repro notes (including `note`, `summary`, and `output` aliases) are retained as context. Their presence or wording cannot establish evidence, reproduction, or successful validation. Supply structured verdicts or command results; PCF still evaluates caller-supplied data and does not authenticate artifact contents or execute commands.
 - The stdio transport rejects frames above 2,000,000 bytes and returns JSON-RPC parse errors for malformed bounded frames without losing the following valid frame.
 - It does not make network-egress claims for Node itself, package installation, or the surrounding MCP client; it claims only that PCF MCP tools do not perform live collection or public writes.
 - Local write tools are limited to the PCF lane/evidence store and are annotated as non-destructive but not read-only.

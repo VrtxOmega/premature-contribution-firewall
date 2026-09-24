@@ -18,9 +18,6 @@ const FAIL_VERDICTS = new Set([
   "regression"
 ]);
 
-const FAILURE_TEXT = /\b(fail(?:ed|ing)?|error|exception|repro(?:duced)?|regression|mismatch|broken)\b/i;
-const FIXED_TEXT = /\b(pass(?:ed|es|ing)?|fixed|verified|works|success|ok)\b/i;
-
 export function evaluateReproGate(input = {}) {
   input = plainObject(input);
   const before = normalizeEvidence(input.before || input.baseline || {}, "before");
@@ -45,7 +42,7 @@ export function evaluateReproGate(input = {}) {
   const afterPassed = afterHasEvidence
     && afterFailures.length === 0
     && !FAIL_VERDICTS.has(afterVerdict)
-    && (PASS_VERDICTS.has(afterVerdict) || afterCommands.some((command) => command.exitCode === 0) || FIXED_TEXT.test(afterEvidence.notes));
+    && (PASS_VERDICTS.has(afterVerdict) || afterCommands.some((command) => command.exitCode === 0));
 
   if (!beforeHasEvidence) {
     warnings.push({
@@ -187,13 +184,13 @@ function normalizeArtifacts(values) {
 }
 
 function hasAnyEvidence(evidence) {
-  return Boolean(evidence.verdict || evidence.notes || evidence.commands.length);
+  return Boolean(evidence.verdict || evidence.commands.length);
 }
 
 function hasFailureEvidence(evidence) {
   if (FAIL_VERDICTS.has(evidence.verdict)) return true;
   if (evidence.commands.some((command) => command.exitCode !== null && command.exitCode !== 0)) return true;
-  return FAILURE_TEXT.test(evidence.notes);
+  return false;
 }
 
 function normalizeExitCode(value) {

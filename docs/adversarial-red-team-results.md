@@ -5,7 +5,7 @@ This red-test corpus captures hostile or malformed submissions that previously e
 ## Summary
 
 - Version: 2026.07.10
-- Cases: 29/29 passing
+- Cases: 31/31 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
@@ -27,7 +27,7 @@ This red-test corpus captures hostile or malformed submissions that previously e
 - ownership-laundering: 1/1 passing
 - candidate-suppression: 1/1 passing
 - gate-bypass: 3/3 passing
-- evidence-laundering: 3/3 passing
+- evidence-laundering: 5/5 passing
 
 ## Cases
 
@@ -57,6 +57,8 @@ This red-test corpus captures hostile or malformed submissions that previously e
 | PASS | unicode-evasion | serious-scout-zero-width-claimed-work | NO_ACTION | NO_ACTION | 97 | `claimed-work` | Late red-team probe returned PROMOTE because claimed-work matching read 'sub[U+200B]mit' as a different token. |
 | PASS | gate-bypass | lane-gate-order-omission | not-ready | not-ready | n/a | Not ready; 9 gate(s) still need evidence. | Initial probe returned `ready` with only `scout=pass`, silently omitting overlap, policy, repro, diff, preflight, and PR gates. |
 | PASS | evidence-laundering | repro-verdict-only-laundering | blocked | blocked | n/a | `before-verdict-unsubstantiated`, `after-verdict-unsubstantiated` | Initial probe returned `pass` even though both proof points were unsubstantiated caller-written assertions. |
+| PASS | evidence-laundering | repro-notes-outcome-laundering | blocked | blocked | n/a | `missing-after-evidence`, `missing-before-evidence` | A local regression returned pass because failure/success keywords in narrative notes were treated as outcomes. |
+| PASS | evidence-laundering | repro-notes-presence-laundering | blocked | blocked | n/a | `missing-after-evidence` | A local regression changed blocked to review solely because a note was nonempty. |
 | PASS | context-evasion | repository-context-empty-object-laundering | unchecked | unchecked | n/a | No repository issue/PR context supplied; duplicate and upstream checks were not run. | Independent red-team review found `{}` normalized as hasContext=true and checkStatus=pass. |
 | PASS | gate-bypass | lane-bare-string-pass-laundering | review | review | n/a | Needs review on 10 gate(s); next useful gate is scout. | Independent red-team review found bare string statuses classified as passed and could produce a ready lane. |
 | PASS | gate-bypass | lane-structured-pass-object-laundering | review | review | n/a | Needs review on 10 gate(s); next useful gate is scout. | Independent second-pass review found the first repair blocked bare strings but still accepted `{status: 'pass'}` for every gate as ready. |
