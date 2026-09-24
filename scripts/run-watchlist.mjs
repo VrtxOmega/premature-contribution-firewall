@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { buildPublicPilotReport } from "./run-public-pilot.mjs";
 import {
   buildWatchlistReport,
@@ -117,7 +118,7 @@ function clampNumber(value, fallback, min, max) {
   return Math.max(min, Math.min(max, Math.floor(numeric)));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     await runWatchlistCli();
   } catch (error) {
