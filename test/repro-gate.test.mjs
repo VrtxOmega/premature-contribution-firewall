@@ -35,6 +35,7 @@ test("narrative wording cannot change explicit command results", () => {
   for (const exitCode of [0, 1, null]) {
     const evidence = { ...after, commands: [{ command: "test-after", exitCode, outputPath: "after.log" }] };
     const baseline = evaluateReproGate({ before, after: evidence, artifacts });
+    assert.equal(baseline.status, exitCode === 0 ? "pass" : exitCode === null ? "review" : "blocked");
     for (const note of notes) {
       const result = evaluateReproGate({
         before: { ...before, notes: note },
