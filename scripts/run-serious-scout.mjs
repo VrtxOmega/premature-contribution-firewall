@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   buildSeriousCandidateScout,
   defaultSeriousSearchQueries,
@@ -21,7 +22,7 @@ export async function runSeriousScout({
   checkPrOverlap = false,
   maxOverlapChecks = 25,
   generatedAt = new Date().toISOString(),
-  config = loadConfig(new URL("..", import.meta.url).pathname),
+  config = loadConfig(fileURLToPath(new URL("..", import.meta.url))),
   githubClient = null
 } = {}) {
   const sourceQueries = queries.length ? queries : defaultSeriousSearchQueries(preset);
@@ -357,7 +358,7 @@ function clampNumber(value, fallback, min, max) {
   return Math.max(min, Math.min(max, Math.floor(numeric)));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     await runSeriousScoutCli();
   } catch (error) {

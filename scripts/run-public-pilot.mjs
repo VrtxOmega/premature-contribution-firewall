@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, relative } from "node:path";
+import { dirname, isAbsolute, relative, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { buildPublicPilotProof, renderPublicPilotMarkdown, renderPublicPilotSummary } from "../src/core/pilot-proof.mjs";
 import { buildMaintainerExportBundle, renderMaintainerExportMarkdown } from "../src/core/pilot-proof.mjs";
 import { buildContributorPreflight } from "../src/core/contributor-preflight.mjs";
@@ -23,7 +24,7 @@ export async function buildPublicPilotReport({
   preflightChecks = null,
   signal = null,
   generatedAt = new Date().toISOString(),
-  config = loadConfig(new URL("..", import.meta.url).pathname)
+  config = loadConfig(fileURLToPath(new URL("..", import.meta.url)))
 } = {}) {
   if (fixturePath) {
     const payload = JSON.parse(await readFile(fixturePath, "utf8"));
@@ -335,7 +336,7 @@ function safeDisplayPath(path) {
   if (!text) return "";
   if (isAbsolute(text)) {
     const rel = relative(process.cwd(), text);
-    if (rel && !rel.startsWith("..") && !isAbsolute(rel)) return rel;
+    if (rel && !rel.startsWith("..") && !isAbsolute(rel)) return rel.split(sep).join("/");
   }
   return text;
 }
@@ -372,7 +373,7 @@ function normalizeRepository(repository) {
   return owner && repo ? `${owner}/${repo}` : "";
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     await runPublicPilotCli();
   } catch (error) {
