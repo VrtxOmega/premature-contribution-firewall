@@ -3,6 +3,7 @@ import { evaluateContribution } from "./evaluator.mjs";
 import { parsePatchSubmission } from "./patch.mjs";
 import { classifyNextAction } from "./queue.mjs";
 import { evaluateReproGate } from "./repro-gate.mjs";
+import { evaluateClaimIntegrity } from "./claim-integrity.mjs";
 import { buildLaneStatus } from "./lane-status.mjs";
 import { analyzeRepositoryContext } from "./repository-context.mjs";
 import { buildSeriousCandidateScout } from "./serious-scout.mjs";
@@ -324,6 +325,90 @@ export const ADVERSARIAL_CASES = [
     residue: "Post-repair probe returned ready because caller-controlled verified and timestamp fields were accepted as a substitute for an artifact.",
     laneStatusInput: { gates: passGates(() => ({ status: "pass", verified: true, updatedAt: "2026-07-10T00:00:00Z" })) },
     expect: { status: "review" }
+  },
+  {
+    id: "claim-verdict-without-surface",
+    category: "claim-integrity",
+    attack: "Declares a passing security claim while explicitly supplying no judgeable target surface.",
+    residue: "The Agent Security Harness loop showed that a decisive verdict can be manufactured from an empty/contentless answer unless surface sufficiency is a first-class gate.",
+    claimIntegrityInput: claimIntegrityCase({
+      surface: { observable: "Served target behavior", state: "none", requiredEvidenceKinds: ["execution"] }
+    }),
+    expect: { status: "blocked", labels: ["verdict-without-surface"] }
+  },
+  {
+    id: "claim-observed-metadata-spoof",
+    category: "evidence-authority",
+    attack: "Supplies caller-claimed exitCode=0 beside observed exitCode=1 and tries to let the claim overwrite the observation.",
+    residue: "Transport/status metadata must come from the observing layer; body/caller metadata cannot be allowed to spoof authoritative evidence.",
+    claimIntegrityInput: claimIntegrityCase({
+      evidence: [
+        { key: "exitCode", kind: "execution", source: "observed", value: 1, path: "observed.json" },
+        { key: "exitCode", kind: "execution", source: "claimed", value: 0, summary: "claimed pass" }
+      ]
+    }),
+    expect: { status: "blocked", labels: ["observed-claim-conflict"] }
+  },
+  {
+    id: "claim-unreachable-negative-pole",
+    category: "verdict-reachability",
+    attack: "Makes both positive and negative controls PASS so the evaluator can never reach the unsafe verdict.",
+    residue: "The #628/#631 mirror failure showed that suppressing false verdicts is not enough if a valid opposite pole becomes unreachable.",
+    claimIntegrityInput: claimIntegrityCase({
+      controls: {
+        positive: claimControl("positive", "pass"),
+        negative: claimControl("negative", "pass")
+      }
+    }),
+    expect: { status: "blocked", labels: ["negative-verdict-unreachable", "controls-do-not-discriminate"] }
+  },
+  {
+    id: "claim-stale-route-ownership",
+    category: "routing-freshness",
+    attack: "Reuses an old ownership check after the lane has changed and attempts a maintainer-owned backport.",
+    residue: "OpenSSL and ClickHouse outcomes showed that overlap and backport ownership are time-sensitive facts, not permanent authorization.",
+    claimIntegrityInput: claimIntegrityCase({
+      routing: {
+        intendedAction: "backport",
+        contributionOwner: "contributor",
+        releaseOwner: "maintainer",
+        backportOwner: "maintainer",
+        catalogueEligibility: "not-applicable",
+        checkedAt: "2026-09-20T00:00:00Z",
+        evidencePath: "route.json"
+      },
+      freshness: {
+        required: true,
+        checkedAt: "2026-09-20T00:00:00Z",
+        asOf: "2026-09-26T17:00:00Z",
+        maxAgeHours: 24,
+        failOnStale: true
+      }
+    }),
+    expect: { status: "blocked", labels: ["backport-owned-by-maintainer", "context-evidence-stale"] }
+  },
+  {
+    id: "claim-generalization-laundering",
+    category: "scope-inflation",
+    attack: "Confirms one narrow shape and silently promotes it into a broader invariant while naming untested adjacent shapes.",
+    residue: "The v4.25.0 no-surface claim was correct as written even though the broader invariant still had residue; PCF must preserve that distinction.",
+    claimIntegrityInput: claimIntegrityCase({
+      claim: {
+        id: "ADV-GEN",
+        statement: "The named target shape is handled correctly.",
+        assertedVerdict: "pass",
+        scope: "named target only",
+        risk: "normal",
+        twoSided: true,
+        generalization: {
+          statement: "All no-surface shapes are handled correctly.",
+          asserted: true,
+          testedShapes: ["closed port"],
+          untestedShapes: ["redirect loop", "empty 500"]
+        }
+      }
+    }),
+    expect: { status: "blocked", labels: ["generalization-has-untested-shapes"] }
   }
 ];
 
@@ -449,6 +534,17 @@ function evaluateRedCase(testCase) {
   }
   if (testCase.reproInput) {
     const result = evaluateReproGate(testCase.reproInput);
+    return {
+      status: result.status,
+      score: null,
+      labels: [...result.blockers, ...result.warnings].map((item) => item.id),
+      ok: result.ok,
+      reason: result.summary,
+      error: result.summary
+    };
+  }
+  if (testCase.claimIntegrityInput) {
+    const result = evaluateClaimIntegrity(testCase.claimIntegrityInput);
     return {
       status: result.status,
       score: null,
@@ -777,8 +873,75 @@ function seriousScoutAgentIssue() {
   };
 }
 
+function claimControl(name, verdict) {
+  return {
+    description: name,
+    expectedVerdict: name === "negative" ? "fail" : "pass",
+    observedVerdict: verdict,
+    executed: true,
+    evidence: [{ path: `${name}.json`, kind: "execution", source: "observed" }]
+  };
+}
+
+function claimIntegrityCase(overrides = {}) {
+  const base = {
+    generatedAt: "2026-09-26T17:00:00Z",
+    claim: {
+      id: "ADV-CI",
+      statement: "The fix restores the named invariant.",
+      assertedVerdict: "pass",
+      scope: "named path only",
+      risk: "security",
+      twoSided: true,
+      generalization: { statement: "", asserted: false, testedShapes: [], untestedShapes: [] }
+    },
+    surface: {
+      observable: "A served/observed execution result distinguishes broken from fixed.",
+      state: "served",
+      requiredEvidenceKinds: ["execution"]
+    },
+    controls: {
+      positive: claimControl("positive", "pass"),
+      negative: claimControl("negative", "fail")
+    },
+    evidence: [{ key: "exitCode", kind: "execution", source: "observed", value: 0, path: "after.json" }],
+    rootCause: {
+      symptom: "Observed failure",
+      reachability: "Named call path",
+      invariant: "Named invariant",
+      patchMechanism: "Patch restores invariant"
+    },
+    routing: {
+      intendedAction: "mainline",
+      contributionOwner: "contributor",
+      releaseOwner: "maintainer",
+      backportOwner: "maintainer",
+      catalogueEligibility: "not-applicable",
+      checkedAt: "2026-09-26T16:30:00Z",
+      evidencePath: "route.json"
+    },
+    freshness: {
+      required: true,
+      checkedAt: "2026-09-26T16:30:00Z",
+      asOf: "2026-09-26T17:00:00Z",
+      maxAgeHours: 24,
+      failOnStale: true
+    }
+  };
+  return {
+    ...base,
+    ...overrides,
+    claim: { ...base.claim, ...(overrides.claim || {}) },
+    surface: { ...base.surface, ...(overrides.surface || {}) },
+    controls: { ...base.controls, ...(overrides.controls || {}) },
+    rootCause: { ...base.rootCause, ...(overrides.rootCause || {}) },
+    routing: { ...base.routing, ...(overrides.routing || {}) },
+    freshness: { ...base.freshness, ...(overrides.freshness || {}) }
+  };
+}
+
 function passGates(factory) {
-  const ids = ["scout", "aiPosture", "overlap", "policy", "repro", "diffShape", "preflight", "pr", "provenance", "calibration"];
+  const ids = ["scout", "aiPosture", "overlap", "policy", "repro", "claimIntegrity", "diffShape", "preflight", "pr", "provenance", "calibration"];
   return Object.fromEntries(ids.map((id) => [id, factory(id)]));
 }
 
