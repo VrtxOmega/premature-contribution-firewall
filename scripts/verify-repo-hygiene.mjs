@@ -69,7 +69,11 @@ export const REQUIRED_SNIPPETS = {
     "npm run repo:verify",
     "npm run ci:gates",
     "This does not claim AI-authorship detection.",
-    "This does not enable GitHub comments, labels, or other writes by default."
+    "This does not enable GitHub comments, labels, or other writes by default.",
+    "## Claim Integrity",
+    "Evidence surface:",
+    "Positive control (must PASS):",
+    "Negative control (must FAIL):"
   ],
   ".github/ISSUE_TEMPLATE/bug_report.yml": [
     "Steps To Reproduce",
