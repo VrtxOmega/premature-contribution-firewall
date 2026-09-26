@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createApiSpec, createSetupGuide, createSetupStatus, evaluateBatch, evaluateMaintainerQueue } from "./core/api.mjs";
+import { buildFalsificationSubmission, createApiSpec, createSetupGuide, createSetupStatus, evaluateBatch, evaluateClaimIntegritySubmission, evaluateMaintainerQueue } from "./core/api.mjs";
 import { applyFeedbackFixtureCandidates, buildCandidateEvidenceArtifact, buildCandidateReplayComparison, readCandidateCorpus, replayCandidateCorpus } from "./core/candidates.mjs";
 import { buildFeedbackCalibration } from "./core/calibration.mjs";
 import { appendFeedback, buildRegressionExport, readFeedbackLedger } from "./core/feedback.mjs";
@@ -214,6 +214,22 @@ async function route(request, response) {
     const file = join(fixturesDir, safeName.endsWith(".json") ? safeName : `${safeName}.json`);
     const text = await readFile(file, "utf8");
     return send(response, 200, text, "application/json; charset=utf-8");
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/claim-integrity") {
+    const rawBody = await readRequestBody(request);
+    const payload = JSON.parse(rawBody.toString("utf8"));
+    const result = evaluateClaimIntegritySubmission(payload);
+    console.log(`[premature-contribution-firewall] claim-integrity status=${result.status} blockers=${result.blockers.length} warnings=${result.warnings.length}`);
+    return sendJson(response, result.status === "pass" ? 200 : 400, { ok: result.status === "pass", result });
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/falsification-packet") {
+    const rawBody = await readRequestBody(request);
+    const payload = JSON.parse(rawBody.toString("utf8"));
+    const result = buildFalsificationSubmission(payload);
+    console.log(`[premature-contribution-firewall] falsification ready=${result.readyToPublish} integrity=${result.integrityStatus}`);
+    return sendJson(response, result.readyToPublish ? 200 : 400, { ok: result.readyToPublish, result });
   }
 
   if (request.method === "POST" && url.pathname === "/api/evaluate") {
