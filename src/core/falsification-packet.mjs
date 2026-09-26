@@ -21,6 +21,25 @@ export function buildFalsificationPacket(input = {}) {
     generalizedInvariant: integrity.claim.generalization?.statement || ""
   };
 
+  const packetBlockers = [];
+  const packetWarnings = [];
+  if (!target.ref) packetBlockers.push({ id: "target-ref-missing", reason: "A publishable falsification packet needs an exact target ref/tag/commit." });
+  if (!target.repository && !target.artifact) {
+    packetBlockers.push({ id: "target-identity-missing", reason: "A publishable falsification packet needs a repository or named artifact." });
+  }
+  if (target.artifact && !target.sha256) {
+    packetBlockers.push({ id: "artifact-digest-missing", reason: "A named target artifact needs a SHA-256 digest before the packet is publishable." });
+  }
+  if (!commands.length) {
+    packetBlockers.push({ id: "reproduction-command-missing", reason: "A publishable falsification packet needs at least one reproduction command." });
+  }
+  if (!parserRules.length) {
+    packetBlockers.push({ id: "classification-rule-missing", reason: "A publishable falsification packet needs an explicit result/parser classification rule." });
+  }
+  if (!adjacentShapes.length) {
+    packetWarnings.push({ id: "adjacent-shapes-empty", reason: "No adjacent break-shapes were supplied; the packet is narrow by construction." });
+  }
+
   const packetCore = {
     artifact: "pcf-falsification-packet",
     version: FALSIFICATION_PACKET_VERSION,
@@ -53,16 +72,16 @@ export function buildFalsificationPacket(input = {}) {
     ...packetCore,
     packetSha256: sha256(stableObject(packetCore)),
     integrityStatus: integrity.status,
-    readyToPublish: integrity.status === "pass",
+    readyToPublish: integrity.status === "pass" && packetBlockers.length === 0,
     integrity,
-    publicationBlockers: integrity.status === "pass"
-      ? []
-      : [
-          {
-            id: "claim-integrity-not-passed",
-            reason: `Falsification packet is a draft because claim integrity is ${integrity.status}.`
-          }
-        ],
+    publicationBlockers: [
+      ...(integrity.status === "pass" ? [] : [{
+        id: "claim-integrity-not-passed",
+        reason: `Falsification packet is a draft because claim integrity is ${integrity.status}.`
+      }]),
+      ...packetBlockers
+    ],
+    publicationWarnings: packetWarnings,
     nonClaims: [
       "The packet does not execute its commands or prove that target hashes, refs, or artifacts exist.",
       "It packages a falsifiable claim so another implementation or operator can try to break it.",
