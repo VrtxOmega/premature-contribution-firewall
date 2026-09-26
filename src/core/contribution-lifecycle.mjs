@@ -62,6 +62,7 @@ const OUTCOME_STATES = new Set([
   "unknown"
 ]);
 const CREDIT_STATES = new Set(["commit-author", "co-author", "acknowledged", "none", "unknown"]);
+const LIFECYCLE_EVENT_TYPES = new Set(["published", "external-reviewed", "externally-reproduced", "remediated", "released", "release-retested", "superseded", "closed", "merged", "credited", "other"]);
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const REPOSITORY = /^[^/\s]+\/[^/\s]+$/;
 const COMMIT = /^[a-f0-9]{7,64}$/i;
@@ -84,7 +85,8 @@ export function assessContributionLifecycle(input = {}) {
     "originalContribution",
     "currentUpstream",
     "claimUnits",
-    "outcome"
+    "outcome",
+    "events"
   ], "Lifecycle input");
   if (input.artifact !== "pcf-contribution-lifecycle-input") {
     throw new ContributionLifecycleError("Lifecycle input artifact must be 'pcf-contribution-lifecycle-input'.");
@@ -103,6 +105,7 @@ export function assessContributionLifecycle(input = {}) {
   const classification = aggregateClassification(assessedClaims);
   const definition = LIFECYCLE_CLASSIFICATIONS[classification];
   const outcome = normalizeOutcome(input.outcome, observedAt);
+  const events = normalizeLifecycleEvents(input.events || [], observedAt);
   const assessmentEvidence = {
     artifact: input.artifact,
     version: input.version,
@@ -142,17 +145,19 @@ export function assessContributionLifecycle(input = {}) {
       assessedClaims
     }),
     outcome,
+    events,
     publicProof: publicProofFor(outcome),
     boundaries: {
       dryRun: true,
       networkAccess: false,
       githubWrites: false,
       outcomeUsedForClassification: false,
+      eventsUsedForClassification: false,
       classificationBasis: "observation-time claim evidence only"
     },
     nonClaims: [
       "This assessment does not prove correctness, mergeability, maintainer endorsement, or permission to publish.",
-      "Recorded outcomes and credit are caller-supplied provenance and are never used to improve the observation-time classification.",
+      "Recorded outcomes, timeline events, and credit are caller-supplied provenance and are never used to improve the observation-time classification.",
       assessmentMode === "retrospective"
         ? "A retrospective fixture can calibrate the lifecycle model; it does not prove PCF predicted the later outcome."
         : "A live assessment can become stale as soon as upstream state changes; recheck before acting."
@@ -204,6 +209,20 @@ export function renderContributionLifecycleMarkdown(result = {}) {
     "",
     markdownText(result.publicProof?.guidance),
     "",
+    "## Lifecycle Timeline",
+    ""
+  );
+  if ((result.events || []).length) {
+    for (const event of result.events) {
+      lines.push(`- ${markdownText(event.at)} — **${markdownText(event.type)}** — ${markdownText(event.summary || event.subject || event.url || "recorded event")}`);
+    }
+  } else {
+    lines.push("- No later lifecycle events supplied.");
+  }
+  lines.push(
+    "",
+    `Events used for classification: ${result.boundaries?.eventsUsedForClassification ? "yes" : "no"}`,
+    "",
     "## Boundaries",
     ""
   );
@@ -218,6 +237,7 @@ export function renderContributionLifecycleSummary(result = {}) {
     `Observed at: ${result.observedAt}`,
     `Next action: ${result.nextAction?.id} (owner: ${result.nextAction?.owner})`,
     `Outcome excluded from classification: ${result.outcome?.usedForClassification === false ? "yes" : "no"}`,
+    `Timeline events excluded from classification: ${result.boundaries?.eventsUsedForClassification === false ? "yes" : "no"}`,
     "",
     result.summary,
     "",
@@ -225,6 +245,10 @@ export function renderContributionLifecycleSummary(result = {}) {
   ];
   for (const claim of result.claimUnits || []) {
     lines.push(`- ${claim.id}: ${claim.lifecycleState} — ${claim.reason}`);
+  }
+  if ((result.events || []).length) {
+    lines.push("", "Lifecycle timeline:");
+    for (const event of result.events) lines.push(`- ${event.at} ${event.type}: ${event.summary || event.subject || event.url || "recorded event"}`);
   }
   lines.push("", `Public proof boundary: ${result.publicProof?.guidance || "No provenance guidance available."}`);
   return `${lines.join("\n")}\n`;
@@ -346,6 +370,36 @@ function aggregateClassification(claims) {
   if (states.includes(CLAIM_STATES.DRIFTED_BUT_REBASEABLE)) return "DRIFTED_BUT_REBASEABLE";
   if (states.every((state) => state === CLAIM_STATES.CURRENT_AND_APPLICABLE)) return "CURRENT_AND_APPLICABLE";
   return "NEEDS_MAINTAINER_DECISION";
+}
+
+function normalizeLifecycleEvents(values, observedAt) {
+  if (!Array.isArray(values)) throw new ContributionLifecycleError("Lifecycle events must be an array.");
+  const seen = new Set();
+  const events = values.map((value, index) => {
+    assertPlainObject(value, `Lifecycle events[${index}]`);
+    assertAllowedKeys(value, ["id", "at", "type", "actor", "subject", "url", "summary", "evidencePath"], `Lifecycle events[${index}]`);
+    const at = requiredTime(value.at, `Lifecycle events[${index}].at`);
+    if (Date.parse(at) < Date.parse(observedAt)) {
+      throw new ContributionLifecycleError(`Lifecycle events[${index}].at cannot be earlier than observedAt.`);
+    }
+    const type = requiredEnum(value.type, LIFECYCLE_EVENT_TYPES, `Lifecycle events[${index}].type`);
+    const id = optionalString(value.id, `Lifecycle events[${index}].id`, 128) || `${type}@${at}`;
+    if (seen.has(id)) throw new ContributionLifecycleError(`Lifecycle event id '${id}' is duplicated.`);
+    seen.add(id);
+    return {
+      id,
+      at,
+      type,
+      actor: optionalString(value.actor, `Lifecycle events[${index}].actor`, 256),
+      subject: optionalString(value.subject, `Lifecycle events[${index}].subject`, 1000),
+      url: optionalUrl(value.url, `Lifecycle events[${index}].url`),
+      summary: optionalString(value.summary, `Lifecycle events[${index}].summary`, 4000),
+      evidencePath: optionalString(value.evidencePath, `Lifecycle events[${index}].evidencePath`, 2000),
+      usedForClassification: false,
+      verification: "caller-supplied provenance; verify the cited host or evidence before publishing"
+    };
+  });
+  return events.sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.id.localeCompare(b.id));
 }
 
 function normalizeOutcome(value, observedAt) {
