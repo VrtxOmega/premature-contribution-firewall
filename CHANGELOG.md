@@ -14,6 +14,7 @@
 - Added adversarial/reachability tests for no-surface verdicts, verdict-pole collapse, stale ownership, root-cause gaps, generalized untested claims, evidence spoofing, repro-gate composition, API parity, and CLI exit-code behavior.
 - Added `pcf residue-register`, local API `/api/residue-register`, and MCP `pcf_residue_register` so known false-ready/false-block/unreachable-verdict residue can be enforced as a shrink-only register: new residue fails and stale repaired declarations also fail until removed.
 - Expanded the adversarial residue corpus to **36/36** by adding no-surface claims, evidence-authority spoofing, unreachable verdict poles, stale route ownership, and scope-generalization laundering.
+- Extended contribution lifecycle inputs with an append-only typed event timeline for publication, external review/reproduction, remediation, release, and released-artifact retest. Timeline events remain cryptographically excluded from the observation-time classification and assessment fingerprint.
 
 ### September 25 evidence and adoption refresh
 
