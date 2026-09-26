@@ -1,0 +1,131 @@
+{
+  "repository": "owner/repo",
+  "target": {
+    "repository": "owner/repo",
+    "ref": "abc1234",
+    "artifact": "package-1.0.0.tgz",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "environment": "Node 22 / Linux x86_64"
+  },
+  "claimIntegrity": {
+    "artifact": "pcf-claim-integrity-input",
+    "version": "2026-09-26",
+    "generatedAt": "2026-09-26T17:00:00Z",
+    "claim": {
+      "id": "EXAMPLE-001",
+      "statement": "The patch fixes the reproduced defect while preserving the valid path.",
+      "assertedVerdict": "pass",
+      "scope": "Pinned target and named path only.",
+      "risk": "high",
+      "twoSided": true,
+      "generalization": {
+        "statement": "The invariant should hold across adjacent transient-failure shapes.",
+        "asserted": false,
+        "testedShapes": [
+          "named failure"
+        ],
+        "untestedShapes": [
+          "adjacent failure shape"
+        ]
+      }
+    },
+    "surface": {
+      "observable": "The target returns evidence that distinguishes the broken and fixed paths.",
+      "state": "served",
+      "requiredEvidenceKinds": [
+        "execution"
+      ]
+    },
+    "controls": {
+      "positive": {
+        "description": "Patched behavior",
+        "expectedVerdict": "pass",
+        "observedVerdict": "pass",
+        "executed": true,
+        "evidence": [
+          {
+            "path": "artifacts/after.json",
+            "kind": "execution",
+            "source": "observed"
+          }
+        ]
+      },
+      "negative": {
+        "description": "Unpatched behavior",
+        "expectedVerdict": "fail",
+        "observedVerdict": "fail",
+        "executed": true,
+        "evidence": [
+          {
+            "path": "artifacts/before.json",
+            "kind": "execution",
+            "source": "observed"
+          }
+        ]
+      }
+    },
+    "evidence": [
+      {
+        "key": "targetRef",
+        "kind": "execution",
+        "source": "observed",
+        "value": "abc1234",
+        "path": "artifacts/target.json"
+      }
+    ],
+    "rootCause": {
+      "symptom": "Observed failure.",
+      "reachability": "Named call path reaches the invariant.",
+      "invariant": "State must remain valid while referenced.",
+      "patchMechanism": "Patch preserves the invariant on the reached path."
+    },
+    "routing": {
+      "intendedAction": "mainline",
+      "contributionOwner": "contributor",
+      "releaseOwner": "maintainer",
+      "backportOwner": "maintainer",
+      "catalogueEligibility": "not-applicable",
+      "checkedAt": "2026-09-26T16:30:00Z",
+      "evidencePath": "artifacts/routing.json"
+    },
+    "freshness": {
+      "required": true,
+      "checkedAt": "2026-09-26T16:30:00Z",
+      "asOf": "2026-09-26T17:00:00Z",
+      "maxAgeHours": 24,
+      "failOnStale": true
+    }
+  },
+  "commands": [
+    {
+      "command": "npm test -- --test-name-pattern claim-integrity",
+      "expectedExitCode": 0,
+      "purpose": "positive/negative control replay",
+      "outputPath": "artifacts/replay.txt"
+    }
+  ],
+  "parserRules": [
+    "PASS and FAIL are decisive; INCONCLUSIVE is not.",
+    "Observed transport/status metadata outranks response-body claims."
+  ],
+  "exceptions": [],
+  "adjacentShapes": [
+    "stale overlap snapshot",
+    "maintainer-owned backport",
+    "empty evidence surface"
+  ],
+  "artifacts": [
+    {
+      "path": "artifacts/before.json",
+      "kind": "negative-control"
+    },
+    {
+      "path": "artifacts/after.json",
+      "kind": "positive-control"
+    }
+  ],
+  "boundaries": [
+    "The packet tests the named claim and does not establish a broader invariant unless adjacent shapes are also covered.",
+    "This is reproduction guidance, not authorization to publish or modify upstream."
+  ]
+}
