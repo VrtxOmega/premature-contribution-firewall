@@ -9,6 +9,7 @@
 - Added closed-lane calibration for `dotnet/runtime#132602` (unsupported root cause), `openssl/openssl#32452` (duplicate after repair), `LLMSecurity/awesome-agent-skills-security#43` (catalogue product-shape mismatch), and `ClickHouse/ClickHouse#122066` (maintainer-owned backport process).
 - Added gates for root-cause-before-patch, duplicate refresh after long repair cycles, catalogue/product-shape fit, and backport ownership.
 - Recorded at least one independently owned public PCF installation: `rygel/outerstellar-platform` runs the pinned v0.1.3 PR Gate with read-only permissions and `fail-on: never`.
+- Extended the Agent Security Harness feedback-loop evidence with the mirror verdict-reachability class from upstream #628/#631: a test that never invents a verdict can still be broken if legitimate served evidence can no longer reach PASS or FAIL. The retained gate now calls for served controls on both reachable verdict poles where the contract permits both outcomes.
 - Evidence: [September 25 ledger addendum](docs/UPSTREAM_CONTRIBUTION_LEDGER_ADDENDUM_20260925.md) and [machine-readable census](docs/upstream-contribution-refresh-20260925.json).
 
 ### External reproduction-to-release loop
