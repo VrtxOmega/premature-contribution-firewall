@@ -224,8 +224,12 @@ test("CLI exposes claim-integrity and falsify with fail-closed exit codes", asyn
     assert.equal(JSON.parse(pass.stdout).status, "pass");
 
     await assert.rejects(
-      execFileAsync(process.execPath, ["src/cli.mjs", "claim-integrity", blocked], { cwd }),
-      (error) => error.code === 1 && JSON.parse(error.stdout).status === "blocked"
+      execFileAsync(process.execPath, ["src/cli.mjs", "claim-integrity", blocked, "--format", "json"], { cwd }),
+      (error) => {
+        assert.equal(error.code, 1);
+        assert.match(error.stdout, /"status"\s*:\s*"blocked"/);
+        return true;
+      }
     );
 
     const packet = await execFileAsync(process.execPath, ["src/cli.mjs", "falsify", falsify, "--format", "json"], { cwd });
