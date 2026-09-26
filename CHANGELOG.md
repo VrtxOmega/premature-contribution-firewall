@@ -2,6 +2,18 @@
 
 ## Unreleased - evidence refresh 2026-09-26
 
+### Claim integrity and falsification
+
+- Added the `Claim -> Evidence Surface -> Controls -> Verdict Reachability` contract so PCF checks whether supplied evidence can actually support a claim instead of merely checking that an artifact exists.
+- Added `pcf claim-integrity` with fail-closed checks for no-surface verdicts, unreachable or non-discriminating controls, high-risk root-cause gaps, observed-vs-claimed evidence conflicts, stale routing/overlap context, maintainer-owned backport/release routing, catalogue-shape mismatch, and overgeneralized untested invariants.
+- Added `pcf falsify` to build deterministic, SHA-256-addressed reproduction packets carrying target identity, scope, controls, commands, parser rules, exceptions, adjacent shapes, and explicit non-claims.
+- Added `claimIntegrity` as a mandatory contribution-lane gate between `repro` and `diffShape`.
+- Composed optional claim integrity into `pcf_repro_gate`, so a green before/after command pair cannot override a blocked evidence contract.
+- Added local API endpoints `/api/claim-integrity` and `/api/falsification-packet`, MCP tools `pcf_claim_integrity` / `pcf_falsification_packet`, and the `pcf://schemas/claim-integrity` resource.
+- Added evidence-authority ordering (`observed` > `external` > `derived` > `claimed`) so caller metadata cannot override higher-authority observed state inside the supplied record.
+- Added adversarial/reachability tests for no-surface verdicts, verdict-pole collapse, stale ownership, root-cause gaps, generalized untested claims, evidence spoofing, repro-gate composition, API parity, and CLI exit-code behavior.
+- Documented shrink-only failure registers as the preferred pattern for known false-ready, false-block, and unreachable-verdict residue.
+
 ### September 25 evidence and adoption refresh
 
 - Advanced the verified direct external merge census to **23 overall / 17 PCF-era** after `ClickHouse/ClickHouse#118352` merged on September 24.
