@@ -1,3 +1,5 @@
+import { evaluateClaimIntegrity } from "./claim-integrity.mjs";
+
 const PASS_VERDICTS = new Set([
   "pass",
   "passed",
@@ -29,6 +31,24 @@ export function evaluateReproGate(input = {}) {
   const afterEvidence = { ...after, commands: afterCommands };
   const blockers = [];
   const warnings = [];
+  const claimIntegrity = input.claimIntegrity ? evaluateClaimIntegrity(input.claimIntegrity) : null;
+
+
+  if (claimIntegrity?.status === "blocked") {
+    blockers.push({
+      id: "claim-integrity-blocked",
+      severity: "blocker",
+      reason: claimIntegrity.summary,
+      blockerIds: claimIntegrity.blockers.map((entry) => entry.id)
+    });
+  } else if (claimIntegrity?.status === "review") {
+    warnings.push({
+      id: "claim-integrity-needs-review",
+      severity: "warning",
+      reason: claimIntegrity.summary,
+      warningIds: claimIntegrity.warnings.map((entry) => entry.id)
+    });
+  }
 
   const beforeHasFailure = hasFailureEvidence(beforeEvidence);
   const beforeHasEvidence = hasAnyEvidence(beforeEvidence);
@@ -129,12 +149,14 @@ export function evaluateReproGate(input = {}) {
       before: beforeEvidence,
       after: afterEvidence
     },
+    claimIntegrity,
     blockers,
     warnings,
     nonClaims: [
       "Repro gate evaluates caller-supplied evidence only.",
       "PCF MCP did not execute these commands.",
-      "A passing repro gate does not prove correctness without code review and maintainer judgment."
+      "A passing repro gate does not prove correctness without code review and maintainer judgment.",
+      "When claimIntegrity is supplied, a blocked claim-integrity assessment blocks this repro gate and a review assessment keeps it in review."
     ]
   };
 }
