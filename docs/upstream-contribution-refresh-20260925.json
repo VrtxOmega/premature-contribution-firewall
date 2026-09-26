@@ -1,0 +1,243 @@
+{
+  "schema_version": "1.0.0",
+  "as_of": "2026-09-26T16:40:00Z",
+  "baseline": {
+    "source": "docs/upstream-contribution-refresh-20260905.json",
+    "last_public_refresh": "2026-09-05",
+    "direct_external_pr_merges": 22,
+    "pcf_era_direct_merges": 16
+  },
+  "current_merge_census": {
+    "direct_external_pr_merges": 23,
+    "pcf_era_direct_merges": 17,
+    "new_direct_merges_since_baseline": 1,
+    "verification": "GitHub readback records ClickHouse/ClickHouse#118352 merged on 2026-09-24; no other new direct external VrtxOmega-authored merge was added by this refresh.",
+    "boundary": "Open, closed-without-merge, maintainer-authored salvage, self-repository, bot, catalogue, technical-feedback, and fork-only activity is excluded from direct external merge totals.",
+    "new_direct_merges": [
+      {
+        "subject": "ClickHouse/ClickHouse#118352",
+        "merged_at": "2026-09-24T08:59:09Z",
+        "url": "https://github.com/ClickHouse/ClickHouse/pull/118352"
+      }
+    ]
+  },
+  "closed_without_merge_since_baseline": [
+    {
+      "subject": "python/cpython#156200",
+      "outcome": "closed_without_merge",
+      "external_actor": "picnixz",
+      "reason": "A stale but existing PR (#143907) already covered the issue; the repository actor asked that no second PR be opened.",
+      "source": "https://github.com/python/cpython/pull/156200#issuecomment-5373144178",
+      "gate_change": "All-state overlap search must treat stale existing PRs as live ownership/duplication signals. Issue-number search is not complete until existing PRs are checked explicitly.",
+      "count_effect": 0
+    },
+    {
+      "subject": "nginx/nginx#1674",
+      "outcome": "closed_without_merge",
+      "external_actor": "sbhowmikf5",
+      "reason": "The repository actor treated the submission as duplicate work and routed discussion back to #1194.",
+      "source": "https://github.com/nginx/nginx/pull/1674#issuecomment-5407482317",
+      "gate_change": "Before coding, distinguish a bug report or active discussion from an invitation to submit a patch. Route ownership and active discussion state are first-class preflight evidence.",
+      "count_effect": 0
+    },
+    {
+      "subject": "libgit2/libgit2#7355",
+      "outcome": "closed_without_merge",
+      "external_actor": "AHSauge",
+      "reason": "The proposed fix arrived as a 127-commit, 149-file PR because the branch was not based cleanly on current main; the external actor asked for the actual change to be condensed.",
+      "source": "https://github.com/libgit2/libgit2/pull/7355#issuecomment-5372643439",
+      "gate_change": "Immediately before publication, compare the candidate branch against upstream current main and fail closed on unexpected commit ancestry, file count, or diff shape even when the intended patch itself is small.",
+      "count_effect": 0
+    },
+    {
+      "subject": "pola-rs/polars#28920",
+      "outcome": "closed_without_merge",
+      "external_actor": "orlp",
+      "reason": "The reviewer required compliance with the repository AI policy and requested a more idiomatic checked_add/is_some_and repair instead of the submitted unused-result-plus-unwrap shape; the first-time-contribution policy was then linked at closure.",
+      "source": "https://github.com/pola-rs/polars/pull/28920#issuecomment-5373196565",
+      "policy_source": "https://github.com/pola-rs/polars/pull/28920#issuecomment-5407307470",
+      "gate_change": "Repository AI/contribution posture and local idiom are pre-publication constraints, not post-review cleanup. A technically plausible safety fix still fails readiness when it violates the project's contribution route or preferred expression of the invariant.",
+      "count_effect": 0
+    },
+    {
+      "subject": "dotnet/runtime#132602",
+      "outcome": "closed_without_merge",
+      "external_actor": "jkoritzinsky/tannergooding/jakobbotsch review; VrtxOmega withdrawal",
+      "reason": "External review showed the proposed TYP_UINT root-cause explanation was unsupported; unrelated crash-dump changes were also bundled. The author withdrew rather than leave an unsupported fix open.",
+      "source": "https://github.com/dotnet/runtime/pull/132602#issuecomment-5755356568",
+      "gate_change": "Require a reproduced caller/root-cause path before changing an assertion or guard, and keep unrelated fixes out of the patch.",
+      "count_effect": 0
+    },
+    {
+      "subject": "openssl/openssl#32452",
+      "outcome": "closed_without_merge",
+      "external_actor": "fwh-dc",
+      "reason": "After branch-base and reproduction repair, the repository actor closed the PR because #32437 carried the same fix more completely.",
+      "source": "https://github.com/openssl/openssl/pull/32452#issuecomment-5829738595",
+      "gate_change": "Refresh duplicate/ownership searches after long repair cycles; stronger local evidence does not preserve ownership if a more complete upstream PR appeared.",
+      "count_effect": 0
+    },
+    {
+      "subject": "LLMSecurity/awesome-agent-skills-security#43",
+      "outcome": "closed_without_merge",
+      "external_actor": "sumleo",
+      "reason": "The submitted Trust Lab repository was judged to be a browser demonstrator over fixed fixtures rather than a reusable tool or benchmark others could apply.",
+      "source": "https://github.com/LLMSecurity/awesome-agent-skills-security/pull/43#issuecomment-5750676590",
+      "gate_change": "Verify catalogue product-shape eligibility before submission, not only technical quality.",
+      "count_effect": 0
+    },
+    {
+      "subject": "ClickHouse/ClickHouse#122066",
+      "outcome": "closed_without_merge",
+      "external_actor": "Michicosun",
+      "reason": "ClickHouse backports are maintainer-triggered from the source PR rather than custom contributor-created backport PRs.",
+      "source": "https://github.com/ClickHouse/ClickHouse/pull/122066#issuecomment-5821772264",
+      "gate_change": "Resolve backport/stable-branch ownership before coding follow-up release work.",
+      "count_effect": 0
+    }
+  ],
+  "open_external_lanes": [
+    {
+      "subject": "IBM/mcp-context-forge#5992",
+      "title": "chore: show startup build provenance",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "openssl/openssl#32457",
+      "title": "Fix integer overflow in evp_pkey_ctx_add1_octet_string()",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "apache/arrow#50947",
+      "title": "GH-50472: [C++][Gandiva] Guard mask length overflow and truncated UTF-8",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "apache/arrow#50948",
+      "title": "GH-50893: [C++][Gandiva] Restrict Soundex table indexes to ASCII letters",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "tokio-rs/tokio#8376",
+      "title": "Fix UAF in io_uring submit: handle EAGAIN like EBUSY",
+      "status": "open_approved",
+      "approved_at": "2026-09-25T23:38:25Z",
+      "mergeable": true,
+      "count_effect": 0,
+      "boundary": "Human approval is review evidence, not a merge."
+    },
+    {
+      "subject": "rust-lang/regex#1388",
+      "title": "Fix panic in BoundedBacktracker when max_haystack_len returns 0",
+      "status": "open",
+      "count_effect": 0
+    },
+    {
+      "subject": "espressif/esp-hosted-mcu#231",
+      "title": "fix: cap ESP_TRANSPORT_SDIO_MAX_BUF_SIZE at 16384 to match ESP-IDF DMA limit (EHM-262)",
+      "status": "open",
+      "count_effect": 0
+    }
+  ],
+  "new_prepublication_gates": [
+    "Search all-state PR overlap and explicitly inspect stale existing PRs before coding.",
+    "Resolve issue/discussion ownership and contribution route before assuming a public issue is an invitation for a patch.",
+    "Compare the final branch against current upstream main immediately before publication; reject unexpected ancestry, commit count, file count, or diff shape.",
+    "Read and satisfy repository AI-assistance and first-time-contributor policy before implementation, not after review begins.",
+    "Keep open PRs and author-claimed local validation at zero outcome weight until external repository state changes.",
+    "Require a reproduced caller/root-cause path before relaxing an assertion or guard.",
+    "Refresh duplicate and ownership checks after long repair cycles before republishing.",
+    "Verify catalogue/product-shape fit before submitting a demonstrator to a reusable-tools list.",
+    "Resolve maintainer-owned backport/release routing before opening stable-branch work."
+  ],
+  "private_or_nonpublic_inputs": {
+    "excluded_from_public_evidence": [
+      "unsolicited private correspondence about PCF boundaries unless the sender explicitly consents to publication"
+    ],
+    "reason": "Private interest can inform product design but is not silently converted into public adoption, validation, attribution, or campaign evidence."
+  },
+  "independent_public_usage": [
+    {
+      "repository": "rygel/outerstellar-platform",
+      "pr": 532,
+      "merged_at": "2026-06-18T03:59:15Z",
+      "workflow": ".github/workflows/pcf-pr-gate.yml",
+      "pcf_ref": "ee022516a5aaf134b9633322537300bb8483713c",
+      "release_comment": "v0.1.3",
+      "permissions": [
+        "contents: read"
+      ],
+      "fail_on": "never",
+      "boundary": "Evidence of at least one independent public PCF Action installation; not a total adoption count or endorsement."
+    }
+  ],
+  "external_technical_feedback_loops": [
+    {
+      "subject": "msaleme/red-team-blue-team-agent-fabric#622",
+      "status": "reported_reproduced_remediated_released_retested",
+      "reporter": "VrtxOmega",
+      "initial_target": "agent-security-harness v4.25.0",
+      "initial_claim": "closed-port / 404 / bare-403 no-surface behavior reproduced",
+      "additional_counterexample_counts": {
+        "redirect_loop": 45,
+        "empty_500": 35,
+        "empty_200": 134,
+        "empty_204": 144
+      },
+      "external_owner_reproduction": {
+        "actor": "msaleme",
+        "reproduced": "over-refusal against an empty HTTP 500 returned 25/25 PASS and exit 0",
+        "source": "https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/622#issuecomment-5845501910"
+      },
+      "upstream_repairs": [
+        "#624",
+        "#625",
+        "#626",
+        "#627",
+        "#629",
+        "#630"
+      ],
+      "upstream_register": {
+        "initial_known_incorrect_cells": 346,
+        "initial_families": 19,
+        "final_cells": 0
+      },
+      "release": {
+        "version": "v4.26.0",
+        "published_at": "2026-09-26T13:46:39Z",
+        "url": "https://github.com/msaleme/red-team-blue-team-agent-fabric/releases/tag/v4.26.0"
+      },
+      "external_retest": {
+        "result": "nine-pole released-package behavior reproduced with zero unexpected target PASS/FAIL",
+        "evidence_repo_pr": "https://github.com/VrtxOmega/veritas-agent-trust-lab/pull/78",
+        "raw_workflow": "https://github.com/VrtxOmega/veritas-agent-trust-lab/actions/runs/36254603030"
+      },
+      "count_effect": {
+        "direct_external_pr_merges": 0,
+        "pcf_era_direct_merges": 0
+      },
+      "boundary": "Technical feedback/remediation evidence only; not PCF or VERITAS validation, adoption, endorsement, or a direct authored upstream merge."
+    }
+  ],
+  "current_main_hardening": {
+    "published_release": "v0.2.0",
+    "tests_linux": 302,
+    "benchmark": "77/77",
+    "adversarial": "31/31",
+    "maintainer_demo": "PASS",
+    "windows_full_suite": "296/302",
+    "windows_remaining_failures": "five prospective-study permission failures plus symlink creation EPERM"
+  },
+  "new_evidence_gates": [
+    "Confirm the narrow stated claim before widening the falsification surface.",
+    "Publish exact artifact identity, independent target behavior, parser rules, raw outputs, and a rerunnable path.",
+    "Convert discovered failure shapes into shrink-only regression state rather than one-off fixes.",
+    "Retest the exact released artifact after upstream remediation.",
+    "Keep technical impact, adoption, approval, and direct merge evidence in separate classes."
+  ],
+  "compatibility_note": "Retains the v1 top-level keys and object-shaped open_external_lanes from the 2026-09-05 snapshot. New evidence classes are additive extension fields."
+}

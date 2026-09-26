@@ -1,6 +1,30 @@
 # Changelog
 
-## Unreleased - evidence refresh 2026-09-05
+## Unreleased - evidence refresh 2026-09-26
+
+### September 25 evidence and adoption refresh
+
+- Advanced the verified direct external merge census to **23 overall / 17 PCF-era** after `ClickHouse/ClickHouse#118352` merged on September 24.
+- Recorded `tokio-rs/tokio#8376` as open with a human `APPROVED` review and clean mergeability while keeping it at zero merge weight.
+- Added closed-lane calibration for `dotnet/runtime#132602` (unsupported root cause), `openssl/openssl#32452` (duplicate after repair), `LLMSecurity/awesome-agent-skills-security#43` (catalogue product-shape mismatch), and `ClickHouse/ClickHouse#122066` (maintainer-owned backport process).
+- Added gates for root-cause-before-patch, duplicate refresh after long repair cycles, catalogue/product-shape fit, and backport ownership.
+- Recorded at least one independently owned public PCF installation: `rygel/outerstellar-platform` runs the pinned v0.1.3 PR Gate with read-only permissions and `fail-on: never`.
+- Evidence: [September 25 ledger addendum](docs/UPSTREAM_CONTRIBUTION_LEDGER_ADDENDUM_20260925.md) and [machine-readable census](docs/upstream-contribution-refresh-20260925.json).
+
+### External reproduction-to-release loop
+
+- Recorded the public Agent Security Harness #622 lifecycle: the v4.25.0 three-pole claim reproduced, while redirect-loop / empty-500 / empty-200 / empty-204 targets exposed **45 / 35 / 134 / 144** additional non-self verdicts.
+- Recorded the external repository owner's independent reproduction of the strongest empty-500 false-assurance row before remediation.
+- Recorded six upstream repair PRs (#624/#625/#626/#627/#629/#630), which introduced a **346-cell / 19-family** shrink-only contentless-answer register and reduced it to zero.
+- Recorded upstream v4.26.0 plus a separate exact-wheel nine-pole retest with zero unexpected target-dependent PASS/FAIL.
+- Added evidence lessons for narrow-claim confirmation, public rerunnable artifacts, shrink-only regression state, released-artifact retesting, and strict separation of technical impact from adoption/merge counts.
+
+### Cross-platform hardening
+
+- Fixed fixture CLI entrypoint detection and module-relative configuration paths with native file-URL conversion, including checkout paths containing spaces, `#`, and `%`.
+- Made repository-relative display paths and LF/CRLF workflow expectations portable without weakening dry-run or least-privilege assertions.
+- Current Linux full-gate evidence after PR #26: **302 tests**, **77/77 benchmark cases**, **31/31 adversarial cases**, maintainer demo PASS.
+- Native Windows full-suite evidence: **296/302**; the remaining six failures are the separately tracked prospective-study permission/symlink cases, with no skipped tests.
 
 ### Repro note handling
 
