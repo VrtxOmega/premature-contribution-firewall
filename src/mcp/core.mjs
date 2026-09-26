@@ -233,6 +233,7 @@ const TOOLS = [
       after: { type: "object", description: "After-fix validation evidence as {verdict, notes, commands}." },
       commands: { type: "array", items: { type: "object" }, description: "Optional phase-tagged command evidence supplied by the caller." },
       artifacts: { type: "array", items: { type: "object" } },
+      claimIntegrity: { type: "object", description: "Optional claim-integrity contract; blocked claim integrity blocks this repro gate." },
       generatedAt: { type: "string" }
     }),
     annotations: TOOL_ANNOTATIONS
