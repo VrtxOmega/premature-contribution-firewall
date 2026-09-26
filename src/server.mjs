@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildFalsificationSubmission, createApiSpec, createSetupGuide, createSetupStatus, evaluateBatch, evaluateClaimIntegritySubmission, evaluateMaintainerQueue } from "./core/api.mjs";
+import { buildFalsificationSubmission, createApiSpec, createSetupGuide, createSetupStatus, evaluateBatch, evaluateClaimIntegritySubmission, evaluateMaintainerQueue, evaluateResidueRegisterSubmission } from "./core/api.mjs";
 import { applyFeedbackFixtureCandidates, buildCandidateEvidenceArtifact, buildCandidateReplayComparison, readCandidateCorpus, replayCandidateCorpus } from "./core/candidates.mjs";
 import { buildFeedbackCalibration } from "./core/calibration.mjs";
 import { appendFeedback, buildRegressionExport, readFeedbackLedger } from "./core/feedback.mjs";
@@ -230,6 +230,14 @@ async function route(request, response) {
     const result = buildFalsificationSubmission(payload);
     console.log(`[premature-contribution-firewall] falsification ready=${result.readyToPublish} integrity=${result.integrityStatus}`);
     return sendJson(response, result.readyToPublish ? 200 : 400, { ok: result.readyToPublish, result });
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/residue-register") {
+    const rawBody = await readRequestBody(request);
+    const payload = JSON.parse(rawBody.toString("utf8"));
+    const result = evaluateResidueRegisterSubmission(payload);
+    console.log(`[premature-contribution-firewall] residue-register status=${result.status} new=${result.counts.new} stale=${result.counts.stale}`);
+    return sendJson(response, result.ok ? 200 : 400, { ok: result.ok, result });
   }
 
   if (request.method === "POST" && url.pathname === "/api/evaluate") {
