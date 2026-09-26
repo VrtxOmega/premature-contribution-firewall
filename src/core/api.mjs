@@ -8,7 +8,7 @@ import { evaluateClaimIntegrity } from "./claim-integrity.mjs";
 import { buildFalsificationPacket } from "./falsification-packet.mjs";
 import { evaluateResidueRegister } from "./residue-register.mjs";
 
-export const API_VERSION = "2026-05-31";
+export const API_VERSION = "2026-09-26";
 export const DEFAULT_BATCH_LIMIT = 100;
 
 export function createApiSpec({ dryRun = true, postComments = false, applyLabels = false, collectRepositoryContext = true } = {}) {
