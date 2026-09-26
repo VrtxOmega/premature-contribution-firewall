@@ -29,6 +29,7 @@ test("MCP manifest exposes safe PCF tools, resources, and prompts", () => {
   assert.ok(toolNames.includes("pcf_repro_gate"));
   assert.ok(toolNames.includes("pcf_claim_integrity"));
   assert.ok(toolNames.includes("pcf_falsification_packet"));
+  assert.ok(toolNames.includes("pcf_residue_register"));
   assert.ok(toolNames.includes("pcf_lane_save"));
   assert.ok(toolNames.includes("pcf_lane_resume"));
   assert.ok(toolNames.includes("pcf_evidence_bundle_save"));
@@ -68,6 +69,7 @@ test("health states the no-write MCP safety contract", async () => {
   assert.ok(health.tools.includes("pcf_scout"));
   assert.ok(health.tools.includes("pcf_repro_gate"));
   assert.ok(health.tools.includes("pcf_claim_integrity"));
+  assert.ok(health.tools.includes("pcf_residue_register"));
   assert.ok(health.tools.includes("pcf_falsification_packet"));
   assert.ok(health.tools.includes("pcf_lane_resume"));
   assert.ok(health.resources.includes("pcf://schemas/lane"));
