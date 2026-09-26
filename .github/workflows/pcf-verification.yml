@@ -69,6 +69,8 @@ jobs:
           npm run benchmark:write
           npm run redtest:write
           npm run demo:maintainer:write
+          node src/cli.mjs claim-integrity docs/claim-integrity-self-assessment-input.json --format json > docs/claim-integrity-self-assessment.json
+          node src/cli.mjs falsify docs/claim-integrity-falsification-input.json --format json > docs/claim-integrity-falsification-packet.json
 
       - name: Upload Proof Artifacts
         uses: actions/upload-artifact@v7
@@ -78,4 +80,6 @@ jobs:
             docs/benchmark-results.md
             docs/adversarial-red-team-results.md
             docs/maintainer-demo-output.md
+            docs/claim-integrity-self-assessment.json
+            docs/claim-integrity-falsification-packet.json
           if-no-files-found: error
