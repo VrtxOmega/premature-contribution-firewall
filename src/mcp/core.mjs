@@ -9,6 +9,8 @@ import {
   parseAiContributionPostureIndex
 } from "../core/ai-contribution-posture.mjs";
 import { buildContributorPreflight } from "../core/contributor-preflight.mjs";
+import { claimIntegritySchemaResource, evaluateClaimIntegrity } from "../core/claim-integrity.mjs";
+import { buildFalsificationPacket } from "../core/falsification-packet.mjs";
 import { evaluateDiffShape } from "../core/diff-shape.mjs";
 import { evaluateContribution } from "../core/evaluator.mjs";
 import { buildLaneStatus } from "../core/lane-status.mjs";
@@ -236,6 +238,24 @@ const TOOLS = [
     annotations: TOOL_ANNOTATIONS
   },
   {
+    name: "pcf_claim_integrity",
+    title: "Claim Integrity Gate",
+    description: "Check whether a supplied contribution claim has a judgeable evidence surface, reachable PASS/FAIL controls, root-cause support, fresh routing evidence, and non-spoofed evidence authority. Never executes commands.",
+    inputSchema: objectSchema({
+      input: { type: "object", description: "Claim-integrity input containing claim, surface, controls, evidence, rootCause, routing, and freshness." }
+    }, ["input"]),
+    annotations: TOOL_ANNOTATIONS
+  },
+  {
+    name: "pcf_falsification_packet",
+    title: "Build Falsification Packet",
+    description: "Package a supplied claim into a portable try-to-break-it artifact with target identity, controls, exceptions, commands, parser rules, adjacent shapes, and scope boundaries. Never executes the packet.",
+    inputSchema: objectSchema({
+      input: { type: "object", description: "Falsification packet input; may contain claimIntegrity plus target, commands, exceptions, parserRules, and adjacentShapes." }
+    }, ["input"]),
+    annotations: TOOL_ANNOTATIONS
+  },
+  {
     name: "pcf_lane_status",
     title: "Contribution Lane Status",
     description: "Summarize supplied scout, overlap, policy, repro, diff, preflight, PR, and provenance gates into a lane status and next gate. Does not verify external state.",
@@ -394,6 +414,12 @@ const RESOURCES = [
     mimeType: "application/json"
   },
   {
+    uri: "pcf://schemas/claim-integrity",
+    name: "PCF Claim Integrity JSON Schema",
+    description: "Machine-readable claim/surface/control contract for verdict reachability and evidence authority.",
+    mimeType: "application/json"
+  },
+  {
     uri: "pcf://doctrine/safety",
     name: "PCF MCP Safety Doctrine",
     description: "Non-claims, gate order, public-action boundary, and local-write boundary for agent use.",
@@ -487,11 +513,14 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
         ? parsePatchSubmission(args.patchText, { profile: args.profile || "kernel-grade", repositoryFiles: args.repositoryFiles || [] })
         : { ...(args.input || {}), profile: args.profile || args.input?.profile };
       const evaluation = evaluateContribution(input, { profile: args.profile || input.profile });
-      const ready = evaluation.status === "ready-for-maintainer" || (args.allowRepair === true && evaluation.status === "needs-repair");
+      const claimIntegrity = input.claimIntegrity ? evaluateClaimIntegrity(input.claimIntegrity) : null;
+      const evaluationReady = evaluation.status === "ready-for-maintainer" || (args.allowRepair === true && evaluation.status === "needs-repair");
+      const ready = evaluationReady && (!claimIntegrity || claimIntegrity.status === "pass");
       return {
         ready,
         gate: args.allowRepair === true ? "ready-for-maintainer or needs-repair passes" : "ready-for-maintainer only",
-        evaluation
+        evaluation,
+        claimIntegrity
       };
     }
     case "pcf_queue":
@@ -518,6 +547,10 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
       return evaluateDiffShape(args);
     case "pcf_repro_gate":
       return evaluateReproGate(args);
+    case "pcf_claim_integrity":
+      return evaluateClaimIntegrity(args.input || {});
+    case "pcf_falsification_packet":
+      return buildFalsificationPacket(args.input || {});
     case "pcf_lane_status":
       return buildLaneStatus(args);
     case "pcf_lane_resume":
@@ -643,6 +676,13 @@ export async function readPcfMcpResource(uri) {
       text: JSON.stringify(reproEvidenceSchemaResource(), null, 2)
     };
   }
+  if (uri === "pcf://schemas/claim-integrity") {
+    return {
+      uri,
+      mimeType: "application/json",
+      text: JSON.stringify(claimIntegritySchemaResource(), null, 2)
+    };
+  }
   if (uri === "pcf://doctrine/safety") {
     return {
       uri,
@@ -672,7 +712,7 @@ export async function getPcfMcpPrompt(name, arguments_ = {}) {
     const issue = args.issue ? ` issue ${args.issue}` : "";
     return promptResult("PCF lane review", [
       `Review the contribution lane${repository}${issue} with PCF discipline before coding.`,
-      "Check issue state, maintainer comments, duplicate/open PR overlap, AI-assisted contribution posture, contribution policy, TODO/FIXME signals, platform fit, local reproduction, and expected diff shape.",
+      "Check issue state, maintainer comments, duplicate/open PR overlap, AI-assisted contribution posture, contribution policy, TODO/FIXME signals, platform fit, local reproduction, claim integrity/verdict reachability, and expected diff shape.",
       "Stop before public action unless every gate has evidence and the human approved the target."
     ].join("\n"));
   }
