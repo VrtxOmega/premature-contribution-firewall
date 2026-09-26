@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0.0",
+  "as_of": "2026-09-25",
+  "prior_refresh": "docs/upstream-contribution-refresh-20260905.json",
+  "merge_census": {
+    "direct_external_pr_merges": 23,
+    "pcf_era_direct_merges": 17,
+    "new_direct_merges_since_2026_09_05": [
+      {
+        "subject": "ClickHouse/ClickHouse#118352",
+        "merged_at": "2026-09-24T08:59:09Z",
+        "url": "https://github.com/ClickHouse/ClickHouse/pull/118352"
+      }
+    ],
+    "boundary": "Only direct external VrtxOmega-authored PRs recorded by GitHub as merged count. Self-repository merges, open approvals, maintainer-authored salvage, listings, and private interest are excluded."
+  },
+  "changed_lanes": [
+    {
+      "subject": "dotnet/runtime#132602",
+      "status": "closed_without_merge",
+      "closed_at": "2026-09-21T04:22:44Z",
+      "gate_change": "Require root-cause/caller reproduction before changing the guard; keep unrelated fixes separate.",
+      "url": "https://github.com/dotnet/runtime/pull/132602"
+    },
+    {
+      "subject": "openssl/openssl#32452",
+      "status": "closed_without_merge",
+      "closed_at": "2026-09-25T09:00:00Z",
+      "gate_change": "Refresh duplicate/ownership search after branch repair or long-lived repro work.",
+      "url": "https://github.com/openssl/openssl/pull/32452"
+    },
+    {
+      "subject": "LLMSecurity/awesome-agent-skills-security#43",
+      "status": "closed_without_merge",
+      "closed_at": "2026-09-20T15:16:44Z",
+      "gate_change": "Verify catalogue product-shape eligibility before submission.",
+      "url": "https://github.com/LLMSecurity/awesome-agent-skills-security/pull/43"
+    },
+    {
+      "subject": "ClickHouse/ClickHouse#122066",
+      "status": "closed_without_merge",
+      "closed_at": "2026-09-24T20:31:56Z",
+      "gate_change": "Resolve stable-branch/backport ownership before coding.",
+      "url": "https://github.com/ClickHouse/ClickHouse/pull/122066"
+    },
+    {
+      "subject": "tokio-rs/tokio#8376",
+      "status": "open_approved",
+      "approved_at": "2026-09-25T23:38:25Z",
+      "mergeable": true,
+      "url": "https://github.com/tokio-rs/tokio/pull/8376"
+    }
+  ],
+  "open_external_lanes": [
+    "IBM/mcp-context-forge#5992",
+    "openssl/openssl#32457",
+    "apache/arrow#50947",
+    "apache/arrow#50948",
+    "tokio-rs/tokio#8376",
+    "rust-lang/regex#1388",
+    "espressif/esp-hosted-mcu#231"
+  ],
+  "independent_public_usage": [
+    {
+      "repository": "rygel/outerstellar-platform",
+      "pr": 532,
+      "merged_at": "2026-06-18T03:59:15Z",
+      "workflow": ".github/workflows/pcf-pr-gate.yml",
+      "pcf_ref": "ee022516a5aaf134b9633322537300bb8483713c",
+      "release_comment": "v0.1.3",
+      "permissions": [
+        "contents: read"
+      ],
+      "fail_on": "never",
+      "boundary": "Evidence of at least one independent public PCF Action installation; not a total adoption count or endorsement."
+    }
+  ],
+  "current_main_hardening": {
+    "published_release": "v0.2.0",
+    "tests_linux": 302,
+    "benchmark": "77/77",
+    "adversarial": "31/31",
+    "maintainer_demo": "PASS",
+    "windows_full_suite": "296/302",
+    "windows_remaining_failures": "five prospective-study permission failures plus symlink creation EPERM"
+  }
+}
