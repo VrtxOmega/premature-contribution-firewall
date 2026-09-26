@@ -68,6 +68,9 @@ Before cloning or patching:
 1. Read the contribution policy and AI/tooling policy.
 2. Check open PR overlap and maintainer ownership.
 3. Reproduce the issue against current upstream.
+4. Establish the root-cause chain: symptom -> reachability -> invariant -> patch mechanism.
+5. Run claim integrity so the proposed proof has a judgeable surface and reachable PASS/FAIL controls.
+6. Refresh overlap/ownership evidence before publication if substantial time or repair work passes.
 4. Scan touched files for TODO/FIXME or architectural warnings.
 5. Keep the diff narrow, tested, and tied to the issue evidence.
 
