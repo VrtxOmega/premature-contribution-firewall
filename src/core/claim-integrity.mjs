@@ -6,6 +6,7 @@ const PASS = new Set(["pass", "passed", "ready", "fixed", "verified", "success",
 const FAIL = new Set(["fail", "failed", "blocked", "rejected", "regression", "unsafe"]);
 const INCONCLUSIVE = new Set(["inconclusive", "unknown", "not-evaluated", "not_evaluated", "not-executed", "not_executed", "review"]);
 const HIGH_RISK = new Set(["high", "critical", "security", "kernel", "concurrency", "memory-safety", "memory_safety", "serious"]);
+const NO_SURFACE_STATES = new Set(["none", "absent", "empty", "contentless", "unserved", "unavailable", "no-surface", "no_surface"]);
 const ROUTE_STATES = new Set(["contributor", "maintainer", "shared", "not-applicable", "not_applicable", "unknown"]);
 const CATALOGUE_STATES = new Set(["eligible", "ineligible", "unknown", "not-applicable", "not_applicable"]);
 
@@ -29,7 +30,7 @@ export function evaluateClaimIntegrity(input = {}) {
     blockers.push(blocker("missing-evidence-surface", "The claim does not name an observable surface that could make the verdict right or wrong."));
   }
 
-  if (surface.state === "none" && isDecisiveVerdict(claim.assertedVerdict)) {
+  if (NO_SURFACE_STATES.has(surface.state) && isDecisiveVerdict(claim.assertedVerdict)) {
     blockers.push(blocker(
       "verdict-without-surface",
       `The claim asserts ${claim.assertedVerdict.toUpperCase()} while the supplied evidence surface is explicitly absent.`
@@ -41,8 +42,13 @@ export function evaluateClaimIntegrity(input = {}) {
     ));
   }
 
+  const allEvidence = [
+    ...evidence,
+    ...controls.positive.evidence,
+    ...controls.negative.evidence
+  ];
   for (const kind of surface.requiredEvidenceKinds) {
-    if (!evidence.some((item) => item.kind === kind && isAuthoritativeEvidence(item) && isTangibleEvidence(item))) {
+    if (!allEvidence.some((item) => item.kind === kind && isAuthoritativeEvidence(item) && isTangibleEvidence(item))) {
       blockers.push(blocker(
         "required-evidence-kind-missing",
         `Required authoritative evidence kind '${kind}' is missing or is only caller-asserted.`,
@@ -522,7 +528,7 @@ function controlHasTangibleExecution(control) {
 }
 
 function controlHasTangibleEvidence(control) {
-  return control.evidence.some(isTangibleEvidence);
+  return control.evidence.some((item) => isAuthoritativeEvidence(item) && isTangibleEvidence(item));
 }
 
 function isTangibleEvidence(item) {
