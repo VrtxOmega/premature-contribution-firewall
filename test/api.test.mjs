@@ -9,6 +9,7 @@ test("API spec exposes callable maintainer endpoints", () => {
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/evaluate-batch"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/claim-integrity"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/falsification-packet"));
+  assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/residue-register"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/benchmark"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/github/queue"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/github/setup"));
