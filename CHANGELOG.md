@@ -12,7 +12,8 @@
 - Added local API endpoints `/api/claim-integrity` and `/api/falsification-packet`, MCP tools `pcf_claim_integrity` / `pcf_falsification_packet`, and the `pcf://schemas/claim-integrity` resource.
 - Added evidence-authority ordering (`observed` > `external` > `derived` > `claimed`) so caller metadata cannot override higher-authority observed state inside the supplied record.
 - Added adversarial/reachability tests for no-surface verdicts, verdict-pole collapse, stale ownership, root-cause gaps, generalized untested claims, evidence spoofing, repro-gate composition, API parity, and CLI exit-code behavior.
-- Documented shrink-only failure registers as the preferred pattern for known false-ready, false-block, and unreachable-verdict residue.
+- Added `pcf residue-register`, local API `/api/residue-register`, and MCP `pcf_residue_register` so known false-ready/false-block/unreachable-verdict residue can be enforced as a shrink-only register: new residue fails and stale repaired declarations also fail until removed.
+- Expanded the adversarial residue corpus to **36/36** by adding no-surface claims, evidence-authority spoofing, unreachable verdict poles, stale route ownership, and scope-generalization laundering.
 
 ### September 25 evidence and adoption refresh
 
@@ -36,7 +37,7 @@
 
 - Fixed fixture CLI entrypoint detection and module-relative configuration paths with native file-URL conversion, including checkout paths containing spaces, `#`, and `%`.
 - Made repository-relative display paths and LF/CRLF workflow expectations portable without weakening dry-run or least-privilege assertions.
-- Current Linux full-gate evidence after PR #26: **302 tests**, **77/77 benchmark cases**, **31/31 adversarial cases**, maintainer demo PASS.
+- Current Linux full-gate evidence after PR #26: **302 tests**, **77/77 benchmark cases**, **36/36 adversarial cases**, maintainer demo PASS.
 - Native Windows full-suite evidence: **296/302**; the remaining six failures are the separately tracked prospective-study permission/symlink cases, with no skipped tests.
 
 ### Repro note handling
