@@ -37,6 +37,7 @@ Current public state:
 - Maintainer feedback tracker: [five-maintainer artifact-shape feedback pass](docs/MAINTAINER_FEEDBACK_TRACKER.md).
 - Real-world usage so far: author-run read-only shadow pilots against public queues, plus at least one independently owned public repository running the PCF PR Gate in advisory/read-only mode: [`rygel/outerstellar-platform`](https://github.com/rygel/outerstellar-platform/blob/main/.github/workflows/pcf-pr-gate.yml).
 - Current-main hardening after v0.2.0: narrative repro notes cannot establish gate outcomes or evidence presence; Windows/escaped-path CLI entrypoints and cross-platform path/newline tests were repaired. Latest full Linux gate: **302 tests**, **77/77 benchmark**, **31/31 adversarial**, maintainer demo PASS.
+- Claim integrity on current `main`: serious contribution evidence can now be evaluated as a **Claim -> Evidence Surface -> Positive/Negative Controls -> Verdict Reachability** contract. High-risk claims can require an explicit symptom/reachability/invariant/patch-mechanism chain; observed evidence outranks caller claims; routing context can expire; and falsification packets make the exact claim and break procedure portable. See [Claim Integrity and Falsification](docs/CLAIM_INTEGRITY.md).
 - External technical feedback loop: [Agent Security Harness #622](https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/622) converted a VrtxOmega reproduction into six upstream repair PRs, a 346-cell/19-family regression register reduced to zero, and release v4.26.0. A separate released-package retest reproduced the repaired nine-pole behavior. Follow-on checks then exposed the **mirror failure class** in [#628](https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/628) and [#631](https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/631): a guard can stop inventing verdicts yet still make legitimate PASS/FAIL outcomes unreachable. This is technical-impact evidence, not PCF/VERITAS validation or a direct-merge count.
 - Upstream contribution learning ledger: [public wins, misses, blocked lanes, and gate changes](docs/UPSTREAM_CONTRIBUTION_LEDGER.md), with the latest [September 25 evidence refresh](docs/UPSTREAM_CONTRIBUTION_LEDGER_ADDENDUM_20260925.md) and [machine-readable census](docs/upstream-contribution-refresh-20260925.json).
 - AI-assisted contribution posture index: [evidence-based repo compatibility, not a maintainer blacklist](docs/AI_CONTRIBUTION_POSTURE_INDEX.md).
@@ -137,6 +138,36 @@ node src/cli.mjs preflight my-pr-draft.json --allow-repair
 ```
 
 Exit code 0 means ready to submit, 1 means not ready (with a fix-first checklist), 2 means usage error. Patch and mbox files are auto-detected and use the kernel-grade profile. The preflight is advisory: it does not guarantee acceptance and makes no GitHub writes.
+
+## Claim Integrity And Falsification
+
+PCF no longer treats "there is a test/log/artifact" as the end of the evidence question.
+
+For serious claims it can ask:
+
+> **What observable surface makes this claim judgeable, and can the proof mechanism still reach both the safe and unsafe verdicts?**
+
+```bash
+pcf claim-integrity fixtures/claim-integrity-example.json
+pcf falsify falsification-input.json --format json
+```
+
+The claim-integrity gate can fail closed on:
+
+- decisive PASS/FAIL claims with no judgeable surface;
+- positive or negative controls that were never executed;
+- controls whose verdict pole is unreachable;
+- positive and negative controls that collapse to the same verdict;
+- caller-claimed metadata that contradicts higher-authority observed evidence;
+- high-risk fixes missing the symptom -> reachability -> invariant -> patch-mechanism chain;
+- contributor work that crosses maintainer-owned backport/release routing;
+- catalogue/product-shape mismatches;
+- stale overlap/ownership/routing evidence;
+- broad generalized invariants that still name untested shapes.
+
+A portable falsification packet carries exact target identity, hashes, commands, parser rules, exceptions, controls, adjacent target shapes, and scope boundaries. It is publication-ready only when the embedded claim-integrity assessment passes.
+
+In the contribution lane, `claimIntegrity` is mandatory after `repro` and before `diffShape`. The full doctrine is in [docs/CLAIM_INTEGRITY.md](docs/CLAIM_INTEGRITY.md).
 
 ## Contribution Lifecycle And Salvage Gate
 
