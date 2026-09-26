@@ -220,7 +220,28 @@
         "direct_external_pr_merges": 0,
         "pcf_era_direct_merges": 0
       },
-      "boundary": "Technical feedback/remediation evidence only; not PCF or VERITAS validation, adoption, endorsement, or a direct authored upstream merge."
+      "boundary": "Technical feedback/remediation evidence only; not PCF or VERITAS validation, adoption, endorsement, or a direct authored upstream merge.",
+      "reachability_follow_on": {
+        "upstream_issues": [
+          "https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/628",
+          "https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/631"
+        ],
+        "findings": [
+          "AutoGen successful JSON transport discarded the actual HTTP status, making valid JSON answers appear unserviced and preventing reliable PASS/FAIL.",
+          "Capability-profile positive/refusal logic read only a package response key even though its transport merges A2A JSON at top level; a served A2A refusal/profile could not reach PASS.",
+          "INT-001 and MAG-019 could detect explicit positive evidence before a suite-wide ambiguity guard erased the PASS.",
+          "Some INCONCLUSIVE branches changed details text without setting not_evaluated=true."
+        ],
+        "prototype_repairs": [
+          "Preserve transport-authored HTTP status and do not let response-body metadata spoof it.",
+          "Use the shared envelope-aware agent_prose extractor instead of assuming one response envelope.",
+          "Mark explicitly observed positive properties so negative-only ambiguity guards do not erase them.",
+          "Keep structural not_evaluated state aligned with INCONCLUSIVE prose."
+        ],
+        "gate_change": "For any test contract that permits both safe and unsafe outcomes, preserve a served PASS control and a served FAIL control; an unreachable verdict pole is a regression. Consider a shrink-only reachability register as the mirror of the no-surface false-assurance register.",
+        "evidence": "https://github.com/VrtxOmega/veritas-agent-trust-lab/blob/main/evidence/ASH_REACHABILITY_FOLLOWON_20260926.md",
+        "boundary": "External I0 execution/review of the upstream harness; not independent validation of PCF or VERITAS."
+      }
     }
   ],
   "current_main_hardening": {
@@ -237,7 +258,8 @@
     "Publish exact artifact identity, independent target behavior, parser rules, raw outputs, and a rerunnable path.",
     "Convert discovered failure shapes into shrink-only regression state rather than one-off fixes.",
     "Retest the exact released artifact after upstream remediation.",
-    "Keep technical impact, adoption, approval, and direct merge evidence in separate classes."
+    "Keep technical impact, adoption, approval, and direct merge evidence in separate classes.",
+    "Require two-sided verdict reachability where the contract permits both outcomes: at least one served PASS control and one served FAIL control, with unreachable poles treated as regressions."
   ],
   "compatibility_note": "Retains the v1 top-level keys and object-shaped open_external_lanes from the 2026-09-05 snapshot. New evidence classes are additive extension fields."
 }
