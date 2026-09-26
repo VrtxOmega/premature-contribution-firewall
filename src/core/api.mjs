@@ -192,6 +192,10 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
         input: "claimIntegrity plus target identity, commands, parser rules, exceptions, adjacent shapes, and artifacts",
         output: "portable packet with packetSha256, integrity status, scope boundaries, and publication readiness"
       },
+      residueRegister: {
+        input: "name plus declared and observed residue identifiers",
+        behavior: "shrink-only: new undeclared residue fails; stale declarations that no longer reproduce also fail until removed"
+      },
       evaluatePatch: {
         text: "git format-patch or mbox text",
         profile: "kernel-grade",
