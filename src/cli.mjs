@@ -33,6 +33,7 @@ import {
 } from "./core/contribution-lifecycle.mjs";
 import { evaluateClaimIntegrity } from "./core/claim-integrity.mjs";
 import { buildFalsificationPacket } from "./core/falsification-packet.mjs";
+import { evaluateResidueRegister } from "./core/residue-register.mjs";
 import { loadConfig } from "./config.mjs";
 
 const args = process.argv.slice(2);
@@ -43,7 +44,7 @@ if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
 }
 
 const command = args[0];
-if (!["evaluate", "evaluate-patch", "queue", "setup", "setup-pilot", "preflight", "validate-corpus", "study", "lifecycle", "claim-integrity", "falsify"].includes(command)) {
+if (!["evaluate", "evaluate-patch", "queue", "setup", "setup-pilot", "preflight", "validate-corpus", "study", "lifecycle", "claim-integrity", "falsify", "residue-register"].includes(command)) {
   console.error(`Unknown command: ${command}`);
   printHelp();
   process.exit(2);
@@ -63,6 +64,10 @@ if (command === "claim-integrity") {
 
 if (command === "falsify") {
   await runFalsificationPacket(args.slice(1));
+}
+
+if (command === "residue-register") {
+  await runResidueRegister(args.slice(1));
 }
 
 if (command === "setup" || command === "setup-pilot") {
@@ -497,6 +502,62 @@ async function runFalsificationPacket(values) {
   }
 }
 
+async function runResidueRegister(values) {
+  const file = values[0];
+  if (!file) {
+    console.error("PCF residue register failed: input file is required.");
+    process.exit(2);
+  }
+  const format = readFlag(values, "--format") || "pretty";
+  if (!["pretty", "json", "markdown"].includes(format)) {
+    console.error(`PCF residue register failed: unsupported format '${format}'.`);
+    process.exit(2);
+  }
+  try {
+    const text = file === "-" ? await readStdin() : await readFile(file, "utf8");
+    const result = evaluateResidueRegister(JSON.parse(text));
+    if (format === "json") {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (format === "markdown") {
+      console.log(renderResidueRegisterMarkdown(result));
+    } else {
+      console.log(`PCF shrink-only residue register: ${result.status.toUpperCase()}`);
+      console.log(result.summary);
+      for (const entry of result.blockers) console.log(`- ${entry.id}: ${entry.reason}`);
+    }
+    process.exit(result.status === "pass" ? 0 : 1);
+  } catch (error) {
+    const message = error?.code === "ENOENT"
+      ? "Required residue-register input file is missing."
+      : error instanceof SyntaxError
+        ? "Residue-register input file contains invalid JSON."
+        : error?.message || "Unexpected residue-register error.";
+    console.error(`PCF residue register failed: ${message}`);
+    process.exit(1);
+  }
+}
+
+function renderResidueRegisterMarkdown(result) {
+  const lines = [
+    "# PCF Shrink-Only Residue Register",
+    "",
+    `**Name:** ${result.name}`,
+    `**Status:** ${result.status}`,
+    `**Declared:** ${result.counts.declared}`,
+    `**Observed:** ${result.counts.observed}`,
+    `**New:** ${result.counts.new}`,
+    `**Stale:** ${result.counts.stale}`,
+    "",
+    result.summary,
+    "",
+    "## Blockers"
+  ];
+  if (!result.blockers.length) lines.push("", "- none");
+  else for (const entry of result.blockers) lines.push("", `- **${entry.id}:** ${entry.reason}`);
+  lines.push("", "## Doctrine", "", "- New undeclared residue fails.", "- Stale declared residue also fails until the register is updated.", "- Regression controls stay even after the register shrinks.", "");
+  return lines.join("\n");
+}
+
 function renderClaimIntegrityMarkdown(result) {
   const lines = [
     "# PCF Claim Integrity",
@@ -580,6 +641,7 @@ function printHelp() {
   node src/cli.mjs lifecycle <lifecycle-input.json|-> [--format pretty|json|markdown]
   node src/cli.mjs claim-integrity <claim-integrity.json|-> [--format pretty|json|markdown]
   node src/cli.mjs falsify <falsification-input.json|-> [--format pretty|json|markdown]
+  node src/cli.mjs residue-register <register.json|-> [--format pretty|json|markdown]
   node src/cli.mjs validate-corpus <consented.jsonl|consented.csv|-> [--input-format jsonl|csv] [--format pretty|json|markdown]
   node src/cli.mjs study init --root <absolute-path> --protocol <protocol.json> --sampling-frame <frame.json> [--mode production|synthetic] [--format pretty|json|markdown]
   node src/cli.mjs study consent|observe|freeze|rate --root <absolute-path> --input <record.json> [--format pretty|json|markdown]
@@ -592,5 +654,6 @@ Preflight exit codes: 0 = ready to submit, 1 = not ready, 2 = usage error.
 Lifecycle exit codes: 0 = assessment produced, 1 = evidence failed closed, 2 = usage error.
 Claim-integrity exit codes: 0 = integrity pass, 1 = blocked or review, 2 = usage error.
 Falsification exit codes: 0 = publish-ready packet, 1 = draft packet, 2 = usage error.
+Residue-register exit codes: 0 = declared and observed residue match, 1 = new/stale/duplicate residue, 2 = usage error.
 Corpus validation exit codes: 0 = corpus measured, 1 = validation failed closed, 2 = usage error.`);
 }
