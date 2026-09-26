@@ -166,7 +166,9 @@ if (command === "preflight") {
   if (format === "json") {
     console.log(JSON.stringify({ ready, gate: allowRepair ? "allow-repair" : "ready-only", evaluation, claimIntegrity }, null, 2));
   } else if (format === "markdown") {
-    console.log(renderMarkdownReport(evaluation));
+    const parts = [renderMarkdownReport(evaluation)];
+    if (claimIntegrity) parts.push(renderClaimIntegrityMarkdown(claimIntegrity));
+    console.log(parts.join("\n\n"));
   } else {
     printPreflightPretty(evaluation, { ready, allowRepair, claimIntegrity });
   }
