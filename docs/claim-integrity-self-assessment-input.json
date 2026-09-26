@@ -4,7 +4,7 @@
     "id": "PCF-CI-V03-SELF",
     "statement": "The claim-integrity buildout refuses decisive contribution claims without sufficient observable evidence while preserving reachable positive and negative verdict poles for its core decision gates.",
     "assertedVerdict": "pass",
-    "scope": "PCF code at 00f1d7552a868b3a677fed26078c56aa8de1ce73; focused claim-integrity, residue-register, repro, lane, diff-shape, and policy-scan controls exercised by CI.",
+    "scope": "PCF code at 3ce5c3c60d748031e1034011e54e94b2e1673d38; focused claim-integrity, residue-register, repro, lane, diff-shape, and policy-scan controls exercised by CI.",
     "risk": "high",
     "twoSided": true,
     "generalization": {
@@ -40,10 +40,10 @@
       "executed": true,
       "evidence": [
         {
-          "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259173810",
+          "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
           "kind": "execution",
           "source": "external",
-          "observationId": "workflow-run-36259173810"
+          "observationId": "workflow-run-36259278171"
         }
       ]
     },
@@ -54,10 +54,10 @@
       "executed": true,
       "evidence": [
         {
-          "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259173810",
+          "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
           "kind": "execution",
           "source": "external",
-          "observationId": "workflow-run-36259173810"
+          "observationId": "workflow-run-36259278171"
         }
       ]
     }
@@ -67,33 +67,33 @@
       "key": "targetCommit",
       "kind": "execution",
       "source": "external",
-      "value": "00f1d7552a868b3a677fed26078c56aa8de1ce73",
-      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259173810",
-      "observationId": "workflow-run-36259173810"
+      "value": "3ce5c3c60d748031e1034011e54e94b2e1673d38",
+      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
+      "observationId": "workflow-run-36259278171"
     },
     {
       "key": "ciConclusion",
       "kind": "execution",
       "source": "external",
       "value": "success",
-      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259173810",
-      "observationId": "workflow-run-36259173810"
+      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
+      "observationId": "workflow-run-36259278171"
     },
     {
       "key": "benchmark",
       "kind": "execution",
       "source": "external",
       "value": "77/77",
-      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259173810",
-      "observationId": "workflow-run-36259173810"
+      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
+      "observationId": "workflow-run-36259278171"
     },
     {
       "key": "adversarial",
       "kind": "execution",
       "source": "external",
       "value": "36/36",
-      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259173810",
-      "observationId": "workflow-run-36259173810"
+      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
+      "observationId": "workflow-run-36259278171"
     }
   ],
   "rootCause": {
