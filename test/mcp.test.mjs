@@ -27,6 +27,8 @@ test("MCP manifest exposes safe PCF tools, resources, and prompts", () => {
   assert.ok(toolNames.includes("pcf_scout"));
   assert.ok(toolNames.includes("pcf_ai_contribution_posture"));
   assert.ok(toolNames.includes("pcf_repro_gate"));
+  assert.ok(toolNames.includes("pcf_claim_integrity"));
+  assert.ok(toolNames.includes("pcf_falsification_packet"));
   assert.ok(toolNames.includes("pcf_lane_save"));
   assert.ok(toolNames.includes("pcf_lane_resume"));
   assert.ok(toolNames.includes("pcf_evidence_bundle_save"));
@@ -45,6 +47,7 @@ test("MCP manifest exposes safe PCF tools, resources, and prompts", () => {
   assert.ok(listPcfMcpResources().some((resource) => resource.uri === "pcf://docs/ai-posture-index"));
   assert.ok(listPcfMcpResources().some((resource) => resource.uri === "pcf://schemas/lane"));
   assert.ok(listPcfMcpResources().some((resource) => resource.uri === "pcf://schemas/repro"));
+  assert.ok(listPcfMcpResources().some((resource) => resource.uri === "pcf://schemas/claim-integrity"));
   assert.ok(listPcfMcpResources().some((resource) => resource.uri === "pcf://doctrine/safety"));
   assert.ok(listPcfMcpResources().some((resource) => resource.uri === "pcf://mcp/server-card"));
   assert.ok(listPcfMcpPrompts().some((prompt) => prompt.name === "pcf_review_lane"));
@@ -64,8 +67,11 @@ test("health states the no-write MCP safety contract", async () => {
   assert.equal(health.shellExecution, "not exposed");
   assert.ok(health.tools.includes("pcf_scout"));
   assert.ok(health.tools.includes("pcf_repro_gate"));
+  assert.ok(health.tools.includes("pcf_claim_integrity"));
+  assert.ok(health.tools.includes("pcf_falsification_packet"));
   assert.ok(health.tools.includes("pcf_lane_resume"));
   assert.ok(health.resources.includes("pcf://schemas/lane"));
+  assert.ok(health.resources.includes("pcf://schemas/claim-integrity"));
   assert.ok(health.resources.includes("pcf://mcp/server-card"));
 });
 
@@ -205,7 +211,7 @@ test("lane status cannot omit mandatory gates through a custom gate order", asyn
 
 test("lane status does not accept bare pass strings as evidence", async () => {
   const passStrings = Object.fromEntries([
-    "scout", "aiPosture", "overlap", "policy", "repro", "diffShape", "preflight", "pr", "provenance", "calibration"
+    "scout", "aiPosture", "overlap", "policy", "repro", "claimIntegrity", "diffShape", "preflight", "pr", "provenance", "calibration"
   ].map((gate) => [gate, "pass"]));
   const status = await callPcfMcpTool("pcf_lane_status", { gates: passStrings });
 
@@ -216,7 +222,7 @@ test("lane status does not accept bare pass strings as evidence", async () => {
 
 test("lane status does not accept evidence-free structured pass objects", async () => {
   const passObjects = Object.fromEntries([
-    "scout", "aiPosture", "overlap", "policy", "repro", "diffShape", "preflight", "pr", "provenance", "calibration"
+    "scout", "aiPosture", "overlap", "policy", "repro", "claimIntegrity", "diffShape", "preflight", "pr", "provenance", "calibration"
   ].map((gate) => [gate, { status: "pass" }]));
   const status = await callPcfMcpTool("pcf_lane_status", { gates: passObjects });
 
@@ -226,7 +232,7 @@ test("lane status does not accept evidence-free structured pass objects", async 
 
 test("lane status rejects placeholder and self-asserted pass evidence", async () => {
   const gateIds = [
-    "scout", "aiPosture", "overlap", "policy", "repro", "diffShape", "preflight", "pr", "provenance", "calibration"
+    "scout", "aiPosture", "overlap", "policy", "repro", "claimIntegrity", "diffShape", "preflight", "pr", "provenance", "calibration"
   ];
   for (const makeGate of [
     () => ({ status: "pass", evidence: [{}] }),
@@ -404,6 +410,7 @@ test("resources and prompts expose lane schema and review guidance", async () =>
   assert.equal(parsed.schema.title, "PCF Contribution Lane");
   assert.ok(parsed.gateOrder.includes("provenance"));
   assert.ok(parsed.gateOrder.includes("calibration"));
+  assert.ok(parsed.gateOrder.includes("claimIntegrity"));
   assert.equal(parsed.schema.properties.artifacts.items.$ref, "#/$defs/artifact");
   assert.ok(parsed.schema.$defs.artifact.anyOf.some((rule) => rule.required?.includes("summary")));
   assert.equal(parsed.schema.$defs.gate.properties.evidence.items.$ref, "#/$defs/gateArtifact");
@@ -413,6 +420,11 @@ test("resources and prompts expose lane schema and review guidance", async () =>
   const reproParsed = JSON.parse(reproSchema.text);
   assert.equal(reproParsed.schema.title, "PCF Repro Evidence");
   assert.ok(reproParsed.acceptedVerdicts.after.includes("verified"));
+
+  const claimSchema = await readPcfMcpResource("pcf://schemas/claim-integrity");
+  const claimParsed = JSON.parse(claimSchema.text);
+  assert.equal(claimParsed.schema.title, "PCF Claim Integrity Input");
+  assert.match(claimParsed.doctrine.twoSidedRule, /PASS control/);
 
   const safety = await readPcfMcpResource("pcf://doctrine/safety");
   const safetyParsed = JSON.parse(safety.text);
