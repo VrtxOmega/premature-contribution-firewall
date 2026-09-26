@@ -1,4 +1,4 @@
-export const PCF_LANE_SCHEMA_VERSION = "2026-07-10";
+export const PCF_LANE_SCHEMA_VERSION = "2026-09-26";
 
 export const PCF_LANE_GATE_ORDER = [
   "scout",
@@ -6,6 +6,7 @@ export const PCF_LANE_GATE_ORDER = [
   "overlap",
   "policy",
   "repro",
+  "claimIntegrity",
   "diffShape",
   "preflight",
   "pr",
