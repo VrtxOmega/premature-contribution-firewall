@@ -75,6 +75,7 @@ assert.ok(toolNames.includes("pcf_submission_readiness"));
 assert.ok(toolNames.includes("pcf_repro_gate"));
 assert.ok(toolNames.includes("pcf_claim_integrity"));
 assert.ok(toolNames.includes("pcf_falsification_packet"));
+assert.ok(toolNames.includes("pcf_residue_register"));
 assert.ok(toolNames.includes("pcf_lane_resume"));
 assert.equal(toolNames.some((name) => /comment|label|merge|push|open_pr/i.test(name)), false);
 
@@ -88,6 +89,7 @@ assert.equal(health.githubWrites, "disabled");
 assert.equal(health.submissionReadinessTool, "pcf_submission_readiness");
 assert.ok(health.tools.includes("pcf_repro_gate"));
 assert.ok(health.tools.includes("pcf_claim_integrity"));
+assert.ok(health.tools.includes("pcf_residue_register"));
 assert.ok(health.tools.includes("pcf_lane_resume"));
 
 const serverCard = JSON.parse(byId.get(5).result.contents[0].text);
