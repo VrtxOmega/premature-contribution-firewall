@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "as_of": "2026-09-25",
+  "as_of": "2026-09-26",
   "prior_refresh": "docs/upstream-contribution-refresh-20260905.json",
   "merge_census": {
     "direct_external_pr_merges": 23,
@@ -83,5 +83,60 @@
     "maintainer_demo": "PASS",
     "windows_full_suite": "296/302",
     "windows_remaining_failures": "five prospective-study permission failures plus symlink creation EPERM"
-  }
+  },
+  "external_technical_feedback_loops": [
+    {
+      "subject": "msaleme/red-team-blue-team-agent-fabric#622",
+      "status": "reported_reproduced_remediated_released_retested",
+      "reporter": "VrtxOmega",
+      "initial_target": "agent-security-harness v4.25.0",
+      "initial_claim": "closed-port / 404 / bare-403 no-surface behavior reproduced",
+      "additional_counterexample_counts": {
+        "redirect_loop": 45,
+        "empty_500": 35,
+        "empty_200": 134,
+        "empty_204": 144
+      },
+      "external_owner_reproduction": {
+        "actor": "msaleme",
+        "reproduced": "over-refusal against an empty HTTP 500 returned 25/25 PASS and exit 0",
+        "source": "https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/622#issuecomment-5845501910"
+      },
+      "upstream_repairs": [
+        "#624",
+        "#625",
+        "#626",
+        "#627",
+        "#629",
+        "#630"
+      ],
+      "upstream_register": {
+        "initial_known_incorrect_cells": 346,
+        "initial_families": 19,
+        "final_cells": 0
+      },
+      "release": {
+        "version": "v4.26.0",
+        "published_at": "2026-09-26T13:46:39Z",
+        "url": "https://github.com/msaleme/red-team-blue-team-agent-fabric/releases/tag/v4.26.0"
+      },
+      "external_retest": {
+        "result": "nine-pole released-package behavior reproduced with zero unexpected target PASS/FAIL",
+        "evidence_repo_pr": "https://github.com/VrtxOmega/veritas-agent-trust-lab/pull/78",
+        "raw_workflow": "https://github.com/VrtxOmega/veritas-agent-trust-lab/actions/runs/36254603030"
+      },
+      "count_effect": {
+        "direct_external_pr_merges": 0,
+        "pcf_era_direct_merges": 0
+      },
+      "boundary": "Technical feedback/remediation evidence only; not PCF or VERITAS validation, adoption, endorsement, or a direct authored upstream merge."
+    }
+  ],
+  "new_evidence_gates": [
+    "Confirm the narrow stated claim before widening the falsification surface.",
+    "Publish exact artifact identity, independent target behavior, parser rules, raw outputs, and a rerunnable path.",
+    "Convert discovered failure shapes into shrink-only regression state rather than one-off fixes.",
+    "Retest the exact released artifact after upstream remediation.",
+    "Keep technical impact, adoption, approval, and direct merge evidence in separate classes."
+  ]
 }
