@@ -95,6 +95,19 @@ This does **not** increase the direct external PR merge count and is not indepen
 4. **Retest the released artifact.** A fix on `main` is not the end of the lifecycle; verify the exact package/tag users will consume.
 5. **Keep evidence classes separate.** Technical impact, adoption, approval, and direct authored merges are distinct signals and must not inflate one another.
 
+## Mirror invariant follow-on — verdict reachability
+
+The #622 repair round exposed a second, opposite failure class after the false-assurance verdicts were removed.
+
+- [#628](https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/628): AutoGen's JSON-success transport discarded the real HTTP status, so valid JSON-speaking targets became `status=0` and could not reliably reach PASS or FAIL. A focused external reproduction confirmed benign served JSON became INCONCLUSIVE and an attack-bearing served JSON answer also became INCONCLUSIVE.
+- [#631](https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/631): capability-profile positive/refusal paths could not see ordinary A2A envelopes, while INT-001 and MAG-019 could detect explicit positive evidence and then have that verdict erased by a suite-wide ambiguity guard.
+- The reviewed prototype demonstrated a narrow repair shape: preserve transport-authored status over body-authored metadata, reuse the existing envelope-aware `agent_prose` extractor, and mark explicitly observed positive controls so the generic negative-only ambiguity rule does not erase them.
+- A structural inconsistency was also found: some INCONCLUSIVE branches rewrote the prose state without setting `not_evaluated=true`.
+
+Gate retained: **a trustworthy evaluator must be able to be wrong and able to be right.** False-positive suppression is only half of verdict integrity. For a test whose contract permits both outcomes, preserve at least one served PASS control and one served FAIL control; if a shared guard or transport change makes either pole unreachable, treat that as a regression and keep a shrink-only reachability register until the pole is restored.
+
+Persistent external evidence is recorded in the Trust Lab at `evidence/ASH_REACHABILITY_FOLLOWON_20260926.md` with the reviewed prototype patch beside it. This remains external I0 execution/review of the upstream harness, not independent validation of PCF or VERITAS.
+
 ## Independent public PCF usage discovered in this refresh
 
 A global GitHub code search found an independently owned public repository using PCF itself:
