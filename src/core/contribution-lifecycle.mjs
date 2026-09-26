@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-export const CONTRIBUTION_LIFECYCLE_VERSION = "2026.07.19";
+export const CONTRIBUTION_LIFECYCLE_VERSION = "2026.09.26";
 
 export const LIFECYCLE_CLASSIFICATIONS = Object.freeze({
   CURRENT_AND_APPLICABLE: lifecycleDefinition(
