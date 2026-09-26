@@ -62,7 +62,7 @@ const GATES = {
     }).status
   },
   lane: {
-    pass: () => buildLaneStatus({ gates: allLaneGates(() => passGate()) }).status,
+    ready: () => buildLaneStatus({ gates: allLaneGates(() => passGate()) }).status,
     review: () => buildLaneStatus({
       gates: { ...allLaneGates(() => passGate()), claimIntegrity: { status: "review", evidence: [{ path: "claim.json" }] } }
     }).status,
