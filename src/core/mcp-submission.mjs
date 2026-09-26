@@ -240,8 +240,8 @@ export function buildMcpSubmissionReadiness({ packageInfo, tools, resources, pro
     ),
     check(
       "schema-and-doctrine-resources",
-      ["pcf://schemas/lane", "pcf://schemas/repro", "pcf://doctrine/safety"].every((uri) => resourceUris.has(uri)),
-      "Lane schema, repro schema, and safety doctrine resources are exposed."
+      ["pcf://schemas/lane", "pcf://schemas/repro", "pcf://schemas/claim-integrity", "pcf://doctrine/safety"].every((uri) => resourceUris.has(uri)),
+      "Lane schema, repro schema, claim-integrity schema, and safety doctrine resources are exposed."
     ),
     check(
       "submission-review-prompt",
