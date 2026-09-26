@@ -248,7 +248,9 @@ When a class of known-bad cases exists:
 4. let the register shrink toward zero;
 5. keep the regression controls permanently.
 
-Useful future PCF registers include:
+PCF now exposes `pcf residue-register` (and MCP `pcf_residue_register`) for this exact pattern. A run passes only when the declared and observed residue identifiers match exactly; new residue fails, and repaired/stale declarations also fail until the register is updated.
+
+Useful registers include:
 
 - known false-ready cases;
 - known false-block cases;
