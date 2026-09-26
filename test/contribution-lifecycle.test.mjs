@@ -121,7 +121,7 @@ test("lifecycle events fail closed on pre-observation timestamps, duplicate ids,
   unknown.events = [{ at: base.observedAt, type: "magic-success" }];
   assert.throws(
     () => assessContributionLifecycle(unknown),
-    (error) => error instanceof ContributionLifecycleError && /must be one of/i.test(error.message)
+    (error) => error instanceof ContributionLifecycleError && /unsupported value/i.test(error.message)
   );
 });
 
