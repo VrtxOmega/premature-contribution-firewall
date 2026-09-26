@@ -28,6 +28,7 @@ import { scanTouchedFilePolicy } from "../core/policy-scan.mjs";
 import { buildMaintainerQueue } from "../core/queue.mjs";
 import { analyzeRepositoryContext } from "../core/repository-context.mjs";
 import { evaluateReproGate } from "../core/repro-gate.mjs";
+import { evaluateResidueRegister } from "../core/residue-register.mjs";
 import { buildContributorScout } from "../core/scout.mjs";
 import { buildSemanticDuplicateAssist } from "../core/semantic-duplicate-assist.mjs";
 import { buildSeriousCandidateScout } from "../core/serious-scout.mjs";
@@ -253,6 +254,15 @@ const TOOLS = [
     description: "Package a supplied claim into a portable try-to-break-it artifact with target identity, controls, exceptions, commands, parser rules, adjacent shapes, and scope boundaries. Never executes the packet.",
     inputSchema: objectSchema({
       input: { type: "object", description: "Falsification packet input; may contain claimIntegrity plus target, commands, exceptions, parserRules, and adjacentShapes." }
+    }, ["input"]),
+    annotations: TOOL_ANNOTATIONS
+  },
+  {
+    name: "pcf_residue_register",
+    title: "Shrink-Only Residue Register",
+    description: "Compare a declared known-defect register with a newly observed set. New residue and stale declarations both fail until the register is deliberately reconciled.",
+    inputSchema: objectSchema({
+      input: { type: "object", description: "Register input with name, declared entries, and observed entries." }
     }, ["input"]),
     annotations: TOOL_ANNOTATIONS
   },
@@ -552,6 +562,8 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
       return evaluateClaimIntegrity(args.input || {});
     case "pcf_falsification_packet":
       return buildFalsificationPacket(args.input || {});
+    case "pcf_residue_register":
+      return evaluateResidueRegister(args.input || {});
     case "pcf_lane_status":
       return buildLaneStatus(args);
     case "pcf_lane_resume":
