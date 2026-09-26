@@ -1,5 +1,5 @@
 export const PCF_REPRO_EVIDENCE_SCHEMA_VERSION = "2026-06-11";
-export const PCF_SAFETY_DOCTRINE_VERSION = "2026-06-11";
+export const PCF_SAFETY_DOCTRINE_VERSION = "2026-09-26";
 
 export const PCF_REPRO_EVIDENCE_SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -79,6 +79,7 @@ export const PCF_SAFETY_DOCTRINE = {
     "overlap",
     "policy",
     "repro",
+    "claimIntegrity",
     "diffShape",
     "preflight",
     "pr",
