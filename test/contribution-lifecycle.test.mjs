@@ -57,6 +57,74 @@ test("Hermes case separates the observation-time decision from the later outcome
   assert.match(result.publicProof.guidance, /do not describe the original contribution as directly merged/i);
 });
 
+test("later lifecycle events are append-only provenance and cannot change the original classification or fingerprint", () => {
+  const item = fixture.cases.find((entry) => entry.id === "hermes-two-claim-refactor-salvage");
+  const baseline = assessContributionLifecycle(item.input);
+  const withEvents = structuredClone(item.input);
+  withEvents.events = [
+    {
+      id: "published",
+      at: "2026-07-20T00:00:00.000Z",
+      type: "published",
+      actor: "github:VrtxOmega",
+      subject: "Original contribution published",
+      url: "https://github.com/example/repo/pull/1",
+      summary: "Contribution entered external review."
+    },
+    {
+      id: "external-review",
+      at: "2026-07-21T00:00:00.000Z",
+      type: "external-reviewed",
+      actor: "github:maintainer",
+      summary: "Maintainer reviewed the contribution."
+    },
+    {
+      id: "release-retest",
+      at: "2026-07-22T00:00:00.000Z",
+      type: "release-retested",
+      actor: "github:VrtxOmega",
+      summary: "Released artifact was retested."
+    }
+  ];
+  const result = assessContributionLifecycle(withEvents);
+
+  assert.equal(result.classification, baseline.classification);
+  assert.equal(result.assessmentSha256, baseline.assessmentSha256);
+  assert.equal(result.boundaries.eventsUsedForClassification, false);
+  assert.deepEqual(result.events.map((event) => event.id), ["published", "external-review", "release-retest"]);
+  assert.ok(result.events.every((event) => event.usedForClassification === false));
+  assert.match(renderContributionLifecycleMarkdown(result), /Lifecycle Timeline/);
+  assert.match(renderContributionLifecycleSummary(result), /Timeline events excluded from classification: yes/);
+});
+
+test("lifecycle events fail closed on pre-observation timestamps, duplicate ids, and unknown event types", () => {
+  const base = fixture.cases.find((entry) => entry.id === "current-and-applicable").input;
+
+  const early = structuredClone(base);
+  early.events = [{ id: "early", at: "2020-01-01T00:00:00.000Z", type: "published" }];
+  assert.throws(
+    () => assessContributionLifecycle(early),
+    (error) => error instanceof ContributionLifecycleError && /cannot be earlier than observedAt/i.test(error.message)
+  );
+
+  const duplicate = structuredClone(base);
+  duplicate.events = [
+    { id: "same", at: base.observedAt, type: "published" },
+    { id: "same", at: base.observedAt, type: "external-reviewed" }
+  ];
+  assert.throws(
+    () => assessContributionLifecycle(duplicate),
+    (error) => error instanceof ContributionLifecycleError && /duplicated/i.test(error.message)
+  );
+
+  const unknown = structuredClone(base);
+  unknown.events = [{ at: base.observedAt, type: "magic-success" }];
+  assert.throws(
+    () => assessContributionLifecycle(unknown),
+    (error) => error instanceof ContributionLifecycleError && /must be one of/i.test(error.message)
+  );
+});
+
 test("contradictory evidence fails closed to maintainer decision", () => {
   const input = structuredClone(fixture.cases.find((entry) => entry.id === "current-and-applicable").input);
   input.claimUnits[0].defectState = "resolved";
