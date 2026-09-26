@@ -81,6 +81,7 @@ pcf://mcp/server-card
 | `pcf_repro_gate` | read-only | Classify caller-supplied before/after repro evidence and optionally compose a claim-integrity contract. |
 | `pcf_claim_integrity` | read-only | Require a judgeable surface, evidence authority, root-cause support, and reachable PASS/FAIL controls. |
 | `pcf_falsification_packet` | read-only | Build a portable try-to-break-it packet from a supplied claim and exact target identity. |
+| `pcf_residue_register` | read-only | Enforce a shrink-only known-defect register; new and stale residue both fail until reconciled. |
 | `pcf_lane_status` | read-only | Summarize supplied lane gates into status and next gate. |
 | `pcf_lane_resume` | read-only | Read one local lane record and summarize the next gate. |
 | `pcf_lane_read` | read-only | Read one local lane record from the fixed lane store. |
