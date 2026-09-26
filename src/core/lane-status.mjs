@@ -4,6 +4,7 @@ const DEFAULT_GATE_ORDER = [
   "overlap",
   "policy",
   "repro",
+  "claimIntegrity",
   "diffShape",
   "preflight",
   "pr",

@@ -1,5 +1,5 @@
-export const PCF_REPRO_EVIDENCE_SCHEMA_VERSION = "2026-06-11";
-export const PCF_SAFETY_DOCTRINE_VERSION = "2026-06-11";
+export const PCF_REPRO_EVIDENCE_SCHEMA_VERSION = "2026-09-26";
+export const PCF_SAFETY_DOCTRINE_VERSION = "2026-09-26";
 
 export const PCF_REPRO_EVIDENCE_SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -19,6 +19,7 @@ export const PCF_REPRO_EVIDENCE_SCHEMA = {
       type: "array",
       items: { "$ref": "#/$defs/artifact" }
     },
+    claimIntegrity: { type: "object" },
     generatedAt: { type: "string" }
   },
   $defs: {
@@ -79,6 +80,7 @@ export const PCF_SAFETY_DOCTRINE = {
     "overlap",
     "policy",
     "repro",
+    "claimIntegrity",
     "diffShape",
     "preflight",
     "pr",
@@ -239,8 +241,8 @@ export function buildMcpSubmissionReadiness({ packageInfo, tools, resources, pro
     ),
     check(
       "schema-and-doctrine-resources",
-      ["pcf://schemas/lane", "pcf://schemas/repro", "pcf://doctrine/safety"].every((uri) => resourceUris.has(uri)),
-      "Lane schema, repro schema, and safety doctrine resources are exposed."
+      ["pcf://schemas/lane", "pcf://schemas/repro", "pcf://schemas/claim-integrity", "pcf://doctrine/safety"].every((uri) => resourceUris.has(uri)),
+      "Lane schema, repro schema, claim-integrity schema, and safety doctrine resources are exposed."
     ),
     check(
       "submission-review-prompt",

@@ -171,7 +171,7 @@ export function buildSeriousCandidateScout(input = {}) {
     nonClaims: [
       "Serious scout is read-only: it does not clone repositories, write patches, open PRs, comment, label, or contact maintainers.",
       "A candidate means the issue looks serious and reviewable enough to spend preflight time, not that a patch should be written immediately.",
-      "Run contribution policy, AI/tooling policy, open-PR overlap, current-upstream reproduction, TODO/FIXME, and diff-shape gates before coding.",
+      "Run contribution policy, AI/tooling policy, open-PR overlap, current-upstream reproduction, root-cause/claim-integrity, TODO/FIXME, and diff-shape gates before coding.",
     "Cosmetic, docs-only, feature-request, duplicate, stale, assigned, generated-tracker, bot-created CI/E2E report, platform-compatibility, and no-repro rows are intentionally down-ranked or blocked."
     ]
   };
@@ -541,7 +541,7 @@ function automationVerdict(summary = {}, { collection = {}, overlap = {} } = {})
     return {
       status: "PROMOTE",
       reason: "Serious candidate rows cleared the impact, evidence, and scope bar.",
-      nextGate: "Run policy, AI/tooling, open-PR overlap, current-upstream repro, TODO/FIXME, and diff-shape gates before coding."
+      nextGate: "Run policy, AI/tooling, open-PR overlap, current-upstream repro, root-cause/claim-integrity, TODO/FIXME, and diff-shape gates before coding."
     };
   }
   return {
@@ -689,8 +689,8 @@ function seriousnessForScore(score, impactScore) {
 
 function nextGateForStatus(status) {
   if (status === "blocked") return "Do not code; inspect blocker or choose another issue.";
-  if (status === "review") return "Manually inspect evidence, repo policy, overlap, and current-upstream behavior before cloning.";
-  return "Run policy, AI/tooling, overlap, current-upstream repro, TODO/FIXME, and diff-shape gates.";
+  if (status === "review") return "Manually inspect evidence, repo policy, overlap, current-upstream behavior, and whether the claim has a judgeable surface before cloning.";
+  return "Run policy, AI/tooling, overlap, current-upstream repro, root-cause/claim-integrity, TODO/FIXME, and diff-shape gates.";
 }
 
 function signalReason(id) {

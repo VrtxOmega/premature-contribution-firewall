@@ -31,6 +31,9 @@ import {
   renderContributionLifecycleMarkdown,
   renderContributionLifecycleSummary
 } from "./core/contribution-lifecycle.mjs";
+import { evaluateClaimIntegrity } from "./core/claim-integrity.mjs";
+import { buildFalsificationPacket } from "./core/falsification-packet.mjs";
+import { evaluateResidueRegister } from "./core/residue-register.mjs";
 import { loadConfig } from "./config.mjs";
 
 const args = process.argv.slice(2);
@@ -41,7 +44,7 @@ if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
 }
 
 const command = args[0];
-if (!["evaluate", "evaluate-patch", "queue", "setup", "setup-pilot", "preflight", "validate-corpus", "study", "lifecycle"].includes(command)) {
+if (!["evaluate", "evaluate-patch", "queue", "setup", "setup-pilot", "preflight", "validate-corpus", "study", "lifecycle", "claim-integrity", "falsify", "residue-register"].includes(command)) {
   console.error(`Unknown command: ${command}`);
   printHelp();
   process.exit(2);
@@ -53,6 +56,18 @@ if (command === "study") {
 
 if (command === "lifecycle") {
   await runContributionLifecycle(args.slice(1));
+}
+
+if (command === "claim-integrity") {
+  await runClaimIntegrity(args.slice(1));
+}
+
+if (command === "falsify") {
+  await runFalsificationPacket(args.slice(1));
+}
+
+if (command === "residue-register") {
+  await runResidueRegister(args.slice(1));
 }
 
 if (command === "setup" || command === "setup-pilot") {
@@ -142,16 +157,20 @@ if (command === "queue") {
 if (command === "preflight") {
   const input = parsePreflightInput(text, file, { profile, policyFiles });
   const evaluation = evaluateContribution(input, { profile: profile || input.profile });
+  const claimIntegrity = input.claimIntegrity ? evaluateClaimIntegrity(input.claimIntegrity) : null;
   const allowRepair = args.includes("--allow-repair");
-  const ready = evaluation.status === "ready-for-maintainer"
+  const evaluationReady = evaluation.status === "ready-for-maintainer"
     || (allowRepair && evaluation.status === "needs-repair");
+  const ready = evaluationReady && (!claimIntegrity || claimIntegrity.status === "pass");
 
   if (format === "json") {
-    console.log(JSON.stringify({ ready, gate: allowRepair ? "allow-repair" : "ready-only", evaluation }, null, 2));
+    console.log(JSON.stringify({ ready, gate: allowRepair ? "allow-repair" : "ready-only", evaluation, claimIntegrity }, null, 2));
   } else if (format === "markdown") {
-    console.log(renderMarkdownReport(evaluation));
+    const parts = [renderMarkdownReport(evaluation)];
+    if (claimIntegrity) parts.push(renderClaimIntegrityMarkdown(claimIntegrity));
+    console.log(parts.join("\n\n"));
   } else {
-    printPreflightPretty(evaluation, { ready, allowRepair });
+    printPreflightPretty(evaluation, { ready, allowRepair, claimIntegrity });
   }
   process.exit(ready ? 0 : 1);
 }
@@ -186,12 +205,13 @@ function parsePreflightInput(rawText, fileName, { profile: requestedProfile, pol
   });
 }
 
-function printPreflightPretty(evaluation, { ready, allowRepair }) {
+function printPreflightPretty(evaluation, { ready, allowRepair, claimIntegrity = null }) {
   const verdict = ready ? "READY TO SUBMIT" : "NOT READY YET";
   console.log(`PCF contributor preflight: ${verdict}`);
   console.log(`Status: ${evaluation.status} (${evaluation.score}/100)`);
   console.log(`Profile: ${evaluation.profile.name}`);
   console.log(`Gate: ${allowRepair ? "ready-for-maintainer or needs-repair passes" : "only ready-for-maintainer passes"}`);
+  if (claimIntegrity) console.log(`Claim integrity: ${claimIntegrity.status.toUpperCase()} - ${claimIntegrity.summary}`);
   console.log("");
   console.log(evaluation.summary);
   if (!ready && evaluation.repairSteps.length) {
@@ -409,6 +429,194 @@ async function runContributionLifecycle(lifecycleArgs) {
   }
 }
 
+async function runClaimIntegrity(values) {
+  const file = values[0];
+  if (!file) {
+    console.error("PCF claim integrity failed: input file is required.");
+    process.exit(2);
+  }
+  const format = readFlag(values, "--format") || "pretty";
+  if (!["pretty", "json", "markdown"].includes(format)) {
+    console.error(`PCF claim integrity failed: unsupported format '${format}'.`);
+    process.exit(2);
+  }
+  try {
+    const text = file === "-" ? await readStdin() : await readFile(file, "utf8");
+    const result = evaluateClaimIntegrity(JSON.parse(text));
+    if (format === "json") {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (format === "markdown") {
+      console.log(renderClaimIntegrityMarkdown(result));
+    } else {
+      console.log(`PCF claim integrity: ${result.status.toUpperCase()}`);
+      console.log(result.summary);
+      for (const entry of result.blockers) console.log(`- BLOCK ${entry.id}: ${entry.reason}`);
+      for (const entry of result.warnings) console.log(`- REVIEW ${entry.id}: ${entry.reason}`);
+      console.log(`Assessment SHA-256: ${result.assessmentSha256}`);
+    }
+    process.exit(result.status === "pass" ? 0 : 1);
+  } catch (error) {
+    const message = error?.code === "ENOENT"
+      ? "Required claim-integrity input file is missing."
+      : error instanceof SyntaxError
+        ? "Claim-integrity input file contains invalid JSON."
+        : error?.message || "Unexpected claim-integrity error.";
+    console.error(`PCF claim integrity failed: ${message}`);
+    process.exit(1);
+  }
+}
+
+async function runFalsificationPacket(values) {
+  const file = values[0];
+  if (!file) {
+    console.error("PCF falsification packet failed: input file is required.");
+    process.exit(2);
+  }
+  const format = readFlag(values, "--format") || "pretty";
+  if (!["pretty", "json", "markdown"].includes(format)) {
+    console.error(`PCF falsification packet failed: unsupported format '${format}'.`);
+    process.exit(2);
+  }
+  try {
+    const text = file === "-" ? await readStdin() : await readFile(file, "utf8");
+    const result = buildFalsificationPacket(JSON.parse(text));
+    if (format === "json") {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (format === "markdown") {
+      console.log(renderFalsificationPacketMarkdown(result));
+    } else {
+      console.log(`PCF falsification packet: ${result.readyToPublish ? "READY" : "DRAFT"}`);
+      console.log(`Integrity status: ${result.integrityStatus}`);
+      console.log(`Packet SHA-256: ${result.packetSha256}`);
+      if (result.publicationBlockers.length) {
+        for (const entry of result.publicationBlockers) console.log(`- ${entry.reason}`);
+      }
+    }
+    process.exit(result.readyToPublish ? 0 : 1);
+  } catch (error) {
+    const message = error?.code === "ENOENT"
+      ? "Required falsification input file is missing."
+      : error instanceof SyntaxError
+        ? "Falsification input file contains invalid JSON."
+        : error?.message || "Unexpected falsification-packet error.";
+    console.error(`PCF falsification packet failed: ${message}`);
+    process.exit(1);
+  }
+}
+
+async function runResidueRegister(values) {
+  const file = values[0];
+  if (!file) {
+    console.error("PCF residue register failed: input file is required.");
+    process.exit(2);
+  }
+  const format = readFlag(values, "--format") || "pretty";
+  if (!["pretty", "json", "markdown"].includes(format)) {
+    console.error(`PCF residue register failed: unsupported format '${format}'.`);
+    process.exit(2);
+  }
+  try {
+    const text = file === "-" ? await readStdin() : await readFile(file, "utf8");
+    const result = evaluateResidueRegister(JSON.parse(text));
+    if (format === "json") {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (format === "markdown") {
+      console.log(renderResidueRegisterMarkdown(result));
+    } else {
+      console.log(`PCF shrink-only residue register: ${result.status.toUpperCase()}`);
+      console.log(result.summary);
+      for (const entry of result.blockers) console.log(`- ${entry.id}: ${entry.reason}`);
+    }
+    process.exit(result.status === "pass" ? 0 : 1);
+  } catch (error) {
+    const message = error?.code === "ENOENT"
+      ? "Required residue-register input file is missing."
+      : error instanceof SyntaxError
+        ? "Residue-register input file contains invalid JSON."
+        : error?.message || "Unexpected residue-register error.";
+    console.error(`PCF residue register failed: ${message}`);
+    process.exit(1);
+  }
+}
+
+function renderResidueRegisterMarkdown(result) {
+  const lines = [
+    "# PCF Shrink-Only Residue Register",
+    "",
+    `**Name:** ${result.name}`,
+    `**Status:** ${result.status}`,
+    `**Declared:** ${result.counts.declared}`,
+    `**Observed:** ${result.counts.observed}`,
+    `**New:** ${result.counts.new}`,
+    `**Stale:** ${result.counts.stale}`,
+    "",
+    result.summary,
+    "",
+    "## Blockers"
+  ];
+  if (!result.blockers.length) lines.push("", "- none");
+  else for (const entry of result.blockers) lines.push("", `- **${entry.id}:** ${entry.reason}`);
+  lines.push("", "## Doctrine", "", "- New undeclared residue fails.", "- Stale declared residue also fails until the register is updated.", "- Regression controls stay even after the register shrinks.", "");
+  return lines.join("\n");
+}
+
+function renderClaimIntegrityMarkdown(result) {
+  const lines = [
+    "# PCF Claim Integrity",
+    "",
+    `**Status:** ${result.status}`,
+    `**Assessment SHA-256:** \`${result.assessmentSha256}\``,
+    "",
+    "## Claim",
+    "",
+    result.claim.statement || "(missing)",
+    "",
+    "## Evidence surface",
+    "",
+    result.surface.observable || "(missing)",
+    "",
+    "## Blockers"
+  ];
+  if (!result.blockers.length) lines.push("", "- none");
+  else for (const entry of result.blockers) lines.push("", `- **${entry.id}:** ${entry.reason}`);
+  lines.push("", "## Warnings");
+  if (!result.warnings.length) lines.push("", "- none");
+  else for (const entry of result.warnings) lines.push("", `- **${entry.id}:** ${entry.reason}`);
+  lines.push("", "## Boundary", "", ...result.nonClaims.map((entry) => `- ${entry}`), "");
+  return lines.join("\n");
+}
+
+function renderFalsificationPacketMarkdown(result) {
+  const lines = [
+    "# PCF Falsification Packet",
+    "",
+    `**Ready to publish:** ${result.readyToPublish ? "yes" : "no"}`,
+    `**Packet SHA-256:** \`${result.packetSha256}\``,
+    `**Integrity status:** ${result.integrityStatus}`,
+    "",
+    "## Claim",
+    "",
+    result.claim.statement || "(missing)",
+    "",
+    "## Target",
+    "",
+    `- Repository: ${result.target.repository || "(unspecified)"}`,
+    `- Ref: ${result.target.ref || "(unspecified)"}`,
+    `- Artifact: ${result.target.artifact || "(unspecified)"}`,
+    `- SHA-256: ${result.target.sha256 || "(unspecified)"}`,
+    "",
+    "## Reproduction commands",
+    ""
+  ];
+  if (!result.commands.length) lines.push("- none supplied");
+  else for (const command of result.commands) lines.push(`- \`${command.command}\` — expected exit ${command.expectedExitCode ?? "unspecified"}`);
+  lines.push("", "## Adjacent shapes", "");
+  if (!result.adjacentShapes.length) lines.push("- none supplied");
+  else for (const shape of result.adjacentShapes) lines.push(`- ${shape}`);
+  lines.push("", "## Boundaries", "", ...result.boundaries.map((entry) => `- ${entry}`), "");
+  return lines.join("\n");
+}
+
 function printStudyResult(result, format) {
   if (format === "json") {
     console.log(JSON.stringify(result, null, 2));
@@ -433,6 +641,9 @@ function printHelp() {
   node src/cli.mjs evaluate-patch <patch-or-mbox> [--format pretty|json|markdown] [--profile kernel-grade] [--policy policy-files.json]
   node src/cli.mjs preflight <payload.json|patch-or-mbox> [--allow-repair] [--format pretty|json|markdown] [--profile standard|kernel-grade] [--policy policy-files.json]
   node src/cli.mjs lifecycle <lifecycle-input.json|-> [--format pretty|json|markdown]
+  node src/cli.mjs claim-integrity <claim-integrity.json|-> [--format pretty|json|markdown]
+  node src/cli.mjs falsify <falsification-input.json|-> [--format pretty|json|markdown]
+  node src/cli.mjs residue-register <register.json|-> [--format pretty|json|markdown]
   node src/cli.mjs validate-corpus <consented.jsonl|consented.csv|-> [--input-format jsonl|csv] [--format pretty|json|markdown]
   node src/cli.mjs study init --root <absolute-path> --protocol <protocol.json> --sampling-frame <frame.json> [--mode production|synthetic] [--format pretty|json|markdown]
   node src/cli.mjs study consent|observe|freeze|rate --root <absolute-path> --input <record.json> [--format pretty|json|markdown]
@@ -443,5 +654,8 @@ function printHelp() {
 
 Preflight exit codes: 0 = ready to submit, 1 = not ready, 2 = usage error.
 Lifecycle exit codes: 0 = assessment produced, 1 = evidence failed closed, 2 = usage error.
+Claim-integrity exit codes: 0 = integrity pass, 1 = blocked or review, 2 = usage error.
+Falsification exit codes: 0 = publish-ready packet, 1 = draft packet, 2 = usage error.
+Residue-register exit codes: 0 = declared and observed residue match, 1 = new/stale/duplicate residue, 2 = usage error.
 Corpus validation exit codes: 0 = corpus measured, 1 = validation failed closed, 2 = usage error.`);
 }

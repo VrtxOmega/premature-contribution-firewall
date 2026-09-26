@@ -17,9 +17,10 @@ const requests = [
   { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "pcf_health", arguments: {} } },
   { jsonrpc: "2.0", id: 5, method: "resources/read", params: { uri: "pcf://mcp/server-card" } },
   { jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "pcf_submission_readiness", arguments: {} } },
+  { jsonrpc: "2.0", id: 7, method: "resources/read", params: { uri: "pcf://schemas/claim-integrity" } },
   {
     jsonrpc: "2.0",
-    id: 7,
+    id: 8,
     method: "tools/call",
     params: {
       name: "pcf_repro_gate",
@@ -72,6 +73,9 @@ const toolNames = byId.get(2).result.tools.map((tool) => tool.name);
 assert.ok(toolNames.includes("pcf_health"));
 assert.ok(toolNames.includes("pcf_submission_readiness"));
 assert.ok(toolNames.includes("pcf_repro_gate"));
+assert.ok(toolNames.includes("pcf_claim_integrity"));
+assert.ok(toolNames.includes("pcf_falsification_packet"));
+assert.ok(toolNames.includes("pcf_residue_register"));
 assert.ok(toolNames.includes("pcf_lane_resume"));
 assert.equal(toolNames.some((name) => /comment|label|merge|push|open_pr/i.test(name)), false);
 
@@ -84,6 +88,8 @@ const health = JSON.parse(byId.get(4).result.content[0].text);
 assert.equal(health.githubWrites, "disabled");
 assert.equal(health.submissionReadinessTool, "pcf_submission_readiness");
 assert.ok(health.tools.includes("pcf_repro_gate"));
+assert.ok(health.tools.includes("pcf_claim_integrity"));
+assert.ok(health.tools.includes("pcf_residue_register"));
 assert.ok(health.tools.includes("pcf_lane_resume"));
 
 const serverCard = JSON.parse(byId.get(5).result.contents[0].text);
@@ -94,8 +100,11 @@ const readiness = JSON.parse(byId.get(6).result.content[0].text);
 assert.equal(readiness.status, "pass");
 assert.ok(readiness.checks.some((check) => check.id === "glama-metadata"));
 
-const repro = JSON.parse(byId.get(7).result.content[0].text);
+const claimSchema = JSON.parse(byId.get(7).result.contents[0].text);
+assert.equal(claimSchema.schema.title, "PCF Claim Integrity Input");
+
+const repro = JSON.parse(byId.get(8).result.content[0].text);
 assert.equal(repro.status, "pass");
 assert.match(repro.nonClaims.join("\n"), /PCF MCP did not execute/);
 
-console.log("PASS pcf-mcp smoke: health, server card, readiness, repro gate, and no public-write tools verified.");
+console.log("PASS pcf-mcp smoke: health, server card, readiness, repro gate, claim-integrity schema, and no public-write tools verified.");

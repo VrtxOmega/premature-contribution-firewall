@@ -4,6 +4,8 @@ Premature Contribution Firewall keeps the CLI for humans and scripts, and expose
 
 The MCP server is intentionally boring and explicit:
 
+Claim integrity adds one more rule: evidence must be capable of distinguishing the claim from its opposite. A gate that blocks bad evidence but can no longer accept good evidence is also broken.
+
 - no GitHub writes
 - no PR creation
 - no comments or labels
@@ -76,7 +78,10 @@ pcf://mcp/server-card
 | `pcf_policy_profile` | read-only | Extract policy requirements from supplied policy file contents. |
 | `pcf_policy_scan` | read-only | Scan supplied touched-file contents for TODO/FIXME policy conflicts. |
 | `pcf_diff_shape` | read-only | Check changed-file stats against reviewability limits. |
-| `pcf_repro_gate` | read-only | Classify caller-supplied before/after repro evidence. |
+| `pcf_repro_gate` | read-only | Classify caller-supplied before/after repro evidence and optionally compose a claim-integrity contract. |
+| `pcf_claim_integrity` | read-only | Require a judgeable surface, evidence authority, root-cause support, and reachable PASS/FAIL controls. |
+| `pcf_falsification_packet` | read-only | Build a portable try-to-break-it packet from a supplied claim and exact target identity. |
+| `pcf_residue_register` | read-only | Enforce a shrink-only known-defect register; new and stale residue both fail until reconciled. |
 | `pcf_lane_status` | read-only | Summarize supplied lane gates into status and next gate. |
 | `pcf_lane_resume` | read-only | Read one local lane record and summarize the next gate. |
 | `pcf_lane_read` | read-only | Read one local lane record from the fixed lane store. |
@@ -101,6 +106,7 @@ Top-level lane artifacts may be descriptive notes with a non-empty summary and n
 | `pcf://api/spec` | Local PCF API and schema summary. |
 | `pcf://schemas/lane` | Contribution-lane schema and recommended gate order. |
 | `pcf://schemas/repro` | Before/after repro-evidence schema for `pcf_repro_gate`. |
+| `pcf://schemas/claim-integrity` | Claim/surface/control schema for evidence authority and verdict reachability. |
 | `pcf://doctrine/safety` | Agent safety doctrine, public-action boundary, and non-claims. |
 | `pcf://docs/watchlist` | Watchlist operating model. |
 | `pcf://docs/upstream-ledger` | Public upstream contribution learning ledger. |
@@ -133,7 +139,7 @@ pcf://schemas/lane
 Recommended gate order:
 
 ```text
-scout -> overlap -> policy -> repro -> diffShape -> preflight -> pr -> provenance -> calibration
+scout -> aiPosture -> overlap -> policy -> repro -> claimIntegrity -> diffShape -> preflight -> pr -> provenance -> calibration
 ```
 
 `pcf_lane_resume` reads one saved lane from this store and returns the current status plus next gate. It does not verify live GitHub state, local git state, or command output freshness.
@@ -182,12 +188,14 @@ omsg-drain codex
 3. `pcf_lane_save` to persist the selected lane.
 4. `pcf_policy_scan` on touched files.
 5. `pcf_repro_gate` on caller-supplied before/after repro and validation logs.
-6. `pcf_evidence_bundle_save` for the proof bundle after commands have actually been run elsewhere.
-7. `pcf_diff_shape` on changed-file stats.
-8. `pcf_preflight` on the final PR body or patch.
-9. `pcf_pr_body_draft` from the evidence.
-10. `pcf_lane_resume` when another agent or later session picks up the lane.
-11. After merge only, `pcf_provenance_draft`.
+6. `pcf_claim_integrity` to prove the claim has a real surface, root-cause chain, fresh route state, and reachable positive/negative controls.
+7. `pcf_falsification_packet` to package exact target identity, exceptions, parser rules, and adjacent break-shapes for independent reproduction.
+8. `pcf_evidence_bundle_save` for the proof bundle after commands have actually been run elsewhere.
+9. `pcf_diff_shape` on changed-file stats.
+10. `pcf_preflight` on the final PR body or patch.
+11. `pcf_pr_body_draft` from the evidence.
+12. `pcf_lane_resume` when another agent or later session picks up the lane.
+13. After merge only, `pcf_provenance_draft`.
 
 ## Safety and Threat Model
 
@@ -198,6 +206,8 @@ PCF MCP is a local stdio server for agent decision support. Its threat model is 
 - It does not perform arbitrary filesystem reads.
 - It does not claim that supplied evidence is true.
 - `pcf_repro_gate` blocks verdict-only before/after assertions unless a command result or phase-tagged artifact substantiates them.
+- `pcf_claim_integrity` blocks decisive verdicts without a judgeable surface, caller claims that contradict higher-authority observations, stale fail-closed routing evidence, incomplete high-risk root-cause chains, and unreachable two-sided verdict poles.
+- `pcf_falsification_packet` never executes the packet; a packet is publish-ready only when its embedded claim-integrity assessment passes.
 - Repro notes (including `note`, `summary`, and `output` aliases) are retained as context. Their presence or wording cannot establish evidence, reproduction, or successful validation. Supply structured verdicts or command results; PCF still evaluates caller-supplied data and does not authenticate artifact contents or execute commands.
 - The stdio transport rejects frames above 2,000,000 bytes and returns JSON-RPC parse errors for malformed bounded frames without losing the following valid frame.
 - It does not make network-egress claims for Node itself, package installation, or the surrounding MCP client; it claims only that PCF MCP tools do not perform live collection or public writes.

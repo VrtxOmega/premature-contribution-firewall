@@ -7,6 +7,9 @@ test("API spec exposes callable maintainer endpoints", () => {
   assert.equal(spec.ok, true);
   assert.equal(spec.dryRun, true);
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/evaluate-batch"));
+  assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/claim-integrity"));
+  assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/falsification-packet"));
+  assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/residue-register"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/benchmark"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/github/queue"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/github/setup"));
@@ -23,6 +26,8 @@ test("API spec exposes callable maintainer endpoints", () => {
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/feedback/candidates/export"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/feedback/candidates/compare"));
   assert.ok(spec.endpoints.some((endpoint) => endpoint.path === "/api/repositories/:owner/:repo/queue"));
+  assert.ok(spec.schemas.claimIntegrity.controls.includes("positive"));
+  assert.match(spec.schemas.falsificationPacket.output, /packetSha256/);
   assert.ok(spec.schemas.feedback.verdicts.includes("too-harsh"));
   assert.match(spec.schemas.feedback.originalPayload, /runnable fixture/);
   assert.match(spec.schemas.feedbackExport.runnableFixture, /benchmark-compatible/);

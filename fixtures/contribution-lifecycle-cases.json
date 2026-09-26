@@ -1,12 +1,12 @@
 {
   "artifact": "pcf-contribution-lifecycle-fixtures",
-  "version": "2026.07.19",
+  "version": "2026.09.26",
   "cases": [
     {
       "id": "hermes-two-claim-refactor-salvage",
       "input": {
         "artifact": "pcf-contribution-lifecycle-input",
-        "version": "2026.07.19",
+        "version": "2026.09.26",
         "assessmentMode": "retrospective",
         "repository": "NousResearch/hermes-agent",
         "observedAt": "2026-07-16T14:19:36.000Z",
@@ -67,7 +67,7 @@
       "id": "current-and-applicable",
       "input": {
         "artifact": "pcf-contribution-lifecycle-input",
-        "version": "2026.07.19",
+        "version": "2026.09.26",
         "assessmentMode": "live",
         "repository": "example/current",
         "observedAt": "2026-07-19T12:00:00.000Z",
@@ -92,7 +92,7 @@
       "id": "drifted-but-rebaseable",
       "input": {
         "artifact": "pcf-contribution-lifecycle-input",
-        "version": "2026.07.19",
+        "version": "2026.09.26",
         "assessmentMode": "live",
         "repository": "example/rebase",
         "observedAt": "2026-07-19T12:00:00.000Z",
@@ -117,7 +117,7 @@
       "id": "salvageable-invariant",
       "input": {
         "artifact": "pcf-contribution-lifecycle-input",
-        "version": "2026.07.19",
+        "version": "2026.09.26",
         "assessmentMode": "live",
         "repository": "example/salvage",
         "observedAt": "2026-07-19T12:00:00.000Z",
@@ -142,7 +142,7 @@
       "id": "superseded-equivalent",
       "input": {
         "artifact": "pcf-contribution-lifecycle-input",
-        "version": "2026.07.19",
+        "version": "2026.09.26",
         "assessmentMode": "live",
         "repository": "example/superseded",
         "observedAt": "2026-07-19T12:00:00.000Z",
@@ -167,7 +167,7 @@
       "id": "invalidated",
       "input": {
         "artifact": "pcf-contribution-lifecycle-input",
-        "version": "2026.07.19",
+        "version": "2026.09.26",
         "assessmentMode": "live",
         "repository": "example/invalidated",
         "observedAt": "2026-07-19T12:00:00.000Z",
@@ -192,7 +192,7 @@
       "id": "uncertain-evidence",
       "input": {
         "artifact": "pcf-contribution-lifecycle-input",
-        "version": "2026.07.19",
+        "version": "2026.09.26",
         "assessmentMode": "live",
         "repository": "example/uncertain",
         "observedAt": "2026-07-19T12:00:00.000Z",

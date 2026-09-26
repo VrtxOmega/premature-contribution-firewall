@@ -1,0 +1,121 @@
+{
+  "generatedAt": "2026-09-26T17:31:00Z",
+  "claim": {
+    "id": "PCF-CI-V03-SELF",
+    "statement": "The claim-integrity buildout refuses decisive contribution claims without sufficient observable evidence while preserving reachable positive and negative verdict poles for its core decision gates.",
+    "assertedVerdict": "pass",
+    "scope": "PCF code at 3ce5c3c60d748031e1034011e54e94b2e1673d38; focused claim-integrity, residue-register, repro, lane, diff-shape, and policy-scan controls exercised by CI.",
+    "risk": "high",
+    "twoSided": true,
+    "generalization": {
+      "statement": "PCF evidence gates should neither manufacture decisive verdicts from absent evidence nor erase legitimate verdicts when sufficient evidence is present.",
+      "asserted": false,
+      "testedShapes": [
+        "decisive verdict with no surface",
+        "caller-claimed metadata conflicts with observed evidence",
+        "negative verdict pole collapses to PASS",
+        "stale maintainer-owned backport routing",
+        "narrow claim inflated into an untested general invariant",
+        "repro/pass-review-blocked reachability",
+        "claim-integrity/pass-review-blocked reachability",
+        "diff-shape/pass-review-blocked reachability",
+        "policy-scan/pass-review-blocked reachability",
+        "lane/ready-review-blocked reachability"
+      ],
+      "untestedShapes": []
+    }
+  },
+  "surface": {
+    "observable": "GitHub Actions executes the code-complete commit and the unit/reachability/red-test controls emit deterministic gate states.",
+    "state": "served",
+    "requiredEvidenceKinds": [
+      "execution"
+    ]
+  },
+  "controls": {
+    "positive": {
+      "description": "A fully supported two-sided high-risk claim with authoritative execution evidence, fresh routing, and complete root-cause chain reaches PASS.",
+      "expectedVerdict": "pass",
+      "observedVerdict": "pass",
+      "executed": true,
+      "evidence": [
+        {
+          "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
+          "kind": "execution",
+          "source": "external",
+          "observationId": "workflow-run-36259278171"
+        }
+      ]
+    },
+    "negative": {
+      "description": "A decisive claim whose evidence surface is absent reaches FAIL/BLOCKED rather than being laundered by otherwise plausible controls.",
+      "expectedVerdict": "fail",
+      "observedVerdict": "fail",
+      "executed": true,
+      "evidence": [
+        {
+          "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
+          "kind": "execution",
+          "source": "external",
+          "observationId": "workflow-run-36259278171"
+        }
+      ]
+    }
+  },
+  "evidence": [
+    {
+      "key": "targetCommit",
+      "kind": "execution",
+      "source": "external",
+      "value": "3ce5c3c60d748031e1034011e54e94b2e1673d38",
+      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
+      "observationId": "workflow-run-36259278171"
+    },
+    {
+      "key": "ciConclusion",
+      "kind": "execution",
+      "source": "external",
+      "value": "success",
+      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
+      "observationId": "workflow-run-36259278171"
+    },
+    {
+      "key": "benchmark",
+      "kind": "execution",
+      "source": "external",
+      "value": "77/77",
+      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
+      "observationId": "workflow-run-36259278171"
+    },
+    {
+      "key": "adversarial",
+      "kind": "execution",
+      "source": "external",
+      "value": "36/36",
+      "path": "https://github.com/VrtxOmega/premature-contribution-firewall/actions/runs/36259278171",
+      "observationId": "workflow-run-36259278171"
+    }
+  ],
+  "rootCause": {
+    "symptom": "PCF could require artifacts and before/after commands yet still lacked a first-class contract proving that the evidence surface actually supported the claim or that both verdict poles remained reachable.",
+    "reachability": "A contribution could clear the repro/evidence-presence layer with structured command results while the claimed property itself was under-observed, overgeneralized, stale-routed, or evaluated by a one-sided mechanism.",
+    "invariant": "A decisive contribution claim must be tied to a judgeable observable surface, higher-authority observations must outrank claims, and each contract that permits two outcomes must keep both verdict poles reachable.",
+    "patchMechanism": "Add Claim -> Evidence Surface -> Controls -> Verdict Reachability, evidence-authority ordering, high-risk root-cause chain, routing freshness, falsification packets, shrink-only residue registers, and a zero-residue core-gate reachability ratchet."
+  },
+  "routing": {
+    "intendedAction": "mainline",
+    "contributionOwner": "contributor",
+    "releaseOwner": "maintainer",
+    "backportOwner": "maintainer",
+    "catalogueEligibility": "not-applicable",
+    "checkedAt": "2026-09-26T17:30:00Z",
+    "evidencePath": "https://github.com/VrtxOmega/premature-contribution-firewall/pull/28"
+  },
+  "freshness": {
+    "required": true,
+    "checkedAt": "2026-09-26T17:30:00Z",
+    "asOf": "2026-09-26T17:31:00Z",
+    "maxAgeHours": 24,
+    "failOnStale": true
+  }
+}

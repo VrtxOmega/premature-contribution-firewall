@@ -2,6 +2,21 @@
 
 ## Unreleased - evidence refresh 2026-09-26
 
+### Claim integrity and falsification
+
+- Added the `Claim -> Evidence Surface -> Controls -> Verdict Reachability` contract so PCF checks whether supplied evidence can actually support a claim instead of merely checking that an artifact exists.
+- Added `pcf claim-integrity` with fail-closed checks for no-surface verdicts, unreachable or non-discriminating controls, high-risk root-cause gaps, observed-vs-claimed evidence conflicts, stale routing/overlap context, maintainer-owned backport/release routing, catalogue-shape mismatch, and overgeneralized untested invariants.
+- Added `pcf falsify` to build deterministic, SHA-256-addressed reproduction packets carrying target identity, scope, controls, commands, parser rules, exceptions, adjacent shapes, and explicit non-claims.
+- Added `claimIntegrity` as a mandatory contribution-lane gate between `repro` and `diffShape`.
+- Composed optional claim integrity into `pcf_repro_gate`, so a green before/after command pair cannot override a blocked evidence contract.
+- Added local API endpoints `/api/claim-integrity` and `/api/falsification-packet`, MCP tools `pcf_claim_integrity` / `pcf_falsification_packet`, and the `pcf://schemas/claim-integrity` resource.
+- Added evidence-authority ordering (`observed` > `external` > `derived` > `claimed`) so caller metadata cannot override higher-authority observed state inside the supplied record.
+- Added adversarial/reachability tests for no-surface verdicts, verdict-pole collapse, stale ownership, root-cause gaps, generalized untested claims, evidence spoofing, repro-gate composition, API parity, and CLI exit-code behavior.
+- Added `pcf residue-register`, local API `/api/residue-register`, and MCP `pcf_residue_register` so known false-ready/false-block/unreachable-verdict residue can be enforced as a shrink-only register: new residue fails and stale repaired declarations also fail until removed.
+- Dogfooded the mirror invariant on PCF itself with a zero-residue verdict-reachability guard across repro, claim-integrity, diff-shape, TODO/FIXME policy scan, and contribution-lane decision gates. A future unreachable declared verdict pole becomes undeclared residue and fails the suite.
+- Expanded the adversarial residue corpus to **36/36** by adding no-surface claims, evidence-authority spoofing, unreachable verdict poles, stale route ownership, and scope-generalization laundering.
+- Extended contribution lifecycle inputs with an append-only typed event timeline for publication, external review/reproduction, remediation, release, and released-artifact retest. Timeline events remain cryptographically excluded from the observation-time classification and assessment fingerprint.
+
 ### September 25 evidence and adoption refresh
 
 - Advanced the verified direct external merge census to **23 overall / 17 PCF-era** after `ClickHouse/ClickHouse#118352` merged on September 24.
@@ -24,7 +39,7 @@
 
 - Fixed fixture CLI entrypoint detection and module-relative configuration paths with native file-URL conversion, including checkout paths containing spaces, `#`, and `%`.
 - Made repository-relative display paths and LF/CRLF workflow expectations portable without weakening dry-run or least-privilege assertions.
-- Current Linux full-gate evidence after PR #26: **302 tests**, **77/77 benchmark cases**, **31/31 adversarial cases**, maintainer demo PASS.
+- Current Linux full-gate evidence after PR #26: **302 tests**, **77/77 benchmark cases**, **36/36 adversarial cases**, maintainer demo PASS.
 - Native Windows full-suite evidence: **296/302**; the remaining six failures are the separately tracked prospective-study permission/symlink cases, with no skipped tests.
 
 ### Repro note handling

@@ -31,6 +31,8 @@ export const REQUIRED_WORKFLOW_SNIPPETS = [
   "npm run benchmark:write",
   "npm run redtest:write",
   "npm run demo:maintainer:write",
+  "node src/cli.mjs claim-integrity docs/claim-integrity-self-assessment-input.json --format json",
+  "node src/cli.mjs falsify docs/claim-integrity-falsification-input.json --format json",
   "actions/upload-artifact@v7"
 ];
 
@@ -61,6 +63,8 @@ export async function verifyCiWorkflow({ workflowPath = DEFAULT_WORKFLOW_PATH } 
     "npm run benchmark:write",
     "npm run redtest:write",
     "npm run demo:maintainer:write",
+    "node src/cli.mjs claim-integrity docs/claim-integrity-self-assessment-input.json --format json",
+    "node src/cli.mjs falsify docs/claim-integrity-falsification-input.json --format json",
     "actions/upload-artifact@v7"
   ]);
 

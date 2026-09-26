@@ -47,6 +47,70 @@ test("preflight emits a machine-readable JSON gate verdict", async () => {
   assert.equal(data.evaluation.status, "ready-for-maintainer");
 });
 
+test("preflight cannot call an otherwise-ready contribution ready when claim integrity is blocked", async () => {
+  const { mkdtemp, readFile, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = await mkdtemp(join(tmpdir(), "pcf-preflight-claim-"));
+  try {
+    const payload = JSON.parse(await readFile(new URL("../fixtures/pr-ready.json", import.meta.url), "utf8"));
+    payload.claimIntegrity = {
+      generatedAt: "2026-09-26T17:00:00Z",
+      claim: {
+        statement: "Ready PR proof establishes the change.",
+        assertedVerdict: "pass",
+        risk: "normal",
+        twoSided: true
+      },
+      surface: {
+        observable: "No target surface was actually exercised.",
+        state: "none"
+      },
+      controls: {
+        positive: {
+          description: "claimed positive",
+          expectedVerdict: "pass",
+          observedVerdict: "pass",
+          executed: true,
+          evidence: [{ path: "after.json", kind: "execution", source: "observed" }]
+        },
+        negative: {
+          description: "claimed negative",
+          expectedVerdict: "fail",
+          observedVerdict: "fail",
+          executed: true,
+          evidence: [{ path: "before.json", kind: "execution", source: "observed" }]
+        }
+      },
+      evidence: [],
+      rootCause: {},
+      routing: {},
+      freshness: {}
+    };
+    const file = join(dir, "payload.json");
+    await writeFile(file, JSON.stringify(payload), "utf8");
+
+    await assert.rejects(
+      execFileAsync(process.execPath, ["src/cli.mjs", "preflight", file, "--format", "json"], { cwd }),
+      (error) => {
+        assert.equal(error.code, 1);
+        const data = JSON.parse(error.stdout);
+        assert.equal(data.evaluation.status, "ready-for-maintainer");
+        assert.equal(data.claimIntegrity.status, "blocked");
+        assert.equal(data.ready, false);
+        return true;
+      }
+    );
+
+    await assert.rejects(
+      execFileAsync(process.execPath, ["src/cli.mjs", "preflight", file, "--format", "markdown"], { cwd }),
+      (error) => error.code === 1 && /PCF Claim Integrity/.test(error.stdout) && /verdict-without-surface/.test(error.stdout)
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("preflight auto-detects plain-text patch input and uses kernel-grade", async () => {
   const { stdout } = await execFileAsync(
     process.execPath,

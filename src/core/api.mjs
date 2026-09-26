@@ -4,8 +4,11 @@ import { parsePatchSubmission } from "./patch.mjs";
 import { DEFAULT_QUEUE_LIMIT, MAX_QUEUE_LIMIT, NEXT_ACTIONS, buildMaintainerQueue } from "./queue.mjs";
 import { buildSetupGuide } from "./setup-guide.mjs";
 import { buildSetupStatus } from "./setup.mjs";
+import { evaluateClaimIntegrity } from "./claim-integrity.mjs";
+import { buildFalsificationPacket } from "./falsification-packet.mjs";
+import { evaluateResidueRegister } from "./residue-register.mjs";
 
-export const API_VERSION = "2026-05-31";
+export const API_VERSION = "2026-09-26";
 export const DEFAULT_BATCH_LIMIT = 100;
 
 export function createApiSpec({ dryRun = true, postComments = false, applyLabels = false, collectRepositoryContext = true } = {}) {
@@ -39,6 +42,21 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
         method: "POST",
         path: "/api/evaluate",
         description: "Evaluate one normalized GitHub issue or pull request payload."
+      },
+      {
+        method: "POST",
+        path: "/api/claim-integrity",
+        description: "Evaluate whether a supplied claim has a judgeable surface, discriminating controls, root-cause support, fresh routing evidence, and reachable verdict poles."
+      },
+      {
+        method: "POST",
+        path: "/api/falsification-packet",
+        description: "Build a portable try-to-break-it packet from a supplied claim-integrity record and target identity."
+      },
+      {
+        method: "POST",
+        path: "/api/residue-register",
+        description: "Compare declared and observed known-defect residue with shrink-only semantics."
       },
       {
         method: "POST",
@@ -162,6 +180,22 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
           }
         }
       },
+      claimIntegrity: {
+        claim: "statement, scope, risk, assertedVerdict, generalization",
+        surface: "observable surface plus required authoritative evidence kinds",
+        controls: "served positive and negative controls with observed verdicts and tangible evidence",
+        rootCause: "symptom -> reachability -> invariant -> patchMechanism chain",
+        routing: "intended action, contribution/backport/release ownership, catalogue eligibility, checkedAt",
+        freshness: "checkedAt/asOf/maxAgeHours with fail-closed stale-context option"
+      },
+      falsificationPacket: {
+        input: "claimIntegrity plus target identity, commands, parser rules, exceptions, adjacent shapes, and artifacts",
+        output: "portable packet with packetSha256, integrity status, scope boundaries, and publication readiness"
+      },
+      residueRegister: {
+        input: "name plus declared and observed residue identifiers",
+        behavior: "shrink-only: new undeclared residue fails; stale declarations that no longer reproduce also fail until removed"
+      },
       evaluatePatch: {
         text: "git format-patch or mbox text",
         profile: "kernel-grade",
@@ -257,6 +291,18 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
       }
     }
   };
+}
+
+export function evaluateClaimIntegritySubmission(payload = {}) {
+  return evaluateClaimIntegrity(payload.input || payload);
+}
+
+export function buildFalsificationSubmission(payload = {}) {
+  return buildFalsificationPacket(payload.input || payload);
+}
+
+export function evaluateResidueRegisterSubmission(payload = {}) {
+  return evaluateResidueRegister(payload.input || payload);
 }
 
 export function evaluateSubmission(payload = {}, options = {}) {

@@ -28,6 +28,9 @@ test("pull request template requires evidence and dry-run guardrails", async () 
   assert.match(template, /## Problem/);
   assert.match(template, /## Change/);
   assert.match(template, /## Risk/);
+  assert.match(template, /## Claim Integrity/);
+  assert.match(template, /Positive control \(must PASS\)/);
+  assert.match(template, /Negative control \(must FAIL\)/);
   assert.match(template, /npm run repo:verify/);
   assert.match(template, /npm run ci:gates/);
   assert.match(template, /does not claim AI-authorship detection/);
@@ -58,6 +61,7 @@ test("package metadata exposes the MCP server in the publish surface", async () 
   assert.equal(packageJson.bin["pcf-mcp"], "src/mcp/server.mjs");
   assert.ok(packageJson.files.includes("src"));
   assert.ok(packageJson.files.includes("docs/MCP.md"));
+  assert.ok(packageJson.files.includes("docs/CLAIM_INTEGRITY.md"));
   assert.ok(packageJson.files.includes("scripts/mcp-smoke.mjs"));
   assert.ok(packageJson.files.includes("glama.json"));
 
