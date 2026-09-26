@@ -1,6 +1,6 @@
-# Upstream Contribution Learning Ledger — 2026-09-25 Addendum
+# Upstream Contribution Learning Ledger — 2026-09-25 Addendum (refreshed 2026-09-26)
 
-This addendum continues the public [Upstream Contribution Learning Ledger](UPSTREAM_CONTRIBUTION_LEDGER.md) and the [September 5 addendum](UPSTREAM_CONTRIBUTION_LEDGER_ADDENDUM_20260905.md) through September 25, 2026.
+This addendum continues the public [Upstream Contribution Learning Ledger](UPSTREAM_CONTRIBUTION_LEDGER.md) and the [September 5 addendum](UPSTREAM_CONTRIBUTION_LEDGER_ADDENDUM_20260905.md) through September 26, 2026. The filename is retained because this refresh began on September 25.
 
 The purpose is calibration, not résumé inflation. Merges count only when GitHub records a direct external VrtxOmega-authored PR as merged. Open PRs, approvals, author-side tests, self-repository changes, maintainer-authored salvage, and catalogue listings remain separate evidence classes.
 
@@ -74,6 +74,27 @@ A machine-readable snapshot accompanies this addendum at [upstream-contribution-
 
 The Tokio approval is useful review evidence but remains zero outcome weight until the repository records a merge or another terminal outcome.
 
+## External technical feedback loop — Agent Security Harness #622
+
+A separate evidence class matured after the September 25 census: a public reproduction report produced upstream remediation even though it was not a pull-request merge.
+
+- Report: [msaleme/red-team-blue-team-agent-fabric#622](https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/622).
+- Initial result against the exact published `agent-security-harness==4.25.0` wheel: the project's named closed-port / 404 / bare-403 claim reproduced, while independently implemented redirect-loop, empty-500, empty-200, and empty-204 targets still produced **45 / 35 / 134 / 144** non-self PASS/FAIL rows.
+- External owner reproduction: the repository owner reran the empty-500 / over-refusal example on a fresh v4.25.0 install and reproduced **25/25 PASS**, agreeing that "Legitimate initialize accepted" from an empty 500 was a false-assurance verdict.
+- Upstream action: PRs [#624](https://github.com/msaleme/red-team-blue-team-agent-fabric/pull/624), [#625](https://github.com/msaleme/red-team-blue-team-agent-fabric/pull/625), [#626](https://github.com/msaleme/red-team-blue-team-agent-fabric/pull/626), [#627](https://github.com/msaleme/red-team-blue-team-agent-fabric/pull/627), [#629](https://github.com/msaleme/red-team-blue-team-agent-fabric/pull/629), and [#630](https://github.com/msaleme/red-team-blue-team-agent-fabric/pull/630) converted the new shapes into permanent guard poles and reduced a **346-cell / 19-family** contentless-answer register to zero.
+- Release: [v4.26.0](https://github.com/msaleme/red-team-blue-team-agent-fabric/releases/tag/v4.26.0) shipped on September 26 with the no-surface guard expanded from three poles to nine.
+- Independent retest: the exact v4.26.0 release wheel was rerun against the same nine independently implemented targets. No unexpected target-dependent PASS/FAIL remained; the only target verdicts were the project's explicitly pinned A2A/payment contract exceptions plus its declared local self-tests. The rerunnable source and raw workflow artifacts are public in [VrtxOmega/veritas-agent-trust-lab#78](https://github.com/VrtxOmega/veritas-agent-trust-lab/pull/78).
+
+This does **not** increase the direct external PR merge count and is not independent validation of PCF or VERITAS. It is evidence of a different thing: a scoped, reproducible technical report was independently checked by an external repository owner, converted into durable regression policy, shipped, and then retested against the released artifact.
+
+### Gates retained from the loop
+
+1. **Confirm the narrow claim before widening the falsification surface.** A useful report can say both "the stated claim reproduced" and "the broader invariant still has residue."
+2. **Publish runnable evidence, not only prose.** Preserve exact artifact identity, target behavior, parser rules, raw outputs, and a rerunnable path so upstream can reproduce the observation without trusting the reporter.
+3. **Turn failure shapes into shrink-only regression state.** A discovered class should become a permanent guard whose known-bad register can only shrink, not a one-off patch.
+4. **Retest the released artifact.** A fix on `main` is not the end of the lifecycle; verify the exact package/tag users will consume.
+5. **Keep evidence classes separate.** Technical impact, adoption, approval, and direct authored merges are distinct signals and must not inflate one another.
+
 ## Independent public PCF usage discovered in this refresh
 
 A global GitHub code search found an independently owned public repository using PCF itself:
@@ -95,6 +116,8 @@ Other public references found in the same search include automated GitHub Market
 5. **Reproduce concurrency review claims against baseline.** Treat lifecycle/race objections as hypotheses to test, not comments to dismiss.
 6. **Approval remains unresolved.** A human approval can be recorded as review evidence, but it is not a merge.
 7. **Independent adoption is a separate evidence class.** A public third-party workflow install is stronger than a mention, but weaker than a claim of broad adoption.
+8. **Separate claim confirmation from falsification residue.** Record what reproduced before reporting the wider failure class.
+9. **Evidence should survive handoff.** Prefer public rerunnable artifacts and release-level retests over private or reporter-only proof.
 
 ## PCF repository hardening since the September 5 evidence refresh
 
