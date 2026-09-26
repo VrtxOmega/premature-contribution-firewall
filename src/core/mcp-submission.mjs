@@ -19,6 +19,7 @@ export const PCF_REPRO_EVIDENCE_SCHEMA = {
       type: "array",
       items: { "$ref": "#/$defs/artifact" }
     },
+    claimIntegrity: { type: "object" },
     generatedAt: { type: "string" }
   },
   $defs: {
