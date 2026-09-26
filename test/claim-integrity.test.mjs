@@ -110,6 +110,14 @@ test("observed evidence outranks and blocks a contradictory caller claim", () =>
   assert.ok(result.blockers.some((entry) => entry.id === "observed-claim-conflict"));
 });
 
+test("control paths do not count when the control evidence is caller-claimed only", () => {
+  const input = readyInput();
+  input.controls.positive.evidence = [{ path: "claimed-after.json", kind: "execution", source: "claimed" }];
+  const result = evaluateClaimIntegrity(input);
+  assert.equal(result.status, "blocked");
+  assert.ok(result.blockers.some((entry) => entry.id === "positive-control-unsubstantiated"));
+});
+
 test("two-sided controls must be reachable and discriminating", () => {
   const input = readyInput();
   input.controls.negative.observedVerdict = "pass";
@@ -197,11 +205,31 @@ test("API helpers expose the same deterministic claim-integrity and packet behav
   const packet = buildFalsificationSubmission({
     input: {
       repository: "owner/repo",
-      target: { ref: "abc1234" },
-      claimIntegrity: readyInput()
+      target: {
+        repository: "owner/repo",
+        ref: "abc1234",
+        artifact: "release.tgz",
+        sha256: "a".repeat(64)
+      },
+      claimIntegrity: readyInput(),
+      commands: [{ command: "node repro.mjs", expectedExitCode: 0 }],
+      parserRules: ["exit 0 means the named control reached its expected verdict"]
     }
   });
   assert.equal(packet.readyToPublish, true);
+});
+
+test("falsification packet fails closed without exact target identity or classification rules", () => {
+  const packet = buildFalsificationPacket({
+    repository: "owner/repo",
+    target: { artifact: "release.tgz" },
+    claimIntegrity: readyInput()
+  });
+  assert.equal(packet.readyToPublish, false);
+  assert.ok(packet.publicationBlockers.some((entry) => entry.id === "target-ref-missing"));
+  assert.ok(packet.publicationBlockers.some((entry) => entry.id === "artifact-digest-missing"));
+  assert.ok(packet.publicationBlockers.some((entry) => entry.id === "reproduction-command-missing"));
+  assert.ok(packet.publicationBlockers.some((entry) => entry.id === "classification-rule-missing"));
 });
 
 test("CLI exposes claim-integrity and falsify with fail-closed exit codes", async () => {
@@ -216,8 +244,15 @@ test("CLI exposes claim-integrity and falsify with fail-closed exit codes", asyn
     await writeFile(blocked, JSON.stringify(blockedInput), "utf8");
     await writeFile(falsify, JSON.stringify({
       repository: "owner/repo",
-      target: { ref: "abc1234" },
-      claimIntegrity: readyInput()
+      target: {
+        repository: "owner/repo",
+        ref: "abc1234",
+        artifact: "release.tgz",
+        sha256: "a".repeat(64)
+      },
+      claimIntegrity: readyInput(),
+      commands: [{ command: "node repro.mjs", expectedExitCode: 0 }],
+      parserRules: ["exit 0 means the named control reached its expected verdict"]
     }), "utf8");
 
     const pass = await execFileAsync(process.execPath, ["src/cli.mjs", "claim-integrity", ready, "--format", "json"], { cwd });
