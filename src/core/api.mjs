@@ -6,6 +6,7 @@ import { buildSetupGuide } from "./setup-guide.mjs";
 import { buildSetupStatus } from "./setup.mjs";
 import { evaluateClaimIntegrity } from "./claim-integrity.mjs";
 import { buildFalsificationPacket } from "./falsification-packet.mjs";
+import { evaluateResidueRegister } from "./residue-register.mjs";
 
 export const API_VERSION = "2026-05-31";
 export const DEFAULT_BATCH_LIMIT = 100;
@@ -51,6 +52,11 @@ export function createApiSpec({ dryRun = true, postComments = false, applyLabels
         method: "POST",
         path: "/api/falsification-packet",
         description: "Build a portable try-to-break-it packet from a supplied claim-integrity record and target identity."
+      },
+      {
+        method: "POST",
+        path: "/api/residue-register",
+        description: "Compare declared and observed known-defect residue with shrink-only semantics."
       },
       {
         method: "POST",
@@ -289,6 +295,10 @@ export function evaluateClaimIntegritySubmission(payload = {}) {
 
 export function buildFalsificationSubmission(payload = {}) {
   return buildFalsificationPacket(payload.input || payload);
+}
+
+export function evaluateResidueRegisterSubmission(payload = {}) {
+  return evaluateResidueRegister(payload.input || payload);
 }
 
 export function evaluateSubmission(payload = {}, options = {}) {
