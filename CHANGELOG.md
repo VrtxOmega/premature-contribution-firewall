@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - evidence refresh 2026-09-25
+## Unreleased - evidence refresh 2026-09-26
 
 ### September 25 evidence and adoption refresh
 
@@ -10,6 +10,14 @@
 - Added gates for root-cause-before-patch, duplicate refresh after long repair cycles, catalogue/product-shape fit, and backport ownership.
 - Recorded at least one independently owned public PCF installation: `rygel/outerstellar-platform` runs the pinned v0.1.3 PR Gate with read-only permissions and `fail-on: never`.
 - Evidence: [September 25 ledger addendum](docs/UPSTREAM_CONTRIBUTION_LEDGER_ADDENDUM_20260925.md) and [machine-readable census](docs/upstream-contribution-refresh-20260925.json).
+
+### External reproduction-to-release loop
+
+- Recorded the public Agent Security Harness #622 lifecycle: the v4.25.0 three-pole claim reproduced, while redirect-loop / empty-500 / empty-200 / empty-204 targets exposed **45 / 35 / 134 / 144** additional non-self verdicts.
+- Recorded the external repository owner's independent reproduction of the strongest empty-500 false-assurance row before remediation.
+- Recorded six upstream repair PRs (#624/#625/#626/#627/#629/#630), which introduced a **346-cell / 19-family** shrink-only contentless-answer register and reduced it to zero.
+- Recorded upstream v4.26.0 plus a separate exact-wheel nine-pole retest with zero unexpected target-dependent PASS/FAIL.
+- Added evidence lessons for narrow-claim confirmation, public rerunnable artifacts, shrink-only regression state, released-artifact retesting, and strict separation of technical impact from adoption/merge counts.
 
 ### Cross-platform hardening
 
