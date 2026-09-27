@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { CLAIM_INTEGRITY_VERSION, evaluateClaimIntegrity } from "./claim-integrity.mjs";
 
-export const FALSIFICATION_PACKET_VERSION = "2026-09-26";
+export const FALSIFICATION_PACKET_VERSION = "2026-09-27";
 
 export function buildFalsificationPacket(input = {}) {
   input = plainObject(input);
@@ -29,6 +29,17 @@ export function buildFalsificationPacket(input = {}) {
   }
   if (target.artifact && !target.sha256) {
     packetBlockers.push({ id: "artifact-digest-missing", reason: "A named target artifact needs a SHA-256 digest before the packet is publishable." });
+  }
+  if (target.repository && !target.commitSha && !target.sha256) {
+    packetBlockers.push({
+      id: "immutable-source-pin-missing",
+      reason: "A source-based repository target needs an immutable 40-hex commit SHA or an exact artifact digest; a moving branch/tag label alone is not a frozen target."
+    });
+  } else if (target.repository && !target.commitSha) {
+    packetWarnings.push({
+      id: "source-commit-not-recorded",
+      reason: "The packet is artifact-pinned by digest, but no immutable repository commit SHA is recorded for source-level comparison."
+    });
   }
   if (!commands.length) {
     packetBlockers.push({ id: "reproduction-command-missing", reason: "A publishable falsification packet needs at least one reproduction command." });
@@ -84,6 +95,7 @@ export function buildFalsificationPacket(input = {}) {
     publicationWarnings: packetWarnings,
     nonClaims: [
       "The packet does not execute its commands or prove that target hashes, refs, or artifacts exist.",
+      "Moving branch or tag names are not treated as immutable source identity; record a commit SHA or exact artifact digest.",
       "It packages a falsifiable claim so another implementation or operator can try to break it.",
       "A ready packet is not a correctness, security, mergeability, or endorsement certificate."
     ]
@@ -92,9 +104,12 @@ export function buildFalsificationPacket(input = {}) {
 
 function normalizeTarget(value) {
   const target = plainObject(value);
+  const ref = text(target.ref || target.commit || target.tag);
+  const commitSha = text(target.commitSha || target.sourceCommit || target.commitSha256 || (/^[a-f0-9]{40}$/i.test(ref) ? ref : ""));
   return {
     repository: text(target.repository || target.repo),
-    ref: text(target.ref || target.commit || target.tag),
+    ref,
+    commitSha,
     artifact: text(target.artifact || target.package || target.file),
     sha256: text(target.sha256 || target.digest || target.hash),
     environment: text(target.environment || target.runtime)
