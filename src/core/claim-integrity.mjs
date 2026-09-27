@@ -715,11 +715,6 @@ function normalizeExitCode(value) {
   return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
-function finiteNumber(value, fallback) {
-  const n = Number(value);
-  return Number.isFinite(n) && n >= 0 ? n : fallback;
-}
-
 function stableValue(value) {
   return JSON.stringify(stableObject(value));
 }
