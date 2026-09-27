@@ -139,6 +139,30 @@ Claim integrity can timestamp context with:
 
 When freshness is required, stale context fails closed until it is refreshed.
 
+Required freshness also fails closed when the measurement cannot be trusted in the first place:
+
+- `checkedAt` is missing;
+- `asOf` is missing, so age cannot be measured;
+- either timestamp is invalid;
+- `checkedAt` is later than `asOf`;
+- `maxAgeHours` is malformed, negative, or non-finite.
+
+PCF does not silently replace an invalid caller-supplied freshness bound with the default. A bad clock or bad age limit is evidence failure, not fresh evidence.
+
+## Independent-evaluator claims
+
+A separate implementation can be valuable without being independent in every sense.
+
+PCF therefore distinguishes:
+
+- **declared grouping** — labels such as model family, prompt ancestry, or retrieval set;
+- **supported grouping** — a count backed by tangible non-claimed provenance evidence;
+- **authenticated independence** — a stronger claim that still depends on the quality of that provenance.
+
+When independent verification is required, self-declared labels alone cannot satisfy the gate. The record must state the required group count, the supported group count, the evidence basis, and tangible evidence from an observed or external source.
+
+This deliberately avoids the mistake of turning normalized names into identity proof. Canonicalizing `Model-A` and `model-a` can prevent cosmetic double-counting; it cannot prove that two differently named evaluators are actually independent.
+
 ## CLI
 
 Evaluate a claim-integrity record:
@@ -167,6 +191,7 @@ pcf falsify falsification-input.json --format json
 A packet can carry:
 
 - exact repository/ref;
+- immutable repository commit SHA when source identity matters;
 - package or artifact identity;
 - SHA-256;
 - narrow claim;
@@ -181,6 +206,8 @@ A packet can carry:
 - non-claims.
 
 The packet receives its own SHA-256 over the deterministic packet core.
+
+A moving branch or tag label is not treated as frozen source identity. Source-based packets need an immutable commit SHA; an exact artifact digest can independently freeze a release artifact. If only the artifact is pinned, PCF warns that source-level comparison lacks a recorded commit.
 
 A falsification packet is publication-ready only when its embedded claim-integrity assessment passes.
 
@@ -274,4 +301,4 @@ Claim integrity does **not** prove:
 
 It makes a narrower promise:
 
-> PCF will not call supplied evidence sufficient merely because it looks complete. The claim must name what can be observed, the evidence must discriminate, authority must be explicit, routing must be current, and reachable verdicts must remain reachable.
+> PCF will not call supplied evidence sufficient merely because it looks complete. The claim must name what can be observed, the evidence must discriminate, authority must be explicit, required freshness must be measurable, independence must not be inferred from labels alone, routing must be current, and reachable verdicts must remain reachable.
