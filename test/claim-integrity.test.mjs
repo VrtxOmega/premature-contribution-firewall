@@ -148,6 +148,52 @@ test("stale ownership evidence and maintainer-owned backports fail closed", () =
   assert.ok(result.blockers.some((entry) => entry.id === "context-evidence-stale"));
 });
 
+test("required freshness fails closed when its clock or age bound is unusable", () => {
+  const missingAsOf = readyInput({ generatedAt: "" });
+  missingAsOf.freshness.asOf = "";
+  let result = evaluateClaimIntegrity(missingAsOf);
+  assert.equal(result.status, "blocked");
+  assert.ok(result.blockers.some((entry) => entry.id === "freshness-asof-missing"));
+
+  const badAge = readyInput();
+  badAge.freshness.maxAgeHours = "not-a-number";
+  result = evaluateClaimIntegrity(badAge);
+  assert.equal(result.status, "blocked");
+  assert.ok(result.blockers.some((entry) => entry.id === "freshness-max-age-invalid"));
+
+  const future = readyInput();
+  future.freshness.checkedAt = "2026-09-26T17:00:01Z";
+  result = evaluateClaimIntegrity(future);
+  assert.equal(result.status, "blocked");
+  assert.ok(result.blockers.some((entry) => entry.id === "freshness-time-from-future"));
+});
+
+test("declared evaluator labels cannot satisfy a required independence claim", () => {
+  const input = readyInput();
+  input.independence = {
+    required: true,
+    requiredGroups: 2,
+    supportedGroups: 2,
+    basis: "declared",
+    evidence: [{ kind: "provenance", source: "claimed", path: "declared-groups.json" }]
+  };
+  let result = evaluateClaimIntegrity(input);
+  assert.equal(result.status, "blocked");
+  assert.ok(result.blockers.some((entry) => entry.id === "independence-declared-only"));
+  assert.ok(result.blockers.some((entry) => entry.id === "independence-evidence-missing"));
+
+  input.independence.basis = "external";
+  input.independence.evidence = [{
+    kind: "provenance",
+    source: "external",
+    path: "external/provenance.json",
+    digest: "b".repeat(64)
+  }];
+  result = evaluateClaimIntegrity(input);
+  assert.equal(result.status, "pass");
+  assert.equal(result.independence.supportedGroups, 2);
+});
+
 test("asserted generalized invariants cannot hide named untested shapes", () => {
   const input = readyInput();
   input.claim.generalization.asserted = true;
@@ -186,6 +232,29 @@ test("falsification packet packages a publish-ready claim without pretending to 
   assert.equal(result.integrityStatus, "pass");
   assert.match(result.packetSha256, /^[a-f0-9]{64}$/);
   assert.match(result.nonClaims.join("\n"), /does not execute/i);
+});
+
+test("source-only falsification packets require an immutable commit rather than a moving branch label", () => {
+  const base = {
+    repository: "owner/repo",
+    claimIntegrity: readyInput(),
+    commands: [{ command: "node reproduce.mjs", expectedExitCode: 0 }],
+    parserRules: ["exit 0 means the named control reached its expected verdict"]
+  };
+
+  const moving = buildFalsificationPacket({
+    ...base,
+    target: { repository: "owner/repo", ref: "main" }
+  });
+  assert.equal(moving.readyToPublish, false);
+  assert.ok(moving.publicationBlockers.some((entry) => entry.id === "immutable-source-pin-missing"));
+
+  const frozen = buildFalsificationPacket({
+    ...base,
+    target: { repository: "owner/repo", ref: "c".repeat(40) }
+  });
+  assert.equal(frozen.readyToPublish, true);
+  assert.equal(frozen.target.commitSha, "c".repeat(40));
 });
 
 test("repro gate composes claim-integrity blockers instead of accepting an otherwise green before/after pair", () => {

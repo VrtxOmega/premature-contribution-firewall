@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-export const CLAIM_INTEGRITY_VERSION = "2026-09-26";
+export const CLAIM_INTEGRITY_VERSION = "2026-09-27";
 
 const PASS = new Set(["pass", "passed", "ready", "fixed", "verified", "success", "accepted"]);
 const FAIL = new Set(["fail", "failed", "blocked", "rejected", "regression", "unsafe"]);
@@ -19,6 +19,7 @@ export function evaluateClaimIntegrity(input = {}) {
   const rootCause = normalizeRootCause(input.rootCause || {});
   const routing = normalizeRouting(input.routing || input.routeOwnership || {});
   const freshness = normalizeFreshness(input.freshness || {}, input.generatedAt || input.observedAt || "");
+  const independence = normalizeIndependence(input.independence || input.evaluatorIndependence || {});
   const blockers = [];
   const warnings = [];
 
@@ -63,12 +64,14 @@ export function evaluateClaimIntegrity(input = {}) {
   evaluateGeneralization({ claim, blockers, warnings });
   evaluateRouting({ routing, freshness, blockers, warnings });
   evaluateFreshness({ freshness, blockers, warnings });
+  evaluateIndependence({ independence, blockers, warnings });
 
   const status = blockers.length ? "blocked" : warnings.length ? "review" : "pass";
   const evidencePaths = unique([
     ...evidence.map((item) => item.path).filter(Boolean),
     ...controls.positive.evidence.map((item) => item.path).filter(Boolean),
-    ...controls.negative.evidence.map((item) => item.path).filter(Boolean)
+    ...controls.negative.evidence.map((item) => item.path).filter(Boolean),
+    ...independence.evidence.map((item) => item.path).filter(Boolean)
   ]);
 
   const assessment = {
@@ -83,6 +86,7 @@ export function evaluateClaimIntegrity(input = {}) {
     rootCause,
     routing,
     freshness,
+    independence,
     evidence,
     authority,
     blockers,
@@ -108,6 +112,7 @@ export function evaluateClaimIntegrity(input = {}) {
     rootCause,
     routing,
     freshness,
+    independence,
     evidence,
     authority,
     blockers,
@@ -167,6 +172,16 @@ export function claimIntegritySchemaResource() {
         rootCause: { type: "object" },
         routing: { type: "object" },
         freshness: { type: "object" },
+        independence: {
+          type: "object",
+          properties: {
+            required: { type: "boolean" },
+            requiredGroups: { type: "number", minimum: 1 },
+            supportedGroups: { type: "number", minimum: 0 },
+            basis: { type: "string", enum: ["declared", "observed", "external", "mixed", "unknown"] },
+            evidence: { type: "array", items: { "$ref": "#/$defs/evidence" } }
+          }
+        },
         generatedAt: { type: "string" }
       },
       $defs: {
@@ -200,7 +215,8 @@ export function claimIntegritySchemaResource() {
       authorityOrder: ["observed", "external", "derived", "claimed"],
       twoSidedRule: "When the contract permits both outcomes, preserve a served PASS control and a served FAIL control.",
       surfaceRule: "No decisive verdict without an observable surface sufficient to support that verdict.",
-      freshnessRule: "Routing, overlap, ownership, and upstream-state evidence can expire and must be refreshed before publication."
+      freshnessRule: "Required freshness fails closed when time bounds are missing, malformed, future-dated, or stale.",
+      independenceRule: "Self-declared evaluator labels do not establish independent verification; required independence needs tangible non-claimed evidence for enough supported groups."
     }
   };
 }
@@ -301,13 +317,37 @@ function normalizeRouting(value) {
   };
 }
 
+function normalizeIndependence(value) {
+  const independence = plainObject(value);
+  const requiredGroupsRaw = independence.requiredGroups ?? independence.minimumGroups ?? 2;
+  const supportedGroupsRaw = independence.supportedGroups ?? independence.verifiedGroups ?? independence.independentGroups;
+  const requiredGroups = Number(requiredGroupsRaw);
+  const supportedGroups = supportedGroupsRaw === undefined || supportedGroupsRaw === null || supportedGroupsRaw === ""
+    ? null
+    : Number(supportedGroupsRaw);
+  const basis = normalize(independence.basis || independence.authority || "unknown");
+  return {
+    required: independence.required === true,
+    requiredGroups,
+    supportedGroups,
+    basis: ["declared", "observed", "external", "mixed", "unknown"].includes(basis) ? basis : "unknown",
+    evidence: normalizeEvidence(independence.evidence || independence.artifacts || []),
+    requiredGroupsValid: Number.isFinite(requiredGroups) && requiredGroups >= 1,
+    supportedGroupsValid: supportedGroups === null || (Number.isFinite(supportedGroups) && supportedGroups >= 0)
+  };
+}
+
 function normalizeFreshness(value, fallbackAsOf) {
   const freshness = plainObject(value);
+  const supplied = freshness.maxAgeHours !== undefined && freshness.maxAgeHours !== null && freshness.maxAgeHours !== "";
+  const parsed = supplied ? Number(freshness.maxAgeHours) : 168;
   return {
     required: freshness.required === true,
     checkedAt: text(freshness.checkedAt),
     asOf: text(freshness.asOf || fallbackAsOf),
-    maxAgeHours: finiteNumber(freshness.maxAgeHours, 168),
+    maxAgeHours: Number.isFinite(parsed) && parsed >= 0 ? parsed : null,
+    maxAgeHoursSupplied: supplied,
+    maxAgeHoursValid: Number.isFinite(parsed) && parsed >= 0,
     failOnStale: freshness.failOnStale !== false
   };
 }
@@ -447,7 +487,14 @@ function evaluateFreshness({ freshness, blockers, warnings }) {
     return;
   }
   if (!freshness.asOf) {
-    warnings.push(warning("freshness-asof-missing", "checkedAt is present but no asOf time was supplied, so evidence age cannot be measured."));
+    const entry = freshness.required
+      ? blocker("freshness-asof-missing", "Freshness is required, but no asOf time was supplied, so evidence age cannot be measured.")
+      : warning("freshness-asof-missing", "checkedAt is present but no asOf time was supplied, so evidence age cannot be measured.");
+    (freshness.required ? blockers : warnings).push(entry);
+    return;
+  }
+  if (!freshness.maxAgeHoursValid) {
+    blockers.push(blocker("freshness-max-age-invalid", "maxAgeHours must be a finite non-negative number; invalid bounds cannot establish freshness."));
     return;
   }
   const checked = Date.parse(freshness.checkedAt);
@@ -466,6 +513,52 @@ function evaluateFreshness({ freshness, blockers, warnings }) {
       ? blocker("context-evidence-stale", `Routing/overlap context is ${ageHours.toFixed(1)}h old, above the ${freshness.maxAgeHours}h limit.`, { ageHours })
       : warning("context-evidence-stale", `Routing/overlap context is ${ageHours.toFixed(1)}h old, above the ${freshness.maxAgeHours}h limit.`, { ageHours });
     (freshness.failOnStale ? blockers : warnings).push(entry);
+  }
+}
+
+function evaluateIndependence({ independence, blockers, warnings }) {
+  const hasSignal = independence.required
+    || independence.supportedGroups !== null
+    || independence.basis !== "unknown"
+    || independence.evidence.length;
+  if (!hasSignal) return;
+
+  if (!independence.requiredGroupsValid) {
+    blockers.push(blocker("independence-required-groups-invalid", "requiredGroups must be a finite number of at least one."));
+    return;
+  }
+  if (!independence.supportedGroupsValid) {
+    blockers.push(blocker("independence-supported-groups-invalid", "supportedGroups must be a finite non-negative number when supplied."));
+    return;
+  }
+
+  const tangible = independence.evidence.some((item) => isAuthoritativeEvidence(item) && isTangibleEvidence(item));
+  if (independence.required && !tangible) {
+    blockers.push(blocker(
+      "independence-evidence-missing",
+      "Independent verification is required, but no tangible non-claimed provenance evidence supports the grouping."
+    ));
+  }
+
+  if (independence.required && ["declared", "unknown"].includes(independence.basis)) {
+    blockers.push(blocker(
+      "independence-declared-only",
+      "Self-declared evaluator labels do not establish independent verification."
+    ));
+  } else if (!independence.required && independence.basis === "declared") {
+    warnings.push(warning(
+      "independence-declared-only",
+      "Evaluator grouping is based only on declared labels and must not be described as authenticated independence."
+    ));
+  }
+
+  if (independence.required && independence.supportedGroups === null) {
+    blockers.push(blocker("independence-count-missing", "Independent verification is required, but supportedGroups is missing."));
+  } else if (independence.supportedGroups !== null && independence.supportedGroups < independence.requiredGroups) {
+    const entry = independence.required
+      ? blocker("independence-insufficient-groups", `Only ${independence.supportedGroups}/${independence.requiredGroups} independently supported group(s) are recorded.`)
+      : warning("independence-insufficient-groups", `Only ${independence.supportedGroups}/${independence.requiredGroups} independently supported group(s) are recorded.`);
+    (independence.required ? blockers : warnings).push(entry);
   }
 }
 
@@ -620,11 +713,6 @@ function normalizeExitCode(value) {
   if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? Math.trunc(n) : null;
-}
-
-function finiteNumber(value, fallback) {
-  const n = Number(value);
-  return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
 
 function stableValue(value) {

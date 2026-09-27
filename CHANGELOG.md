@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased - evidence refresh 2026-09-26
+## Unreleased - evidence refresh 2026-09-27
+
+### September 27 external-verification hardening
+
+- Recorded the tolegm / AstraNL Trust Lab Track 1 report as a separate evidence class: all 12 frozen result objects and five generated files reproduced exactly, while adjacent heartbeat-freshness and evaluator-grouping failures remained outside the fixed-fixture claim.
+- Required freshness now fails closed when `asOf` is missing, `checkedAt` is future-dated, or a caller-supplied `maxAgeHours` is malformed/negative/non-finite instead of silently falling back to a default.
+- Added an optional evaluator-independence contract. When independent verification is required, self-declared grouping labels cannot satisfy the gate; tangible non-claimed provenance evidence and enough supported groups are required.
+- Falsification packets now distinguish moving refs from immutable source identity. Source-only repository targets require a 40-hex commit SHA; exact artifact digests can freeze release artifacts while emitting a source-level warning when no commit is recorded.
+- Updated claim-integrity doctrine and public documentation to keep declared grouping, supported grouping, and authenticated independence separate.
+- Updated the current-main evidence count from 302 to this hardening's verified full Linux gate: **331 tests**, **77/77 benchmark**, **36/36 adversarial**, maintainer demo PASS.
+- Evidence: [Trust Lab external reproduction lessons](docs/TRUST_LAB_EXTERNAL_REPRO_20260927.md).
 
 ### Claim integrity and falsification
 
