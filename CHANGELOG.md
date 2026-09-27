@@ -9,7 +9,7 @@
 - Added an optional evaluator-independence contract. When independent verification is required, self-declared grouping labels cannot satisfy the gate; tangible non-claimed provenance evidence and enough supported groups are required.
 - Falsification packets now distinguish moving refs from immutable source identity. Source-only repository targets require a 40-hex commit SHA; exact artifact digests can freeze release artifacts while emitting a source-level warning when no commit is recorded.
 - Updated claim-integrity doctrine and public documentation to keep declared grouping, supported grouping, and authenticated independence separate.
-- Updated the current-main evidence count from 302 to the latest verified pre-branch full Linux run: **328 tests**, **77/77 benchmark**, **36/36 adversarial**, maintainer demo PASS.
+- Updated the current-main evidence count from 302 to this hardening's verified full Linux gate: **331 tests**, **77/77 benchmark**, **36/36 adversarial**, maintainer demo PASS.
 - Evidence: [Trust Lab external reproduction lessons](docs/TRUST_LAB_EXTERNAL_REPRO_20260927.md).
 
 ### Claim integrity and falsification
