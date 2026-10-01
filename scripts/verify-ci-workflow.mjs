@@ -33,7 +33,10 @@ export const REQUIRED_WORKFLOW_SNIPPETS = [
   "npm run demo:maintainer:write",
   "node src/cli.mjs claim-integrity docs/claim-integrity-self-assessment-input.json --format json",
   "node src/cli.mjs falsify docs/claim-integrity-falsification-input.json --format json",
-  "actions/upload-artifact@v7"
+  "actions/upload-artifact@v7",
+  "windows-gates:",
+  "runs-on: windows-latest",
+  "npm run ci:gates"
 ];
 
 export const FORBIDDEN_WORKFLOW_SNIPPETS = [

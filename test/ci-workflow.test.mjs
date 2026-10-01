@@ -27,6 +27,24 @@ test("CI workflow stays dry-run and least-privilege", async () => {
   assertDryRunWorkflow(workflow);
 });
 
+test("CI workflow requires the Windows proof gates", async () => {
+  const workflow = await readFile(workflowPath, "utf8");
+  const dir = await mkdtemp(join(tmpdir(), "pcf-workflow-windows-"));
+  const copyPath = join(dir, "workflow.yml");
+  try {
+    for (const snippet of ["windows-gates:", "runs-on: windows-latest", "npm run ci:gates"]) {
+      const mutated = workflow.replace(snippet, "removed-windows-gate");
+      assert.notEqual(mutated, workflow);
+      await writeFile(copyPath, mutated);
+      const result = await verifyCiWorkflow({ workflowPath: copyPath });
+      assert.equal(result.ok, false);
+      assert.ok(result.failures.includes(`missing required workflow snippet: ${snippet}`));
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 function assertDryRunWorkflow(workflow) {
   assert.match(workflow, /permissions:\r?\n\s+contents: read/);
   assert.match(workflow, /PCF_DRY_RUN: "true"/);

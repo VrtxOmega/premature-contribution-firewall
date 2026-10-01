@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { chmod, mkdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -22,8 +22,67 @@ const OBSERVED_AT = "2026-07-13T21:05:00.000Z";
 const FREEZE_AT = "2026-07-13T21:06:00.000Z";
 const RATING_AT = "2026-07-13T21:10:00.000Z";
 const AGGREGATE_LOCK_AT = "2026-07-28T00:00:00.000Z";
+const posixOnly = { skip: process.platform === "win32" && "Study storage requires POSIX owner-only permissions; Windows rejection is tested separately." };
+const windowsOnly = { skip: process.platform !== "win32" && "Native Windows storage contract." };
 
-test("study initialization creates a private local store and rejects symlink roots", async () => {
+test("native Windows study APIs reject before creating or modifying storage", windowsOnly, async () => {
+  const parent = await temporaryParent();
+  const root = join(parent, "study");
+  const rejectsWindows = (error) => error instanceof ProspectiveStudyError
+    && /unsupported on native Windows/.test(error.message)
+    && /Linux or WSL/.test(error.message);
+  try {
+    for (const mode of ["synthetic", "production"]) {
+      await assert.rejects(() => initializeProspectiveStudy({
+        root, protocol: studyProtocol(), samplingFrame: studyFrame(), mode
+      }), rejectsWindows);
+      assert.deepEqual(await readdir(parent), []);
+    }
+
+    // An existing store must also be rejected without changing its contents.
+    await mkdir(root);
+    const sentinel = join(root, "study.json");
+    const original = '{"untouched":true}\n';
+    await writeFile(sentinel, original);
+    for (const operation of [
+      initializeProspectiveStudy, readProspectiveStudyStatus, recordStudyConsent,
+      recordStudyObservation, freezeStudyCase, submitStudyRating,
+      withdrawStudyParticipant, analyzeProspectiveStudy
+    ]) {
+      await assert.rejects(() => operation({ root }), rejectsWindows);
+      assert.deepEqual(await readdir(root), ["study.json"]);
+      assert.equal(await readFile(sentinel, "utf8"), original);
+    }
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
+});
+
+test("native Windows study CLI fails with actionable guidance and no store", windowsOnly, async () => {
+  const parent = await temporaryParent();
+  const root = join(parent, "study");
+  try {
+    const protocolPath = join(parent, "protocol.json");
+    const framePath = join(parent, "sampling-frame.json");
+    await writeFile(protocolPath, JSON.stringify(studyProtocol()));
+    await writeFile(framePath, JSON.stringify(studyFrame()));
+    for (const args of [
+      ["init", "--protocol", protocolPath, "--sampling-frame", framePath, "--mode", "synthetic"],
+      ["status"]
+    ]) {
+      const result = runCli(["study", ...args, "--root", root, "--format", "json"]);
+      assert.equal(result.status, 1, result.stderr);
+      assert.equal(result.stdout, "");
+      assert.match(result.stderr, /unsupported on native Windows/);
+      assert.match(result.stderr, /Linux or WSL/);
+      await assert.rejects(() => stat(root), { code: "ENOENT" });
+    }
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
+});
+
+test("study initialization creates a private local store and rejects symlink roots", posixOnly, async () => {
   const parent = await temporaryParent();
   const root = join(parent, "study");
   try {
@@ -139,7 +198,7 @@ test("study initialization creates a private local store and rejects symlink roo
   }
 });
 
-test("synthetic workflow seals PCF output, enforces assignments, and produces privacy-safe analysis", async () => {
+test("synthetic workflow seals PCF output, enforces assignments, and produces privacy-safe analysis", posixOnly, async () => {
   const parent = await temporaryParent();
   const root = join(parent, "study");
   try {
@@ -286,7 +345,7 @@ test("synthetic workflow seals PCF output, enforces assignments, and produces pr
   }
 });
 
-test("aggregate lock waits for the later disclosed withdrawal deadline", async () => {
+test("aggregate lock waits for the later disclosed withdrawal deadline", posixOnly, async () => {
   const parent = await temporaryParent();
   const root = join(parent, "study");
   try {
@@ -323,7 +382,7 @@ test("aggregate lock waits for the later disclosed withdrawal deadline", async (
   }
 });
 
-test("withdrawal deletes the participant rating before lock and excludes affected cases", async () => {
+test("withdrawal deletes the participant rating before lock and excludes affected cases", posixOnly, async () => {
   const parent = await temporaryParent();
   const root = join(parent, "study");
   try {
@@ -366,7 +425,7 @@ test("withdrawal deletes the participant rating before lock and excludes affecte
   }
 });
 
-test("pcf study CLI initializes and reports a synthetic study without network access", async () => {
+test("pcf study CLI initializes and reports a synthetic study without network access", posixOnly, async () => {
   const parent = await temporaryParent();
   const root = join(parent, "study");
   const protocolPath = join(parent, "protocol.json");

@@ -24,9 +24,18 @@ monotonic time order.
 
 ## Private store
 
+Study storage requires a POSIX filesystem that enforces owner-only permissions.
+Native Windows is unsupported: every study storage operation fails before reading
+or writing the store, including synthetic initialization. On Windows, run Node
+inside WSL and place the study root on the Linux filesystem, not under `/mnt/c`.
+Node's Windows `chmod` support cannot enforce the owner/group/other isolation this
+runner requires; this is not fixed by running as Administrator. See the
+[Node.js file-mode limitations](https://nodejs.org/api/fs.html#file-modes).
+
 The study root must be an explicit absolute path and cannot contain symbolic
-links. Directories are created with mode `0700`; files use `0600`. Every read
-fails closed if those owner-only permissions drift.
+links. Directories are created with mode `0700` and verified before study files
+are written; files use `0600`. Every read fails closed if those owner-only
+permissions drift. The other PCF commands do not require this study store.
 
 ```text
 <root>/

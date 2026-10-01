@@ -490,11 +490,19 @@ test("MCP stdio reports malformed JSON and continues with the next frame", () =>
   assert.deepEqual(responses[1].result, {});
 });
 
-test("npm-style pcf-mcp bin symlink starts the stdio server", async () => {
+test("npm-style pcf-mcp bin symlink starts the stdio server", async (t) => {
   const dir = await mkdtemp(join(tmpdir(), "pcf-mcp-bin-"));
   const binPath = join(dir, "pcf-mcp");
   try {
-    await symlink(join(repoRoot, "src/mcp/server.mjs"), binPath);
+    try {
+      await symlink(join(repoRoot, "src/mcp/server.mjs"), binPath);
+    } catch (error) {
+      if (process.platform === "win32" && error.code === "EPERM") {
+        t.skip("This Windows account cannot create file symlinks; direct stdio coverage remains active.");
+        return;
+      }
+      throw error;
+    }
     const stdout = execFileSync(process.execPath, [binPath], {
       cwd: repoRoot,
       input: `${JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} })}\n`,

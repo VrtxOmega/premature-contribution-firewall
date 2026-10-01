@@ -91,6 +91,7 @@ export async function initializeProspectiveStudy({
   for (const directory of paths.directories) {
     await mkdir(directory, { recursive: true, mode: DIRECTORY_MODE });
     await chmod(directory, DIRECTORY_MODE);
+    await assertPrivateDirectory(directory);
   }
 
   const initializedAt = normalizedTime(now);
@@ -1178,6 +1179,12 @@ async function readCaseRatings(paths, item) {
 }
 
 function studyPaths(root) {
+  if (process.platform === "win32") {
+    throw new ProspectiveStudyError(
+      "Prospective study storage requires POSIX owner-only permissions and is unsupported on native Windows. "
+      + "Use Linux or WSL with the study root on its Linux filesystem (not /mnt/c)."
+    );
+  }
   if (!root || !isAbsolute(String(root))) {
     throw new ProspectiveStudyError("Study root must be an explicit absolute path.");
   }
