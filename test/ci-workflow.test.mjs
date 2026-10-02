@@ -94,3 +94,27 @@ test("CI workflow uploads generated proof artifacts after gates pass", async () 
   assert.match(workflow, /docs\/maintainer-demo-output\.md/);
   assert.match(workflow, /if-no-files-found: error/);
 });
+
+test("installed-package verification is required before proof upload and publish", async () => {
+  const workflow = await readFile(workflowPath, "utf8");
+  const manifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const publish = await readFile(new URL("../.github/workflows/npm-publish.yml", import.meta.url), "utf8");
+  assert.match(manifest.scripts["ci:gates"], /&& npm run package:verify$/);
+  assert.match(publish, /run: npm run ci:gates/);
+  assert.ok(publish.indexOf("run: npm run ci:gates") < publish.indexOf("- name: Publish\n")
+    || publish.indexOf("run: npm run ci:gates") < publish.indexOf("- name: Publish\r\n"));
+  const dir = await mkdtemp(join(tmpdir(), "pcf-package-gate-"));
+  const copyPath = join(dir, "workflow.yml");
+  try {
+    await writeFile(copyPath, workflow.replace("npm run package:verify", "npm run missing-package-gate"));
+    const missing = await verifyCiWorkflow({ workflowPath: copyPath });
+    assert.equal(missing.ok, false);
+    assert.ok(missing.failures.includes("missing required workflow snippet: npm run package:verify"));
+    await writeFile(copyPath, workflow.replace("npm run package:verify", "npm run missing-package-gate") + "\n# npm run package:verify\n");
+    const late = await verifyCiWorkflow({ workflowPath: copyPath });
+    assert.equal(late.ok, false);
+    assert.ok(late.failures.some((failure) => failure.includes("out of order")));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

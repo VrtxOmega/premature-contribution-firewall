@@ -64,6 +64,9 @@ jobs:
       - name: Maintainer Demo Gate
         run: npm run demo:maintainer -- --fail-on-regression
 
+      - name: Verify Packaged Install
+        run: npm run package:verify
+
       - name: Generate Proof Artifacts
         run: |
           npm run benchmark:write
