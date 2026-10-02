@@ -1,0 +1,54 @@
+{
+  "kind": "pull_request",
+  "number": 8376,
+  "title": "Fix UAF in io_uring submit: handle EAGAIN like EBUSY",
+  "body": "Fixes #8255\n\nWhen the kernel returns EAGAIN from io_uring_enter, the SQE is already queued in the submission ring. submit() returned the error, and register_op's submit_or_remove closure called remove_op() + Op::poll dropped the data the SQE points to. A later successful submit executing the stale SQE against freed memory causes use-after-free.",
+  "authorAssociation": "NONE",
+  "changedFiles": 1,
+  "additions": 8,
+  "deletions": 0,
+  "files": [
+    {
+      "filename": "tokio/src/runtime/io/driver/uring.rs",
+      "status": "modified",
+      "additions": 8,
+      "deletions": 0,
+      "patch": "@@ -117,6 +117,14 @@ impl UringContext {\n                 Err(ref e) if e.raw_os_error() == Some(libc::EBUSY) => {\n                     self.dispatch_completions();\n                 }\n+                // EAGAIN means the kernel ran out of resources; drain completions\n+                // and retry, same as EBUSY. Otherwise, the SQE remains queued in\n+                // the kernel ring while we remove_op() and drop the associated data,\n+                // leading to a use-after-free when the kernel eventually executes\n+                // the stale SQE.\n+                Err(ref e) if e.raw_os_error() == Some(libc::EAGAIN) => {\n+                    self.dispatch_completions();\n+                }\n                 // For other errors, we currently return the error as is.\n                 Err(e) => {\n                     return Err(e);"
+    }
+  ],
+  "repositoryContext": {
+    "repository": "tokio-rs/tokio",
+    "pullRequests": [
+      {
+        "number": 8366,
+        "title": "fix(io_uring): prevent use-after-free on failed submit",
+        "body": "Fixes #8255\r\n\r\nThis PR implements maintainer's proposed solution:\r\n\r\n1). Treat EAGAIN like EBUSY in the submit loop to drain completions and retry.\r\n\r\n2). If submit fails after an SQE is queued, leave the operation in the slab.\r\n\r\n3). register_op now returns the index on failure. Op::poll uses this to upgrade its state to Polled and returns Pending. When the future drops, the memory is safely moved to Lifecycle::Cancelled until the kernel's CQE arrives.",
+        "state": "open",
+        "files": [
+          "tokio/src/runtime/driver/op.rs",
+          "tokio/src/runtime/io/driver/uring.rs"
+        ],
+        "htmlUrl": "https://github.com/tokio-rs/tokio/pull/8366"
+      },
+      {
+        "number": 8185,
+        "title": "runtime: keep io_uring op alive when submission fails after push",
+        "body": "## Motivation\r\n\r\nIn the io_uring backend, `register_op` pushes an SQE onto the submission queue\r\nand then calls `submit()`. If `submit()` returns any error other than `EBUSY`,\r\nthe op is removed from the slab, which drops the operation and frees the buffer\r\nthe SQE points at.\r\n\r\nThis is unsound. `io_uring_enter` advances the submission queue head as it\r\nconsumes SQEs, so a non-`EBUSY` error does not mean the kernel never saw the\r\nentry — it may have already accepted it. In that case the kernel can still write\r\ninto the buffer we just freed (use-after-free), and the eventual CQE refers to a\r\nslab slot that no longer exists, which panics the driver or, if the slot has\r\nbeen reused, completes an unrelated op.\r\n\r\n## Solution\r\n\r\nOnce the SQE has been pushed, keep the slab entry even if `submit()` fails, the\r\nsame way the cancellation path does: the buffer stays alive until the completion\r\nis observed, and the error is still propagated to the caller. The pre-push\r\nsubmit (flushing a full queue) is unchanged, since there the entry has not\r\nreached the kernel and removing it is correct.\r\n\r\nAdds a regression test that forces a post-push submit failure and asserts the op\r\nis retained. Verified on Linux 6.8 (io_uring enabled): the test fails before this\r\nchange and passes after, and the existing `fs_uring*` tests continue to pass.\r\n",
+        "state": "open",
+        "files": [
+          "tokio/src/fs/file.rs",
+          "tokio/src/fs/read_uring.rs",
+          "tokio/src/fs/write.rs",
+          "tokio/src/io/uring/open.rs",
+          "tokio/src/io/uring/read.rs",
+          "tokio/src/io/uring/write.rs",
+          "tokio/src/runtime/driver/op.rs",
+          "tokio/src/runtime/io/driver.rs",
+          "tokio/src/runtime/io/driver/uring.rs",
+          "tokio/src/runtime/io/mod.rs"
+        ],
+        "htmlUrl": "https://github.com/tokio-rs/tokio/pull/8185"
+      }
+    ]
+  }
+}

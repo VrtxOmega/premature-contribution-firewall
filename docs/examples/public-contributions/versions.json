@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-02T17:11:21.323Z",
+  "source": {
+    "packageVersion": "0.2.0",
+    "gitHead": "95aaa4edc1fd260a302f1a00cee59ac12d03ce29"
+  },
+  "published": {
+    "registry": "https://registry.npmjs.org/premature-contribution-firewall/0.2.0",
+    "packageVersion": "0.2.0",
+    "gitHead": "8739108af4055c9ac72b033a7da4df770aa43272",
+    "tarball": "https://registry.npmjs.org/premature-contribution-firewall/-/premature-contribution-firewall-0.2.0.tgz",
+    "integrity": "sha512-UIhuHf/qGM06fzRmr2ycZcjHCLGE6QjzkJxuxwkf7CCL7vI88FJ+Hj3HdotjxUQGHp5YL/HF1k1xZVRN7vKT3Q==",
+    "integrityVerified": true
+  }
+}

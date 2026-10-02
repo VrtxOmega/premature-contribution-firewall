@@ -1,0 +1,705 @@
+{
+  "artifact": "pcf-public-contribution-replay",
+  "schemaVersion": 1,
+  "hashEncoding": "SHA-256 of UTF-8 text with CRLF normalized to LF",
+  "packageVersion": "0.2.0",
+  "nodeVersion": "v24.19.0",
+  "cliSha256": "a38b0d96113e576f8c949933084c951258563660b7518cb51ea459ed475a62b3",
+  "sourcesSha256": "8ee1f9726d727e81cf5ab487d958571e666289193beb471bdf6fe480a3ff5f59",
+  "outputProjection": "Decision, checks, repairs, context matches and lifecycle boundaries; verbose generated comment omitted. Re-run individual commands for full output.",
+  "results": [
+    {
+      "id": "tokio-without-context",
+      "kind": "public-current-self-evaluation",
+      "command": "pcf preflight 8376-input.json --format json",
+      "inputSha256": "e5e7ba07ba84800eb97bb96ba685101c0f18afc6a7beecb2c7ba692ae36c73f5",
+      "exitCode": 1,
+      "ready": false,
+      "gate": "ready-only",
+      "status": "needs-repair",
+      "score": 61,
+      "labels": [
+        "needs-tests",
+        "needs-human-verification",
+        "ci-missing",
+        "maintainer-attention-risk",
+        "needs-repair"
+      ],
+      "repairSteps": [
+        "Add a test, run an existing test command, or explain why testing is not applicable.",
+        "Add the exact verification you personally ran, including before/after evidence where possible.",
+        "Run the repository checks locally or wait for CI before requesting maintainer review.",
+        "Reduce reviewer burden with tests, a smaller diff, and clear ownership of the change."
+      ],
+      "checks": [
+        {
+          "id": "title",
+          "status": "pass",
+          "reason": "The title names a specific change."
+        },
+        {
+          "id": "body",
+          "status": "pass",
+          "reason": "The description gives enough context for first-pass review."
+        },
+        {
+          "id": "scope",
+          "status": "pass",
+          "reason": "Touches 1 file(s) with 8 changed line(s)."
+        },
+        {
+          "id": "path-safety",
+          "status": "pass",
+          "reason": "Changed paths look like normal repository-relative paths."
+        },
+        {
+          "id": "tests",
+          "status": "fail",
+          "reason": "No test file, test command, or explicit no-test rationale found."
+        },
+        {
+          "id": "negated-verification",
+          "status": "pass",
+          "reason": "Verification language is not contradicted by a no-run statement."
+        },
+        {
+          "id": "verification",
+          "status": "warn",
+          "reason": "Maintainers need a reproducible reason to believe the change works."
+        },
+        {
+          "id": "policy",
+          "status": "pass",
+          "reason": "No repository policy files supplied; default readiness rules applied."
+        },
+        {
+          "id": "project-test-command",
+          "status": "pass",
+          "reason": "No project test command was discovered from repository policy files."
+        },
+        {
+          "id": "repository-context",
+          "status": "unchecked",
+          "reason": "No repository issue/PR context supplied; duplicate and upstream checks were not run."
+        },
+        {
+          "id": "ci",
+          "status": "warn",
+          "reason": "No CI result was supplied."
+        },
+        {
+          "id": "dependencies",
+          "status": "pass",
+          "reason": "No unexplained dependency or generated-file churn found."
+        },
+        {
+          "id": "generated-artifacts",
+          "status": "pass",
+          "reason": "No unexplained generated, bundled, or minified artifact churn found."
+        },
+        {
+          "id": "secrets",
+          "status": "pass",
+          "reason": "No obvious token/private-key patterns found in supplied text."
+        },
+        {
+          "id": "prompt-injection",
+          "status": "pass",
+          "reason": "No obvious instruction-hijacking or review-bypass language found."
+        },
+        {
+          "id": "draft",
+          "status": "pass",
+          "reason": "PR is not marked draft."
+        },
+        {
+          "id": "accountability",
+          "status": "warn",
+          "reason": "First-time contributor with elevated review burden."
+        }
+      ],
+      "contextStatus": "unchecked",
+      "concurrentPullRequests": []
+    },
+    {
+      "id": "tokio-with-selected-context",
+      "kind": "public-current-self-evaluation",
+      "command": "pcf preflight 8376-context-input.json --format json",
+      "inputSha256": "0a9877db7169858cf701efd81c608a0cb4429f605dd7e9b192dbac592813b8fa",
+      "exitCode": 1,
+      "ready": false,
+      "gate": "ready-only",
+      "status": "needs-repair",
+      "score": 51,
+      "labels": [
+        "needs-tests",
+        "needs-human-verification",
+        "concurrent-work",
+        "ci-missing",
+        "maintainer-attention-risk",
+        "needs-repair"
+      ],
+      "repairSteps": [
+        "Add a test, run an existing test command, or explain why testing is not applicable.",
+        "Add the exact verification you personally ran, including before/after evidence where possible.",
+        "Coordinate with the listed active pull request before requesting maintainer review.",
+        "Run the repository checks locally or wait for CI before requesting maintainer review.",
+        "Reduce reviewer burden with tests, a smaller diff, and clear ownership of the change."
+      ],
+      "checks": [
+        {
+          "id": "title",
+          "status": "pass",
+          "reason": "The title names a specific change."
+        },
+        {
+          "id": "body",
+          "status": "pass",
+          "reason": "The description gives enough context for first-pass review."
+        },
+        {
+          "id": "scope",
+          "status": "pass",
+          "reason": "Touches 1 file(s) with 8 changed line(s)."
+        },
+        {
+          "id": "path-safety",
+          "status": "pass",
+          "reason": "Changed paths look like normal repository-relative paths."
+        },
+        {
+          "id": "tests",
+          "status": "fail",
+          "reason": "No test file, test command, or explicit no-test rationale found."
+        },
+        {
+          "id": "negated-verification",
+          "status": "pass",
+          "reason": "Verification language is not contradicted by a no-run statement."
+        },
+        {
+          "id": "verification",
+          "status": "warn",
+          "reason": "Maintainers need a reproducible reason to believe the change works."
+        },
+        {
+          "id": "policy",
+          "status": "pass",
+          "reason": "No repository policy files supplied; default readiness rules applied."
+        },
+        {
+          "id": "project-test-command",
+          "status": "pass",
+          "reason": "No project test command was discovered from repository policy files."
+        },
+        {
+          "id": "repository-context",
+          "status": "warn",
+          "reason": "2 concurrent pull request(s)"
+        },
+        {
+          "id": "ci",
+          "status": "warn",
+          "reason": "No CI result was supplied."
+        },
+        {
+          "id": "dependencies",
+          "status": "pass",
+          "reason": "No unexplained dependency or generated-file churn found."
+        },
+        {
+          "id": "generated-artifacts",
+          "status": "pass",
+          "reason": "No unexplained generated, bundled, or minified artifact churn found."
+        },
+        {
+          "id": "secrets",
+          "status": "pass",
+          "reason": "No obvious token/private-key patterns found in supplied text."
+        },
+        {
+          "id": "prompt-injection",
+          "status": "pass",
+          "reason": "No obvious instruction-hijacking or review-bypass language found."
+        },
+        {
+          "id": "draft",
+          "status": "pass",
+          "reason": "PR is not marked draft."
+        },
+        {
+          "id": "accountability",
+          "status": "warn",
+          "reason": "First-time contributor with elevated review burden."
+        }
+      ],
+      "contextStatus": "warn",
+      "concurrentPullRequests": [
+        {
+          "number": "8366",
+          "url": "https://github.com/tokio-rs/tokio/pull/8366",
+          "title": "fix(io_uring): prevent use-after-free on failed submit"
+        },
+        {
+          "number": "8185",
+          "url": "https://github.com/tokio-rs/tokio/pull/8185",
+          "title": "runtime: keep io_uring op alive when submission fails after push"
+        }
+      ]
+    },
+    {
+      "id": "rask-closed-unmerged",
+      "kind": "public-retrospective-self-evaluation",
+      "command": "pcf preflight 469-input.json --format json",
+      "inputSha256": "9685b7ea43ff0ec7575d09db082916f35c466ffe853ad70d28a3875543752771",
+      "exitCode": 1,
+      "ready": false,
+      "gate": "ready-only",
+      "status": "needs-repair",
+      "score": 93,
+      "labels": [
+        "ci-missing",
+        "needs-repair"
+      ],
+      "repairSteps": [
+        "Run the repository checks locally or wait for CI before requesting maintainer review."
+      ],
+      "checks": [
+        {
+          "id": "title",
+          "status": "pass",
+          "reason": "The title names a specific change."
+        },
+        {
+          "id": "body",
+          "status": "pass",
+          "reason": "The description gives enough context for first-pass review."
+        },
+        {
+          "id": "scope",
+          "status": "pass",
+          "reason": "Touches 3 file(s) with 92 changed line(s)."
+        },
+        {
+          "id": "path-safety",
+          "status": "pass",
+          "reason": "Changed paths look like normal repository-relative paths."
+        },
+        {
+          "id": "tests",
+          "status": "pass",
+          "reason": "Includes 1 test file(s)."
+        },
+        {
+          "id": "negated-verification",
+          "status": "pass",
+          "reason": "Verification language is not contradicted by a no-run statement."
+        },
+        {
+          "id": "verification",
+          "status": "pass",
+          "reason": "Includes verification tied to an issue, reproducer, or before/after behavior."
+        },
+        {
+          "id": "policy",
+          "status": "pass",
+          "reason": "No repository policy files supplied; default readiness rules applied."
+        },
+        {
+          "id": "project-test-command",
+          "status": "pass",
+          "reason": "No project test command was discovered from repository policy files."
+        },
+        {
+          "id": "repository-context",
+          "status": "unchecked",
+          "reason": "No repository issue/PR context supplied; duplicate and upstream checks were not run."
+        },
+        {
+          "id": "ci",
+          "status": "warn",
+          "reason": "No CI result was supplied."
+        },
+        {
+          "id": "dependencies",
+          "status": "pass",
+          "reason": "No unexplained dependency or generated-file churn found."
+        },
+        {
+          "id": "generated-artifacts",
+          "status": "pass",
+          "reason": "No unexplained generated, bundled, or minified artifact churn found."
+        },
+        {
+          "id": "secrets",
+          "status": "pass",
+          "reason": "No obvious token/private-key patterns found in supplied text."
+        },
+        {
+          "id": "prompt-injection",
+          "status": "pass",
+          "reason": "No obvious instruction-hijacking or review-bypass language found."
+        },
+        {
+          "id": "draft",
+          "status": "pass",
+          "reason": "PR is not marked draft."
+        },
+        {
+          "id": "accountability",
+          "status": "pass",
+          "reason": "First-time contributor with elevated review burden."
+        }
+      ],
+      "contextStatus": "unchecked",
+      "concurrentPullRequests": []
+    },
+    {
+      "id": "karakeep-merged",
+      "kind": "public-retrospective-self-evaluation",
+      "command": "pcf preflight 2864-input.json --format json",
+      "inputSha256": "7d491200f09025f021820a91fafed0a66530add2c98dcce1bc2bcb58daf2c104",
+      "exitCode": 1,
+      "ready": false,
+      "gate": "ready-only",
+      "status": "needs-repair",
+      "score": 67,
+      "labels": [
+        "needs-tests",
+        "needs-human-verification",
+        "ci-missing",
+        "needs-repair"
+      ],
+      "repairSteps": [
+        "Add a test, run an existing test command, or explain why testing is not applicable.",
+        "Add the exact verification you personally ran, including before/after evidence where possible.",
+        "Run the repository checks locally or wait for CI before requesting maintainer review."
+      ],
+      "checks": [
+        {
+          "id": "title",
+          "status": "pass",
+          "reason": "The title names a specific change."
+        },
+        {
+          "id": "body",
+          "status": "pass",
+          "reason": "The description gives enough context for first-pass review."
+        },
+        {
+          "id": "scope",
+          "status": "pass",
+          "reason": "Touches 1 file(s) with 2 changed line(s)."
+        },
+        {
+          "id": "path-safety",
+          "status": "pass",
+          "reason": "Changed paths look like normal repository-relative paths."
+        },
+        {
+          "id": "tests",
+          "status": "fail",
+          "reason": "No test file, test command, or explicit no-test rationale found."
+        },
+        {
+          "id": "negated-verification",
+          "status": "pass",
+          "reason": "Verification language is not contradicted by a no-run statement."
+        },
+        {
+          "id": "verification",
+          "status": "warn",
+          "reason": "Maintainers need a reproducible reason to believe the change works."
+        },
+        {
+          "id": "policy",
+          "status": "pass",
+          "reason": "No repository policy files supplied; default readiness rules applied."
+        },
+        {
+          "id": "project-test-command",
+          "status": "pass",
+          "reason": "No project test command was discovered from repository policy files."
+        },
+        {
+          "id": "repository-context",
+          "status": "unchecked",
+          "reason": "No repository issue/PR context supplied; duplicate and upstream checks were not run."
+        },
+        {
+          "id": "ci",
+          "status": "warn",
+          "reason": "No CI result was supplied."
+        },
+        {
+          "id": "dependencies",
+          "status": "pass",
+          "reason": "No unexplained dependency or generated-file churn found."
+        },
+        {
+          "id": "generated-artifacts",
+          "status": "pass",
+          "reason": "No unexplained generated, bundled, or minified artifact churn found."
+        },
+        {
+          "id": "secrets",
+          "status": "pass",
+          "reason": "No obvious token/private-key patterns found in supplied text."
+        },
+        {
+          "id": "prompt-injection",
+          "status": "pass",
+          "reason": "No obvious instruction-hijacking or review-bypass language found."
+        },
+        {
+          "id": "draft",
+          "status": "pass",
+          "reason": "PR is not marked draft."
+        },
+        {
+          "id": "accountability",
+          "status": "pass",
+          "reason": "Contributor context does not add extra review burden."
+        }
+      ],
+      "contextStatus": "unchecked",
+      "concurrentPullRequests": []
+    },
+    {
+      "id": "tokio-lifecycle-unknowns",
+      "kind": "analyst-coded-public-evidence",
+      "command": "pcf lifecycle 8376-lifecycle-input.json --format json",
+      "inputSha256": "2f864a3b5802b40d07a58f09689175bd80a87ce7063a273c6a834ccafa0938c1",
+      "exitCode": 1,
+      "error": "PCF contribution lifecycle failed: Lifecycle input version must be '2026.07.19'.",
+      "classification": null
+    },
+    {
+      "id": "synthetic-ready",
+      "kind": "existing-synthetic-control",
+      "command": "pcf preflight ../../../fixtures/pr-ready.json --format json",
+      "inputSha256": "d732990fd7590c1bdce6e795b1fdeaf97a7ab860b83951e4d1ca7fd3d56183d2",
+      "exitCode": 0,
+      "ready": true,
+      "gate": "ready-only",
+      "status": "ready-for-maintainer",
+      "score": 100,
+      "labels": [
+        "ready-for-maintainer"
+      ],
+      "repairSteps": [
+        "No repair required before maintainer review."
+      ],
+      "checks": [
+        {
+          "id": "title",
+          "status": "pass",
+          "reason": "The title names a specific change."
+        },
+        {
+          "id": "body",
+          "status": "pass",
+          "reason": "The description gives enough context for first-pass review."
+        },
+        {
+          "id": "scope",
+          "status": "pass",
+          "reason": "Touches 3 file(s) with 92 changed line(s)."
+        },
+        {
+          "id": "path-safety",
+          "status": "pass",
+          "reason": "Changed paths look like normal repository-relative paths."
+        },
+        {
+          "id": "tests",
+          "status": "pass",
+          "reason": "Includes 1 test file(s)."
+        },
+        {
+          "id": "negated-verification",
+          "status": "pass",
+          "reason": "Verification language is not contradicted by a no-run statement."
+        },
+        {
+          "id": "verification",
+          "status": "pass",
+          "reason": "Includes verification tied to an issue, reproducer, or before/after behavior."
+        },
+        {
+          "id": "policy",
+          "status": "pass",
+          "reason": "Submission satisfies repository policy signals from 1 source(s)."
+        },
+        {
+          "id": "project-test-command",
+          "status": "pass",
+          "reason": "No project test command was discovered from repository policy files."
+        },
+        {
+          "id": "repository-context",
+          "status": "unchecked",
+          "reason": "No repository issue/PR context supplied; duplicate and upstream checks were not run."
+        },
+        {
+          "id": "ci",
+          "status": "pass",
+          "reason": "At least one supplied check passed and no supplied checks failed."
+        },
+        {
+          "id": "dependencies",
+          "status": "pass",
+          "reason": "No unexplained dependency or generated-file churn found."
+        },
+        {
+          "id": "generated-artifacts",
+          "status": "pass",
+          "reason": "No unexplained generated, bundled, or minified artifact churn found."
+        },
+        {
+          "id": "secrets",
+          "status": "pass",
+          "reason": "No obvious token/private-key patterns found in supplied text."
+        },
+        {
+          "id": "prompt-injection",
+          "status": "pass",
+          "reason": "No obvious instruction-hijacking or review-bypass language found."
+        },
+        {
+          "id": "draft",
+          "status": "pass",
+          "reason": "PR is not marked draft."
+        },
+        {
+          "id": "accountability",
+          "status": "pass",
+          "reason": "Contributor context does not add extra review burden."
+        }
+      ],
+      "contextStatus": "unchecked",
+      "concurrentPullRequests": []
+    },
+    {
+      "id": "synthetic-unready",
+      "kind": "existing-synthetic-control",
+      "command": "pcf preflight ../../../fixtures/pr-unready.json --format json",
+      "inputSha256": "5ca042ef6c3375448fd8e1a4442f85d71e403beb9fba74fe2b224f65c61ea025",
+      "exitCode": 1,
+      "ready": false,
+      "gate": "ready-only",
+      "status": "low-review-value",
+      "score": 0,
+      "labels": [
+        "needs-clear-summary",
+        "needs-context",
+        "too-broad",
+        "needs-tests",
+        "needs-human-verification",
+        "ci-missing",
+        "dependency-review",
+        "secrets-risk",
+        "low-review-value"
+      ],
+      "repairSteps": [
+        "Split unrelated work into a smaller PR that a maintainer can review in one focused pass.",
+        "Remove leaked secret-like material and rotate the exposed credential before resubmitting.",
+        "Replace the vague title with the specific behavior or subsystem being changed.",
+        "Add a concise problem statement, change summary, and risk/impact note.",
+        "Add a test, run an existing test command, or explain why testing is not applicable.",
+        "Add the exact verification you personally ran, including before/after evidence where possible.",
+        "Run the repository checks locally or wait for CI before requesting maintainer review.",
+        "Explain why dependency or lockfile changes are necessary."
+      ],
+      "checks": [
+        {
+          "id": "title",
+          "status": "fail",
+          "reason": "The title is too vague for triage."
+        },
+        {
+          "id": "body",
+          "status": "fail",
+          "reason": "The description needs a clearer problem, change summary, and risk note."
+        },
+        {
+          "id": "scope",
+          "status": "fail",
+          "reason": "Touches 34 file(s) with 2500 changed line(s)."
+        },
+        {
+          "id": "path-safety",
+          "status": "pass",
+          "reason": "Changed paths look like normal repository-relative paths."
+        },
+        {
+          "id": "tests",
+          "status": "fail",
+          "reason": "No test file, test command, or explicit no-test rationale found."
+        },
+        {
+          "id": "negated-verification",
+          "status": "pass",
+          "reason": "Verification language is not contradicted by a no-run statement."
+        },
+        {
+          "id": "verification",
+          "status": "fail",
+          "reason": "Maintainers need a reproducible reason to believe the change works."
+        },
+        {
+          "id": "policy",
+          "status": "pass",
+          "reason": "No repository policy files supplied; default readiness rules applied."
+        },
+        {
+          "id": "project-test-command",
+          "status": "pass",
+          "reason": "No project test command was discovered from repository policy files."
+        },
+        {
+          "id": "repository-context",
+          "status": "unchecked",
+          "reason": "No repository issue/PR context supplied; duplicate and upstream checks were not run."
+        },
+        {
+          "id": "ci",
+          "status": "warn",
+          "reason": "No CI result was supplied."
+        },
+        {
+          "id": "dependencies",
+          "status": "warn",
+          "reason": "Dependency or lockfile changes need an explicit reason."
+        },
+        {
+          "id": "generated-artifacts",
+          "status": "pass",
+          "reason": "No unexplained generated, bundled, or minified artifact churn found."
+        },
+        {
+          "id": "secrets",
+          "status": "fail",
+          "reason": "Found 1 obvious secret-like string(s)."
+        },
+        {
+          "id": "prompt-injection",
+          "status": "pass",
+          "reason": "No obvious instruction-hijacking or review-bypass language found."
+        },
+        {
+          "id": "draft",
+          "status": "pass",
+          "reason": "PR is not marked draft."
+        },
+        {
+          "id": "accountability",
+          "status": "fail",
+          "reason": "AI/tool disclosure without human testing or understanding creates review risk."
+        }
+      ],
+      "contextStatus": "unchecked",
+      "concurrentPullRequests": []
+    }
+  ]
+}

@@ -1,0 +1,474 @@
+{
+  "observedAt": "2026-10-02T17:09:20.214Z",
+  "selection": "Purposive self-evaluation: ambiguous overlap, closed unmerged case, and merged narrow fix. Not a representative sample or independent validation.",
+  "snapshots": [
+    {
+      "repository": "tokio-rs/tokio",
+      "observedAt": "2026-10-02T17:09:20.214Z",
+      "url": "https://github.com/tokio-rs/tokio/pull/8376",
+      "number": 8376,
+      "title": "Fix UAF in io_uring submit: handle EAGAIN like EBUSY",
+      "body": "Fixes #8255\n\nWhen the kernel returns EAGAIN from io_uring_enter, the SQE is already queued in the submission ring. submit() returned the error, and register_op's submit_or_remove closure called remove_op() + Op::poll dropped the data the SQE points to. A later successful submit executing the stale SQE against freed memory causes use-after-free.",
+      "state": "open",
+      "merged": false,
+      "draft": false,
+      "author": "VrtxOmega",
+      "authorAssociation": "NONE",
+      "createdAt": "2026-08-21T16:25:56Z",
+      "updatedAt": "2026-10-01T10:59:21Z",
+      "closedAt": null,
+      "mergedAt": null,
+      "headSha": "3b5f0e496a1fbb3e56d249518648f53e36a26434",
+      "baseSha": "ea91b33ca57ff0581b38e735cc108f831bccbdaa",
+      "mergeCommitSha": "7919331c1170377909e854240ab0e56e6f0f287b",
+      "changedFiles": 1,
+      "additions": 8,
+      "deletions": 0,
+      "files": [
+        {
+          "filename": "tokio/src/runtime/io/driver/uring.rs",
+          "status": "modified",
+          "additions": 8,
+          "deletions": 0,
+          "patch": "@@ -117,6 +117,14 @@ impl UringContext {\n                 Err(ref e) if e.raw_os_error() == Some(libc::EBUSY) => {\n                     self.dispatch_completions();\n                 }\n+                // EAGAIN means the kernel ran out of resources; drain completions\n+                // and retry, same as EBUSY. Otherwise, the SQE remains queued in\n+                // the kernel ring while we remove_op() and drop the associated data,\n+                // leading to a use-after-free when the kernel eventually executes\n+                // the stale SQE.\n+                Err(ref e) if e.raw_os_error() == Some(libc::EAGAIN) => {\n+                    self.dispatch_completions();\n+                }\n                 // For other errors, we currently return the error as is.\n                 Err(e) => {\n                     return Err(e);"
+        }
+      ],
+      "comments": [
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8376#issuecomment-5372500381",
+          "author": "chatgpt-codex-connector[bot]",
+          "association": "NONE",
+          "body": "You have reached your Codex usage limits for code reviews. You can see your limits in the [Codex usage dashboard](https://chatgpt.com/codex/cloud/settings/usage).",
+          "createdAt": "2026-08-21T16:26:00Z",
+          "updatedAt": "2026-08-21T16:26:00Z"
+        },
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8376#issuecomment-5926459092",
+          "author": "Daksh14",
+          "association": "CONTRIBUTOR",
+          "body": "@ADD-SP #8366 is actually a duplicate of #8185, this change just calls dispatch compeletions on ebusy like the kernel docs mention",
+          "createdAt": "2026-10-01T07:07:05Z",
+          "updatedAt": "2026-10-01T07:07:26Z"
+        }
+      ],
+      "reviews": [
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8376#pullrequestreview-5323586128",
+          "author": "Daksh14",
+          "association": "CONTRIBUTOR",
+          "body": "",
+          "state": "APPROVED",
+          "submittedAt": "2026-09-25T23:38:25Z",
+          "commitId": "3b5f0e496a1fbb3e56d249518648f53e36a26434"
+        },
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8376#pullrequestreview-5340792495",
+          "author": "ADD-SP",
+          "association": "MEMBER",
+          "body": "Does this PR duplicate <https://github.com/tokio-rs/tokio/pull/8366>?",
+          "state": "COMMENTED",
+          "submittedAt": "2026-09-28T15:17:43Z",
+          "commitId": "3b5f0e496a1fbb3e56d249518648f53e36a26434"
+        }
+      ],
+      "collection": {
+        "publicOnly": true,
+        "issueCommentsComplete": true,
+        "reviewsComplete": true,
+        "filesComplete": true,
+        "inlineReviewCommentsCollected": false,
+        "checksCollected": false
+      }
+    },
+    {
+      "repository": "tokio-rs/tokio",
+      "observedAt": "2026-10-02T17:09:20.214Z",
+      "url": "https://github.com/tokio-rs/tokio/pull/8366",
+      "number": 8366,
+      "title": "fix(io_uring): prevent use-after-free on failed submit",
+      "body": "Fixes #8255\r\n\r\nThis PR implements maintainer's proposed solution:\r\n\r\n1). Treat EAGAIN like EBUSY in the submit loop to drain completions and retry.\r\n\r\n2). If submit fails after an SQE is queued, leave the operation in the slab.\r\n\r\n3). register_op now returns the index on failure. Op::poll uses this to upgrade its state to Polled and returns Pending. When the future drops, the memory is safely moved to Lifecycle::Cancelled until the kernel's CQE arrives.",
+      "state": "open",
+      "merged": false,
+      "draft": false,
+      "author": "Amit5601",
+      "authorAssociation": "NONE",
+      "createdAt": "2026-08-17T18:46:13Z",
+      "updatedAt": "2026-09-17T12:01:59Z",
+      "closedAt": null,
+      "mergedAt": null,
+      "headSha": "ec0700b95228a8ebb5c6508a48a92ef747ba4d12",
+      "baseSha": "7bb6f0734922cffa7e49049dfc4c10d84737db41",
+      "mergeCommitSha": "79efb76c2b1a06bbff57da78f7272a729dccd5e0",
+      "changedFiles": 2,
+      "additions": 46,
+      "deletions": 17,
+      "files": [
+        {
+          "filename": "tokio/src/runtime/driver/op.rs",
+          "status": "modified",
+          "additions": 7,
+          "deletions": 3,
+          "patch": "@@ -175,9 +175,14 @@ impl<T: Cancellable + Completable + Send> Future for Op<T> {\n                 let waker = cx.waker().clone();\n \n                 // SAFETY: entry is valid for the entire duration of the operation\n-                match unsafe { driver.register_op(entry, waker) } {\n+                match unsafe { driver.register_op(entry, waker).into_tuple() } {\n                     Ok(idx) => this.state = State::Polled(idx),\n-                    Err(err) => {\n+\n+                    Err((_err, Some(idx))) => {\n+                        this.state = State::Polled(idx);\n+                    }\n+\n+                    Err((err, None)) => {\n                         let data = this\n                             .take_data()\n                             .expect(\"Data must be present on Initialization\");\n@@ -187,7 +192,6 @@ impl<T: Cancellable + Completable + Send> Future for Op<T> {\n                         return Poll::Ready(data.complete_with_error(err));\n                     }\n                 };\n-\n                 Poll::Pending\n             }\n "
+        },
+        {
+          "filename": "tokio/src/runtime/io/driver/uring.rs",
+          "status": "modified",
+          "additions": 39,
+          "deletions": 14,
+          "patch": "@@ -14,6 +14,22 @@ use std::{io, mem, task::Waker};\n \n const DEFAULT_RING_SIZE: u32 = 256;\n \n+pub(crate) enum RegisterResult {\n+    Submitted(usize),\n+    NotPushed(std::io::Error),\n+    Pushed { index: usize, error: std::io::Error },\n+}\n+\n+impl RegisterResult {\n+    pub(crate) fn into_tuple(self) -> Result<usize, (std::io::Error, Option<usize>)> {\n+        match self {\n+            RegisterResult::Submitted(idx) => Ok(idx),\n+            RegisterResult::NotPushed(err) => Err((err, None)),\n+            RegisterResult::Pushed { index, error } => Err((error, Some(index))),\n+        }\n+    }\n+}\n+\n pub(crate) struct UringContext {\n     pub(crate) uring: Option<io_uring::IoUring>,\n     pub(crate) ops: slab::Slab<Lifecycle>,\n@@ -113,8 +129,12 @@ impl UringContext {\n                     return Ok(());\n                 }\n \n-                // If the submission queue is full, we dispatch completions and try again.\n-                Err(ref e) if e.raw_os_error() == Some(libc::EBUSY) => {\n+                // If the submission queue is full, or the kernel is out of resources,\n+                // we dispatch completions and try again.\n+                Err(ref e)\n+                    if e.raw_os_error() == Some(libc::EBUSY)\n+                        || e.raw_os_error() == Some(libc::EAGAIN) =>\n+                {\n                     self.dispatch_completions();\n                 }\n                 // For other errors, we currently return the error as is.\n@@ -259,40 +279,45 @@ impl Handle {\n     ///\n     /// Callers must ensure that parameters of the entry (such as buffer) are valid and will\n     /// be valid for the entire duration of the operation, otherwise it may cause memory problems.\n-    pub(crate) unsafe fn register_op(&self, entry: Entry, waker: Waker) -> io::Result<usize> {\n+    pub(crate) unsafe fn register_op(&self, entry: Entry, waker: Waker) -> RegisterResult {\n         assert!(self.uring_probe.initialized());\n \n-        // Uring is initialized.\n-\n         let mut guard = self.get_uring().lock();\n         let ctx = &mut *guard;\n         let index = ctx.ops.insert(Lifecycle::Waiting(waker));\n         let entry = entry.user_data(index as u64);\n \n-        let submit_or_remove = |ctx: &mut UringContext| -> io::Result<()> {\n+        let submit_or_err = |ctx: &mut UringContext, queued: bool| -> Result<(), RegisterResult> {\n             if let Err(e) = ctx.submit() {\n-                // Submission failed, remove the entry from the slab and return the error\n-                ctx.remove_op(index);\n-                return Err(e);\n+                if !queued {\n+                    // SQE is not in the ring. Safe to remove the tracking data.\n+                    ctx.remove_op(index);\n+                    return Err(RegisterResult::NotPushed(e));\n+                } else {\n+                    // SQE IS in the ring. We must NOT remove the op.\n+                    return Err(RegisterResult::Pushed { index, error: e });\n+                }\n             }\n             Ok(())\n         };\n \n         // SAFETY: entry is valid for the entire duration of the operation\n         while unsafe { ctx.ring_mut().submission().push(&entry).is_err() } {\n-            // If the submission queue is full, flush it to the kernel\n-            submit_or_remove(ctx)?;\n+            if let Err(err_res) = submit_or_err(ctx, false) {\n+                return err_res;\n+            }\n         }\n \n         // Ensure that the completion queue is not full before submitting the entry.\n         while ctx.ring_mut().completion().is_full() {\n             ctx.dispatch_completions();\n         }\n \n-        // Note: For now, we submit the entry immediately without utilizing batching.\n-        submit_or_remove(ctx)?;\n+        if let Err(err_res) = submit_or_err(ctx, true) {\n+            return err_res;\n+        }\n \n-        Ok(index)\n+        RegisterResult::Submitted(index)\n     }\n \n     pub(crate) fn cancel_op<T: Cancellable>(&self, index: usize, data: Option<T>) {"
+        }
+      ],
+      "comments": [
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8366#issuecomment-5626282510",
+          "author": "Daksh14",
+          "association": "CONTRIBUTOR",
+          "body": "The operation is submitted when you first call await on an `Op<T>` when its first polled, \r\n\r\nthe initialize branch calls `register_op` there's \r\nmultiple ways submitting an operation can fail, those are more descriptively handelled with https://github.com/tokio-rs/tokio/pull/8185/changes#diff-3340859d8085887ff842a587853d966e6fcdf297524b5109dfdd015ba82577c1R18 RegisterResult enum.\r\n\r\nThere's cases like `EINTR` also handled with that approach if a signal stops a read/write operation, we retry at the `read` /`write` level in the io-uring call path",
+          "createdAt": "2026-09-10T22:28:04Z",
+          "updatedAt": "2026-09-11T01:28:56Z"
+        },
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8366#issuecomment-5708631478",
+          "author": "Amit5601",
+          "association": "NONE",
+          "body": "@Darksonn @Daksh14 I have made the required changes, please look into them.",
+          "createdAt": "2026-09-17T04:37:33Z",
+          "updatedAt": "2026-09-17T04:37:33Z"
+        },
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8366#issuecomment-5714011102",
+          "author": "Darksonn",
+          "association": "MEMBER",
+          "body": "Isn't this a duplicate of #8185 that we're already working on?",
+          "createdAt": "2026-09-17T12:01:59Z",
+          "updatedAt": "2026-09-17T12:01:59Z"
+        }
+      ],
+      "reviews": [],
+      "collection": {
+        "publicOnly": true,
+        "issueCommentsComplete": true,
+        "reviewsComplete": true,
+        "filesComplete": true,
+        "inlineReviewCommentsCollected": false,
+        "checksCollected": false
+      }
+    },
+    {
+      "repository": "tokio-rs/tokio",
+      "observedAt": "2026-10-02T17:09:20.214Z",
+      "url": "https://github.com/tokio-rs/tokio/pull/8185",
+      "number": 8185,
+      "title": "runtime: keep io_uring op alive when submission fails after push",
+      "body": "## Motivation\r\n\r\nIn the io_uring backend, `register_op` pushes an SQE onto the submission queue\r\nand then calls `submit()`. If `submit()` returns any error other than `EBUSY`,\r\nthe op is removed from the slab, which drops the operation and frees the buffer\r\nthe SQE points at.\r\n\r\nThis is unsound. `io_uring_enter` advances the submission queue head as it\r\nconsumes SQEs, so a non-`EBUSY` error does not mean the kernel never saw the\r\nentry — it may have already accepted it. In that case the kernel can still write\r\ninto the buffer we just freed (use-after-free), and the eventual CQE refers to a\r\nslab slot that no longer exists, which panics the driver or, if the slot has\r\nbeen reused, completes an unrelated op.\r\n\r\n## Solution\r\n\r\nOnce the SQE has been pushed, keep the slab entry even if `submit()` fails, the\r\nsame way the cancellation path does: the buffer stays alive until the completion\r\nis observed, and the error is still propagated to the caller. The pre-push\r\nsubmit (flushing a full queue) is unchanged, since there the entry has not\r\nreached the kernel and removing it is correct.\r\n\r\nAdds a regression test that forces a post-push submit failure and asserts the op\r\nis retained. Verified on Linux 6.8 (io_uring enabled): the test fails before this\r\nchange and passes after, and the existing `fs_uring*` tests continue to pass.\r\n",
+      "state": "open",
+      "merged": false,
+      "draft": false,
+      "author": "blasrodri",
+      "authorAssociation": "CONTRIBUTOR",
+      "createdAt": "2026-06-02T15:59:26Z",
+      "updatedAt": "2026-06-26T13:43:23Z",
+      "closedAt": null,
+      "mergedAt": null,
+      "headSha": "f7e3b8e78a464d9f4ccb1c4a575017d54b86e338",
+      "baseSha": "778e9d97d91cff2c3036cc5663936d479edb30cb",
+      "mergeCommitSha": null,
+      "changedFiles": 10,
+      "additions": 111,
+      "deletions": 29,
+      "files": [
+        {
+          "filename": "tokio/src/fs/file.rs",
+          "status": "modified",
+          "additions": 11,
+          "deletions": 4,
+          "patch": "@@ -1011,14 +1011,21 @@ impl Inner {\n             let (res, r_fd, r_buf) =\n                 // u64::MAX to use and advance the file position\n                 Op::read_at(fd, buf, max_buf_size, u64::MAX).await;\n-            match res {\n-                Err(e) if e.kind() == io::ErrorKind::Interrupted => {\n+            match (res, r_fd, r_buf) {\n+                // Retry an interrupted read with the resources the op handed back.\n+                (Err(e), Some(r_fd), Some(r_buf)) if e.kind() == io::ErrorKind::Interrupted => {\n                     buf = r_buf;\n                     fd = r_fd;\n                     continue;\n                 }\n-                Err(e) => break (Operation::Read(Err(e)), r_buf),\n-                Ok(n) => break (Operation::Read(Ok(n as usize)), r_buf),\n+                // A cancelled op keeps its buffer in the driver, so the idle slot\n+                // gets a fresh empty `Buf` instead.\n+                (Err(e), _, r_buf) => {\n+                    let buf = r_buf.unwrap_or_else(|| Buf::with_capacity(0));\n+                    break (Operation::Read(Err(e)), buf);\n+                }\n+                (Ok(n), _, Some(r_buf)) => break (Operation::Read(Ok(n as usize)), r_buf),\n+                (Ok(_), ..) => unreachable!(\"a successful read returns its buffer\"),\n             }\n         }\n     }"
+        },
+        {
+          "filename": "tokio/src/fs/read_uring.rs",
+          "status": "modified",
+          "additions": 7,
+          "deletions": 4,
+          "patch": "@@ -118,17 +118,20 @@ async fn op_read(\n     loop {\n         let (res, r_fd, r_buf) = Op::read_at(fd, buf, read_len as usize, *offset).await;\n \n-        match res {\n-            Err(e) if e.kind() == ErrorKind::Interrupted => {\n+        match (res, r_fd, r_buf) {\n+            // Retry an interrupted read with the buffer the op handed back. A\n+            // cancelled op returns no buffer, so it falls through as terminal.\n+            (Err(e), Some(r_fd), Some(r_buf)) if e.kind() == ErrorKind::Interrupted => {\n                 buf = r_buf;\n                 fd = r_fd;\n             }\n-            Err(e) => return Err(e),\n-            Ok(size_read) => {\n+            (Err(e), ..) => return Err(e),\n+            (Ok(size_read), Some(r_fd), Some(r_buf)) => {\n                 *offset += size_read as u64;\n \n                 return Ok((r_fd, r_buf, size_read == 0));\n             }\n+            (Ok(_), ..) => unreachable!(\"a successful read returns its fd and buffer\"),\n         }\n     }\n }"
+        },
+        {
+          "filename": "tokio/src/fs/write.rs",
+          "status": "modified",
+          "additions": 9,
+          "deletions": 3,
+          "patch": "@@ -75,7 +75,13 @@ async fn write_uring(path: &Path, mut buf: OwnedBuf) -> io::Result<()> {\n     let mut buf_offset: usize = 0;\n     let mut file_offset: u64 = 0;\n     while buf_offset < total {\n-        let (res, _buf, _fd) = Op::write_at(fd, buf, buf_offset, file_offset)?.await;\n+        let (res, r_buf, r_fd) = Op::write_at(fd, buf, buf_offset, file_offset)?.await;\n+\n+        // A cancelled op returns no resources to continue with, so its error is\n+        // terminal; otherwise an interrupted write retries from where it stopped.\n+        let (Some(r_buf), Some(r_fd)) = (r_buf, r_fd) else {\n+            return Err(res.expect_err(\"a cancelled op completes with an error\"));\n+        };\n \n         let n = match res {\n             Ok(0) => return Err(io::ErrorKind::WriteZero.into()),\n@@ -84,8 +90,8 @@ async fn write_uring(path: &Path, mut buf: OwnedBuf) -> io::Result<()> {\n             Err(e) => return Err(e),\n         };\n \n-        buf = _buf;\n-        fd = _fd;\n+        buf = r_buf;\n+        fd = r_fd;\n         buf_offset += n as usize;\n         file_offset += n as u64;\n     }"
+        },
+        {
+          "filename": "tokio/src/io/uring/open.rs",
+          "status": "modified",
+          "additions": 4,
+          "deletions": 0,
+          "patch": "@@ -27,6 +27,10 @@ impl Completable for Open {\n     fn complete_with_error(self, err: Error) -> Self::Output {\n         Err(err)\n     }\n+\n+    fn complete_after_cancel(err: Error) -> Self::Output {\n+        Err(err)\n+    }\n }\n \n impl Cancellable for Open {"
+        },
+        {
+          "filename": "tokio/src/io/uring/read.rs",
+          "status": "modified",
+          "additions": 9,
+          "deletions": 3,
+          "patch": "@@ -61,19 +61,25 @@ impl<B: fmt::Debug, F> fmt::Debug for Read<B, F> {\n }\n \n impl<B: ReadBuffer, F: UringFd> Completable for Read<B, F> {\n-    type Output = (io::Result<u32>, F, B);\n+    // The fd and buffer are `None` only when the op was cancelled and they were\n+    // kept in the driver; otherwise they are returned to the caller.\n+    type Output = (io::Result<u32>, Option<F>, Option<B>);\n \n     fn complete(self, cqe: CqeResult) -> Self::Output {\n         let mut buf = self.buf;\n         if let Ok(len) = cqe.result {\n             // SAFETY: kernel wrote exactly `len` bytes into the prepared buffer.\n             unsafe { buf.uring_read_complete(len) };\n         }\n-        (cqe.result, self.fd, buf)\n+        (cqe.result, Some(self.fd), Some(buf))\n     }\n \n     fn complete_with_error(self, err: Error) -> Self::Output {\n-        (Err(err), self.fd, self.buf)\n+        (Err(err), Some(self.fd), Some(self.buf))\n+    }\n+\n+    fn complete_after_cancel(err: Error) -> Self::Output {\n+        (Err(err), None, None)\n     }\n }\n "
+        },
+        {
+          "filename": "tokio/src/io/uring/write.rs",
+          "status": "modified",
+          "additions": 9,
+          "deletions": 3,
+          "patch": "@@ -12,13 +12,19 @@ pub(crate) struct Write {\n }\n \n impl Completable for Write {\n-    type Output = (io::Result<u32>, OwnedBuf, OwnedFd);\n+    // The buffer and fd are `None` only when the op was cancelled and they were\n+    // kept in the driver; otherwise they are returned to the caller.\n+    type Output = (io::Result<u32>, Option<OwnedBuf>, Option<OwnedFd>);\n     fn complete(self, cqe: CqeResult) -> Self::Output {\n-        (cqe.result, self.buf, self.fd)\n+        (cqe.result, Some(self.buf), Some(self.fd))\n     }\n \n     fn complete_with_error(self, err: Error) -> Self::Output {\n-        (Err(err), self.buf, self.fd)\n+        (Err(err), Some(self.buf), Some(self.fd))\n+    }\n+\n+    fn complete_after_cancel(err: Error) -> Self::Output {\n+        (Err(err), None, None)\n     }\n }\n "
+        },
+        {
+          "filename": "tokio/src/runtime/driver/op.rs",
+          "status": "modified",
+          "additions": 29,
+          "deletions": 5,
+          "patch": "@@ -4,6 +4,7 @@ use crate::io::uring::read::Read;\n use crate::io::uring::utils::ArcFd;\n use crate::io::uring::write::Write;\n \n+use crate::runtime::io::RegisterResult;\n use crate::runtime::Handle;\n \n use io_uring::cqueue;\n@@ -124,6 +125,10 @@ pub(crate) trait Completable {\n     // The `Op` type that implements this trait can return the passed error\n     // upstream by embedding it in the `Output`.\n     fn complete_with_error(self, error: Error) -> Self::Output;\n+\n+    // Like `complete_with_error`, but for an op cancelled after the SQE reached\n+    // the kernel: its resources stay with the driver and are not returned.\n+    fn complete_after_cancel(error: Error) -> Self::Output;\n }\n \n /// Extracts the `CancelData` needed to safely cancel an in-flight io_uring operation.\n@@ -138,18 +143,22 @@ impl<T: Cancellable + Completable + Send> Future for Op<T> {\n \n     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {\n         let this = self.get_mut();\n-        let handle = &mut this.handle;\n-        let driver = handle.inner.driver().io();\n \n         match &mut this.state {\n             State::Initialize(entry_opt) => {\n                 let entry = entry_opt.take().expect(\"Entry must be present\");\n                 let waker = cx.waker().clone();\n \n+                let driver = this.handle.inner.driver().io();\n                 // SAFETY: entry is valid for the entire duration of the operation\n-                match unsafe { driver.register_op(entry, waker) } {\n-                    Ok(idx) => this.state = State::Polled(idx),\n-                    Err(err) => {\n+                let result = unsafe { driver.register_op(entry, waker) };\n+\n+                match result {\n+                    RegisterResult::Submitted(idx) => this.state = State::Polled(idx),\n+\n+                    // The kernel never saw the entry, so the resources go back to\n+                    // the caller with the error.\n+                    RegisterResult::NotPushed(err) => {\n                         let data = this\n                             .take_data()\n                             .expect(\"Data must be present on Initialization\");\n@@ -158,12 +167,27 @@ impl<T: Cancellable + Completable + Send> Future for Op<T> {\n \n                         return Poll::Ready(data.complete_with_error(err));\n                     }\n+\n+                    // The kernel may have seen the entry, so cancel to keep the\n+                    // resources alive until completion instead of returning them.\n+                    RegisterResult::Pushed { index, error } => {\n+                        let data = this\n+                            .take_data()\n+                            .expect(\"Data must be present on Initialization\");\n+\n+                        this.handle.inner.driver().io().cancel_op(index, Some(data));\n+\n+                        this.state = State::Complete;\n+\n+                        return Poll::Ready(T::complete_after_cancel(error));\n+                    }\n                 };\n \n                 Poll::Pending\n             }\n \n             State::Polled(idx) => {\n+                let driver = this.handle.inner.driver().io();\n                 let mut ctx = driver.get_uring().lock();\n                 let lifecycle = ctx.ops.get_mut(*idx).expect(\"Lifecycle must be present\");\n "
+        },
+        {
+          "filename": "tokio/src/runtime/io/driver.rs",
+          "status": "modified",
+          "additions": 1,
+          "deletions": 0,
+          "patch": "@@ -5,6 +5,7 @@ cfg_signal_internal_and_unix! {\n cfg_io_uring! {\n     mod uring;\n     use uring::UringContext;\n+    pub(crate) use uring::RegisterResult;\n     use crate::sync::OnceCell;\n }\n "
+        },
+        {
+          "filename": "tokio/src/runtime/io/driver/uring.rs",
+          "status": "modified",
+          "additions": 29,
+          "deletions": 7,
+          "patch": "@@ -14,6 +14,19 @@ use std::{io, mem, task::Waker};\n \n const DEFAULT_RING_SIZE: u32 = 256;\n \n+/// Outcome of registering an op with the io_uring.\n+pub(crate) enum RegisterResult {\n+    /// In-flight at this slab index.\n+    Submitted(usize),\n+\n+    /// Submit failed before reaching the kernel; the slot was removed.\n+    NotPushed(io::Error),\n+\n+    /// Submit failed after reaching the kernel; the slot is kept and the caller\n+    /// must cancel it to keep its resources alive until completion.\n+    Pushed { index: usize, error: io::Error },\n+}\n+\n pub(crate) struct UringContext {\n     pub(crate) uring: Option<io_uring::IoUring>,\n     pub(crate) ops: slab::Slab<Lifecycle>,\n@@ -259,7 +272,7 @@ impl Handle {\n     ///\n     /// Callers must ensure that parameters of the entry (such as buffer) are valid and will\n     /// be valid for the entire duration of the operation, otherwise it may cause memory problems.\n-    pub(crate) unsafe fn register_op(&self, entry: Entry, waker: Waker) -> io::Result<usize> {\n+    pub(crate) unsafe fn register_op(&self, entry: Entry, waker: Waker) -> RegisterResult {\n         assert!(self.uring_probe.initialized());\n \n         // Uring is initialized.\n@@ -269,9 +282,10 @@ impl Handle {\n         let index = ctx.ops.insert(Lifecycle::Waiting(waker));\n         let entry = entry.user_data(index as u64);\n \n-        let submit_or_remove = |ctx: &mut UringContext| -> io::Result<()> {\n+        // `entry` has not been pushed yet, so a submit error here means it never\n+        // reached the kernel and we can drop the slot before returning.\n+        let submit_before_push = |ctx: &mut UringContext| -> io::Result<()> {\n             if let Err(e) = ctx.submit() {\n-                // Submission failed, remove the entry from the slab and return the error\n                 ctx.remove_op(index);\n                 return Err(e);\n             }\n@@ -280,8 +294,10 @@ impl Handle {\n \n         // SAFETY: entry is valid for the entire duration of the operation\n         while unsafe { ctx.ring_mut().submission().push(&entry).is_err() } {\n-            // If the submission queue is full, flush it to the kernel\n-            submit_or_remove(ctx)?;\n+            // If the submission queue is full, flush it to the kernel and retry.\n+            if let Err(e) = submit_before_push(ctx) {\n+                return RegisterResult::NotPushed(e);\n+            }\n         }\n \n         // Ensure that the completion queue is not full before submitting the entry.\n@@ -290,9 +306,15 @@ impl Handle {\n         }\n \n         // Note: For now, we submit the entry immediately without utilizing batching.\n-        submit_or_remove(ctx)?;\n+        //\n+        // `entry` is now pushed, so the kernel may already own the buffer it\n+        // points at. Keep the slot on a submit error: dropping it would let the\n+        // `Op` free the buffer while it is still in use.\n+        if let Err(e) = ctx.submit() {\n+            return RegisterResult::Pushed { index, error: e };\n+        }\n \n-        Ok(index)\n+        RegisterResult::Submitted(index)\n     }\n \n     pub(crate) fn cancel_op<T: Cancellable>(&self, index: usize, data: Option<T>) {"
+        },
+        {
+          "filename": "tokio/src/runtime/io/mod.rs",
+          "status": "modified",
+          "additions": 3,
+          "deletions": 0,
+          "patch": "@@ -5,6 +5,9 @@\n mod driver;\n use driver::{Direction, Tick};\n pub(crate) use driver::{Driver, Handle, ReadyEvent};\n+cfg_io_uring! {\n+    pub(crate) use driver::RegisterResult;\n+}\n \n mod registration;\n pub(crate) use registration::Registration;"
+        }
+      ],
+      "comments": [],
+      "reviews": [
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8185#pullrequestreview-4426958125",
+          "author": "martin-g",
+          "association": "MEMBER",
+          "body": "",
+          "state": "COMMENTED",
+          "submittedAt": "2026-06-04T11:05:45Z",
+          "commitId": "039aff77e580a3e42f9e8db5d5959767934c91ca"
+        },
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8185#pullrequestreview-4428784566",
+          "author": "blasrodri",
+          "association": "CONTRIBUTOR",
+          "body": "",
+          "state": "COMMENTED",
+          "submittedAt": "2026-06-04T14:43:00Z",
+          "commitId": "039aff77e580a3e42f9e8db5d5959767934c91ca"
+        },
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8185#pullrequestreview-4428920134",
+          "author": "blasrodri",
+          "association": "CONTRIBUTOR",
+          "body": "",
+          "state": "COMMENTED",
+          "submittedAt": "2026-06-04T15:00:31Z",
+          "commitId": "d5e4b10beae55c9602da129a2b5adce4ab328538"
+        },
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8185#pullrequestreview-4451638776",
+          "author": "mattiapitossi",
+          "association": "MEMBER",
+          "body": "",
+          "state": "COMMENTED",
+          "submittedAt": "2026-06-08T16:55:43Z",
+          "commitId": "d5e4b10beae55c9602da129a2b5adce4ab328538"
+        },
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8185#pullrequestreview-4452001728",
+          "author": "blasrodri",
+          "association": "CONTRIBUTOR",
+          "body": "",
+          "state": "COMMENTED",
+          "submittedAt": "2026-06-08T17:43:56Z",
+          "commitId": "039aff77e580a3e42f9e8db5d5959767934c91ca"
+        },
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8185#pullrequestreview-4573446936",
+          "author": "mattiapitossi",
+          "association": "MEMBER",
+          "body": "",
+          "state": "COMMENTED",
+          "submittedAt": "2026-06-25T17:35:40Z",
+          "commitId": "f7e3b8e78a464d9f4ccb1c4a575017d54b86e338"
+        },
+        {
+          "url": "https://github.com/tokio-rs/tokio/pull/8185#pullrequestreview-4579906124",
+          "author": "blasrodri",
+          "association": "CONTRIBUTOR",
+          "body": "",
+          "state": "COMMENTED",
+          "submittedAt": "2026-06-26T13:43:23Z",
+          "commitId": "f7e3b8e78a464d9f4ccb1c4a575017d54b86e338"
+        }
+      ],
+      "collection": {
+        "publicOnly": true,
+        "issueCommentsComplete": true,
+        "reviewsComplete": true,
+        "filesComplete": true,
+        "inlineReviewCommentsCollected": false,
+        "checksCollected": false
+      }
+    },
+    {
+      "repository": "rask-lang/rask",
+      "observedAt": "2026-10-02T17:09:20.214Z",
+      "url": "https://github.com/rask-lang/rask/pull/469",
+      "number": 469,
+      "title": "mono: use resolved targets for method reachability",
+      "body": "Fixes #258.\n\n## Problem\n\nMonomorphization handled an instance call such as `LoadError.message()` by enqueueing every method with the bare name `message`. That made unrelated stdlib methods reachable; the reporter reproduction then lowered `IoError_message` in the wrong program context and failed with `UnresolvedVariable(\"msg\")`.\n\n## Change\n\nPass the type checker TypedProgram into production monomorphization and use its CALL6 `Callee::Method` target as the exact reachable method. Keep the existing conservative bare-name fallback for standalone or unresolved cases that do not have a typed dispatch target.\n\n## Verification\n\n- Before: the release CLI failed on the issue reproduction with `MIR lowering 'IoError_message': UnresolvedVariable(\"msg\")`.\n- After: the same native run exits successfully and prints `1 2 3`, `none`, and `10 20 30`.\n- `cargo test -p rask-mono` — 49 passed\n- `cargo test -p rask-compiler` — 19 passed\n- `cargo build --release -p rask-cli`\n- `git diff --check`\n\n## Risk\n\nThe production path now consumes the dispatch result already established by the type checker. The conservative fallback remains for callers without TypedProgram data.\n\n## Assistance disclosure\n\nOpenAI Codex helped trace the failure, implement the patch, and run the checks. I reviewed the scoped diff and evidence before submission.\n",
+      "state": "closed",
+      "merged": false,
+      "draft": false,
+      "author": "VrtxOmega",
+      "authorAssociation": "NONE",
+      "createdAt": "2026-07-30T02:31:20Z",
+      "updatedAt": "2026-07-30T16:34:33Z",
+      "closedAt": "2026-07-30T16:34:13Z",
+      "mergedAt": null,
+      "headSha": "b2297f05abed08f9ee6549db8a76e574e4a73763",
+      "baseSha": "65106b2760bee3f4adc9e9d7c3cd7b6b9fbe8d8f",
+      "mergeCommitSha": "d0662fb9159d7271ee7ca9de75a9ced889638c33",
+      "changedFiles": 3,
+      "additions": 75,
+      "deletions": 17,
+      "files": [
+        {
+          "filename": "compiler/crates/rask-compiler/tests/pipeline.rs",
+          "status": "modified",
+          "additions": 36,
+          "deletions": 1,
+          "patch": "@@ -10,7 +10,7 @@ use std::io::Write;\n use std::path::PathBuf;\n use std::sync::atomic::{AtomicU64, Ordering};\n \n-use rask_compiler::{check_file, CompilerConfig, CfgConfig};\n+use rask_compiler::{check_file, compile_file, CompilerConfig, CfgConfig};\n \n static TMP_COUNTER: AtomicU64 = AtomicU64::new(0);\n \n@@ -106,6 +106,41 @@ fn call_targets_records_free_and_method_dispatch() {\n     let _ = std::fs::remove_file(&path);\n }\n \n+#[test]\n+fn monomorphization_uses_the_resolved_method_target() {\n+    let path = tmp_rk(r#\"\n+        struct AlphaError {}\n+        extend AlphaError {\n+            func message(self) -> string { return \"alpha\" }\n+        }\n+\n+        struct BetaError {}\n+        extend BetaError {\n+            func message(self) -> string { return \"beta\" }\n+        }\n+\n+        func main() {\n+            const error = AlphaError {}\n+            println(error.message())\n+        }\n+    \"#);\n+    let output = compile_file(path.to_str().unwrap(), Vec::new(), &default_config());\n+    let result = output.result.expect(\"expected success\");\n+    let names: Vec<&str> = result\n+        .mono\n+        .functions\n+        .iter()\n+        .map(|function| function.name.as_str())\n+        .collect();\n+\n+    assert!(names.contains(&\"AlphaError_message\"));\n+    assert!(\n+        !names.contains(&\"BetaError_message\"),\n+        \"resolved AlphaError.message() must not make every bare `message` method reachable: {names:?}\"\n+    );\n+    let _ = std::fs::remove_file(&path);\n+}\n+\n // ═══════════════════════════════════════════════════════════════════════\n // Error accumulation — the main novel contract\n // ═══════════════════════════════════════════════════════════════════════"
+        },
+        {
+          "filename": "compiler/crates/rask-mono/src/lib.rs",
+          "status": "modified",
+          "additions": 1,
+          "deletions": 1,
+          "patch": "@@ -181,7 +181,7 @@ pub fn monomorphize_with_packages(\n     decls: &[Decl],\n     package_modules: std::collections::HashSet<String>,\n ) -> Result<MonoProgram, MonomorphizeError> {\n-    let mut mono = Monomorphizer::new(decls, &program.call_type_args);\n+    let mut mono = Monomorphizer::with_typed_program(decls, program);\n     mono.set_package_modules(package_modules);\n     mono.set_trait_coercions(&program.trait_coercions);\n "
+        },
+        {
+          "filename": "compiler/crates/rask-mono/src/reachability.rs",
+          "status": "modified",
+          "additions": 38,
+          "deletions": 15,
+          "patch": "@@ -17,7 +17,7 @@ use rask_ast::{\n     stmt::{Stmt, StmtKind},\n };\n use rask_ast::NodeId;\n-use rask_types::Type;\n+use rask_types::{Callee, Type, TypedProgram};\n use std::collections::{HashMap, VecDeque};\n \n /// Monomorphization work item\n@@ -48,6 +48,9 @@ pub struct Monomorphizer<'a> {\n     method_by_bare_name: HashMap<String, Vec<String>>,\n     /// Resolved type args per call site (from typechecker)\n     call_type_args: &'a HashMap<NodeId, Vec<Type>>,\n+    /// CALL6 dispatch targets and type names from the type checker. Absent in\n+    /// standalone reachability tests, which retain the conservative fallback.\n+    typed: Option<&'a TypedProgram>,\n     /// External package module names — `pkg.func()` enqueues `func`, not `pkg_func`\n     package_modules: std::collections::HashSet<String>,\n     /// Already processed (name, type_args) pairs\n@@ -179,6 +182,7 @@ impl<'a> Monomorphizer<'a> {\n             method_table,\n             method_by_bare_name,\n             call_type_args,\n+            typed: None,\n             package_modules: std::collections::HashSet::new(),\n             seen: HashMap::new(),\n             queue: VecDeque::new(),\n@@ -189,6 +193,13 @@ impl<'a> Monomorphizer<'a> {\n         }\n     }\n \n+    /// Build a reachability pass with the type checker's canonical call targets.\n+    pub fn with_typed_program(decls: &'a [Decl], typed: &'a TypedProgram) -> Self {\n+        let mut mono = Self::new(decls, &typed.call_type_args);\n+        mono.typed = Some(typed);\n+        mono\n+    }\n+\n     /// Record implicit trait-coercion sites (TR5) from the type checker.\n     pub fn set_trait_coercions(&mut self, coercions: &HashMap<NodeId, String>) {\n         self.trait_coercions = coercions.clone();\n@@ -376,22 +387,34 @@ impl<'a> Monomorphizer<'a> {\n                     .cloned()\n                     .unwrap_or_default();\n \n-                // Static method call: Type.method() → enqueue \"Type_method\"\n-                // Cross-package call: pkg.func() → enqueue \"func\" (the function\n-                // is registered under its original name from the dependency).\n-                if let ExprKind::Ident(name) = &object.kind {\n-                    if self.package_modules.contains(name) {\n-                        self.enqueue(method.clone(), type_args.clone());\n-                    } else {\n-                        self.enqueue(format!(\"{}_{}\", name, method), type_args.clone());\n+                let resolved_target = self.typed\n+                    .and_then(|typed| typed.call_targets.get(&expr.id).map(|target| (typed, target)))\n+                    .and_then(|(typed, target)| match target {\n+                        Callee::Method { type_id, method } => {\n+                            Some(format!(\"{}_{}\", typed.types.type_name(*type_id), method))\n+                        }\n+                        Callee::Free(_) => None,\n+                    });\n+\n+                if let Some(target) = resolved_target {\n+                    self.enqueue(target, type_args.clone());\n+                } else {\n+                    // Static method call: Type.method() → enqueue \"Type_method\"\n+                    // Cross-package call: pkg.func() → enqueue \"func\" (the function\n+                    // is registered under its original name from the dependency).\n+                    if let ExprKind::Ident(name) = &object.kind {\n+                        if self.package_modules.contains(name) {\n+                            self.enqueue(method.clone(), type_args.clone());\n+                        } else {\n+                            self.enqueue(format!(\"{}_{}\", name, method), type_args.clone());\n+                        }\n                     }\n-                }\n \n-                // Instance method call: value.method() → enqueue all methods\n-                // with this bare name (conservative; receiver type unknown here)\n-                if let Some(qualified_names) = self.method_by_bare_name.get(method) {\n-                    for qname in qualified_names.clone() {\n-                        self.enqueue(qname, type_args.clone());\n+                    // Untyped fallback: enqueue every method with this bare name.\n+                    if let Some(qualified_names) = self.method_by_bare_name.get(method) {\n+                        for qname in qualified_names.clone() {\n+                            self.enqueue(qname, type_args.clone());\n+                        }\n                     }\n                 }\n "
+        }
+      ],
+      "comments": [
+        {
+          "url": "https://github.com/rask-lang/rask/pull/469#issuecomment-5133606097",
+          "author": "dritory",
+          "association": "CONTRIBUTOR",
+          "body": "fix addresses the symptom rather than the mangling collision.",
+          "createdAt": "2026-07-30T16:34:33Z",
+          "updatedAt": "2026-07-30T16:34:33Z"
+        }
+      ],
+      "reviews": [],
+      "collection": {
+        "publicOnly": true,
+        "issueCommentsComplete": true,
+        "reviewsComplete": true,
+        "filesComplete": true,
+        "inlineReviewCommentsCollected": false,
+        "checksCollected": false
+      }
+    },
+    {
+      "repository": "karakeep-app/karakeep",
+      "observedAt": "2026-10-02T17:09:20.214Z",
+      "url": "https://github.com/karakeep-app/karakeep/pull/2864",
+      "number": 2864,
+      "title": "Fix screenshot preview scrolling",
+      "body": "Fixes #2817.\n\n## Summary\n\n- makes the screenshot preview pane vertically scrollable when a screenshot is taller than the preview viewport\n- keeps horizontal overflow hidden so wide screenshots still fit the existing preview layout\n\n## Before / After\n\n- Before: long screenshots could be clipped inside the previewer with no scrollbar.\n- After: the screenshot section owns its vertical overflow, so long screenshots can be scrolled without changing the other preview modes.\n\n## Validation\n\n- `pnpm exec oxfmt --ignore-path=.gitignore --check apps/web/components/dashboard/preview/LinkContentSection.tsx`\n- `pnpm --filter @karakeep/web run lint`\n- `pnpm --filter @karakeep/web run typecheck`\n- `TZ=UTC pnpm --filter @karakeep/web run test -- --run`\n- `git diff --check upstream/main...HEAD`\n- pre-commit hook: `turbo run --no-daemon typecheck lint format`\n",
+      "state": "closed",
+      "merged": true,
+      "draft": false,
+      "author": "VrtxOmega",
+      "authorAssociation": "CONTRIBUTOR",
+      "createdAt": "2026-06-01T17:49:01Z",
+      "updatedAt": "2026-07-26T14:50:27Z",
+      "closedAt": "2026-07-26T12:02:15Z",
+      "mergedAt": "2026-07-26T12:02:15Z",
+      "headSha": "d48b27de68c63944bc6db777bfe717b2b36edb0a",
+      "baseSha": "76cbbf3990e052fd47c74b43acf262c94ca95248",
+      "mergeCommitSha": "595392a9e706a7b93951cb9a7deea70ba00cadb4",
+      "changedFiles": 1,
+      "additions": 1,
+      "deletions": 1,
+      "files": [
+        {
+          "filename": "apps/web/components/dashboard/preview/LinkContentSection.tsx",
+          "status": "modified",
+          "additions": 1,
+          "deletions": 1,
+          "patch": "@@ -77,7 +77,7 @@ function FullPageArchiveSection({ link }: { link: ZBookmarkedLink }) {\n \n function ScreenshotSection({ link }: { link: ZBookmarkedLink }) {\n   return (\n-    <div className=\"relative h-full min-w-full\">\n+    <div className=\"relative h-full min-w-full overflow-y-auto overflow-x-hidden\">\n       <Image\n         alt=\"screenshot\"\n         src={`/api/assets/${link.screenshotAssetId}`}"
+        }
+      ],
+      "comments": [
+        {
+          "url": "https://github.com/karakeep-app/karakeep/pull/2864#issuecomment-4595103132",
+          "author": "greptile-apps[bot]",
+          "association": "CONTRIBUTOR",
+          "body": "<h3>Greptile Summary</h3>\n\nThis PR fixes clipped screenshot previews by adding `overflow-y-auto overflow-x-hidden` to the `ScreenshotSection` wrapper div, which lets users scroll vertically through tall screenshots while keeping horizontal overflow hidden.\n\n- The one-line change mirrors the exact pattern already used by the reader/cached view (`overflow-y-auto overflow-x-hidden` on line 151), so the fix is idiomatic and consistent with the rest of the component.\n- The parent flex container already carries `min-h-0` (line 289), so the `h-full` child will correctly bound its height and allow `overflow-y-auto` to activate as intended.\n\n<h3>Confidence Score: 5/5</h3>\n\nSafe to merge — the change is a single Tailwind class addition scoped entirely to the screenshot preview section with no side effects on other preview modes.\n\nThe fix is a one-line Tailwind change that replicates a pattern already used in the same component for the reader view. The parent flex container's min-h-0 ensures the overflow constraint functions as expected, and the rest of the layout is unaffected.\n\nNo files require special attention.\n\n<h3>Important Files Changed</h3>\n\n\n\n\n| Filename | Overview |\n|----------|----------|\n| apps/web/components/dashboard/preview/LinkContentSection.tsx | Adds overflow-y-auto overflow-x-hidden to the ScreenshotSection wrapper div, enabling vertical scrolling for tall screenshots while keeping horizontal overflow clipped. The approach is consistent with how the cached/reader view handles its own overflow on line 151. |\n\n</details>\n\n\n\n<!-- greptile_other_comments_section -->\n\n<sub>Reviews (1): Last reviewed commit: [\"fix preview screenshot scrolling\"](https://github.com/karakeep-app/karakeep/commit/d48b27de68c63944bc6db777bfe717b2b36edb0a) | [Re-trigger Greptile](https://app.greptile.com/api/retrigger?id=34960711)</sub>",
+          "createdAt": "2026-06-01T17:50:15Z",
+          "updatedAt": "2026-06-01T17:50:15Z"
+        },
+        {
+          "url": "https://github.com/karakeep-app/karakeep/pull/2864#issuecomment-5083379653",
+          "author": "MohamedBassem",
+          "association": "MEMBER",
+          "body": "Thanks for the PR, this is now coming in the next release :) Sorry it took so long!",
+          "createdAt": "2026-07-26T12:02:30Z",
+          "updatedAt": "2026-07-26T12:02:30Z"
+        },
+        {
+          "url": "https://github.com/karakeep-app/karakeep/pull/2864#issuecomment-5083995219",
+          "author": "VrtxOmega",
+          "association": "CONTRIBUTOR",
+          "body": "Thank you—and no worries on the timing. I used my PCF workflow to keep this to the single affected overflow rule and verify the repository gates before submission, so I’m glad the narrow fix held up and will ship in the next release. I appreciate you taking the time to review and merge it.",
+          "createdAt": "2026-07-26T14:50:27Z",
+          "updatedAt": "2026-07-26T14:50:27Z"
+        }
+      ],
+      "reviews": [],
+      "collection": {
+        "publicOnly": true,
+        "issueCommentsComplete": true,
+        "reviewsComplete": true,
+        "filesComplete": true,
+        "inlineReviewCommentsCollected": false,
+        "checksCollected": false
+      }
+    }
+  ],
+  "additionalSources": [
+    {
+      "url": "https://api.github.com/repos/tokio-rs/tokio/branches/master",
+      "checkedAt": "2026-10-02T17:11:21.319Z",
+      "ref": "master",
+      "commit": "2746c3ae26f8ac0af6023843a7f23d419c334efe"
+    },
+    {
+      "url": "https://github.com/rask-lang/rask/issues/258#issuecomment-5089262508",
+      "createdAt": "2026-07-27T08:53:06Z",
+      "updatedAt": "2026-07-27T08:53:06Z",
+      "author": "dritory",
+      "body": "Hit the same `MIR lowering '<Type>_message': UnresolvedVariable` symptom during unrelated codegen work, but this repro has **no name collision** — the failing method belongs to stdlib `IoError`, which the program never mentions. So whatever fix lands here needs to cover more than user↔stdlib short-name clashes; a spurious-reachability path pulls in `IoError.message` and then fails to lower it.\n\nMinimal repro (native only; `--interp` runs fine):\n\n```rask\nstruct Big { a: i64, b: i64, c: i64 }\nenum LoadError { Missing }\nextend LoadError {\n    func message(self) -> string {\n        match self { LoadError.Missing => return \"x\" }\n    }\n}\nfunc find(hit: bool) -> Big? {\n    if hit { return Big { a: 1, b: 2, c: 3 } }\n    return none\n}\nfunc load(ok: bool) -> Big or LoadError {\n    if ok { return Big { a: 10, b: 20, c: 30 } }\n    return LoadError.Missing\n}\nfunc main() {\n    const a: Big? = find(true)\n    if a? { println(\"{a.a} {a.b} {a.c}\") } else { println(\"none\") }\n    const b: Big? = find(false)\n    if b? { println(\"{b.a} {b.b} {b.c}\") } else { println(\"none\") }\n    match load(true) {\n        Big as v => println(\"{v.a} {v.b} {v.c}\")\n        LoadError as e => println(\"{e.message()}\")\n    }\n}\n```\n\n```\nerror: MIR lowering 'IoError_message': UnresolvedVariable(\"msg\")\n```\n\nThe trigger is fiddly: it needs the struct-carrying optionals **and** the `.message()` call on the Result error arm together. Drop either (scalar optionals, or a literal in the err arm, or remove the optionals) and it compiles and runs natively. That fragility points at reachability/mono over-approximation — the set of `message` bodies marked reachable depends on unrelated surrounding code, and one of them (`IoError.message`) can't be lowered in the context it's instantiated under.\n\nReproduces on `main` at f2f0e81.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_"
+    }
+  ]
+}
