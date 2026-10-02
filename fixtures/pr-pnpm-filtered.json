@@ -1,0 +1,19 @@
+{
+  "kind": "pull_request",
+  "number": 2864,
+  "title": "Fix screenshot preview scrolling",
+  "body": "Fixes #2817.\n\n## Summary\n\n- makes the screenshot preview pane vertically scrollable when a screenshot is taller than the preview viewport\n- keeps horizontal overflow hidden so wide screenshots still fit the existing preview layout\n\n## Before / After\n\n- Before: long screenshots could be clipped inside the previewer with no scrollbar.\n- After: the screenshot section owns its vertical overflow, so long screenshots can be scrolled without changing the other preview modes.\n\n## Validation\n\n- `pnpm exec oxfmt --ignore-path=.gitignore --check apps/web/components/dashboard/preview/LinkContentSection.tsx`\n- `pnpm --filter @karakeep/web run lint`\n- `pnpm --filter @karakeep/web run typecheck`\n- `TZ=UTC pnpm --filter @karakeep/web run test -- --run`\n- `git diff --check upstream/main...HEAD`\n- pre-commit hook: `turbo run --no-daemon typecheck lint format`\n",
+  "authorAssociation": "CONTRIBUTOR",
+  "changedFiles": 1,
+  "additions": 1,
+  "deletions": 1,
+  "files": [
+    {
+      "filename": "apps/web/components/dashboard/preview/LinkContentSection.tsx",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -77,7 +77,7 @@ function FullPageArchiveSection({ link }: { link: ZBookmarkedLink }) {\n \n function ScreenshotSection({ link }: { link: ZBookmarkedLink }) {\n   return (\n-    <div className=\"relative h-full min-w-full\">\n+    <div className=\"relative h-full min-w-full overflow-y-auto overflow-x-hidden\">\n       <Image\n         alt=\"screenshot\"\n         src={`/api/assets/${link.screenshotAssetId}`}"
+    }
+  ]
+}

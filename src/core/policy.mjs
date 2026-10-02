@@ -141,12 +141,20 @@ export function evaluatePolicyRequirements({
   };
 }
 
-export function evaluateProjectTestCommand({ body, policyProfile, hasTestMention, hasNoTestsReason, docsOnly }) {
+export function evaluateProjectTestCommand({ body, policyProfile, hasTestMention, hasNoTestsReason, docsOnly, verificationUnexecuted = false }) {
   const commands = policyProfile?.testCommands || [];
   if (commands.length === 0) {
     return {
       status: "pass",
       reason: "No project test command was discovered from repository policy files.",
+      matchedCommand: ""
+    };
+  }
+
+  if (verificationUnexecuted) {
+    return {
+      status: "fail",
+      reason: "A planned, example-only, or explicitly unrun command does not satisfy the repository test command requirement.",
       matchedCommand: ""
     };
   }

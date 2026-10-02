@@ -20,6 +20,107 @@ export const ADVERSARY_VERSION = "2026.09.26";
 
 export const ADVERSARIAL_CASES = [
   {
+    id: "pnpm-bulleted-example",
+    category: "verification-laundering",
+    attack: "Adds a Markdown bullet before an explicit Example command label.",
+    residue: "The narrowed prose classifier missed list prefixes, so Example: became reported verification when preceded by a bullet.",
+    input: {
+      ...baseReadyPr(),
+      body: "Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\n## Verification\n\n- Example: `pnpm test`",
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "pnpm-command-pending-suffix",
+    category: "verification-laundering",
+    attack: "Marks the command pending in a postfix annotation while requesting patch-local CI credit.",
+    residue: "Narrowing broad prose-word checks lost explicit command-level pending annotations; the report then substituted for missing CI.",
+    input: {
+      ...baseReadyPr(),
+      body: "Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\n## Verification\n\n- `pnpm test` (pending)",
+      submissionFormat: "patch_series",
+      checks: [],
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification", "ci-missing"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "pnpm-nested-planning",
+    category: "verification-laundering",
+    attack: "Places a planned command under a neutral subheading to substitute for patch-local CI.",
+    residue: "The first pnpm repair forgot the Test plan ancestor when it entered Commands, promoting unrun work to verification and local CI evidence.",
+    input: {
+      ...baseReadyPr(),
+      body: "Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\n## Test plan\n\n### Commands\n\n`pnpm test`",
+      submissionFormat: "patch_series",
+      checks: [],
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification", "ci-missing"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "pnpm-quoted-help",
+    category: "verification-laundering",
+    attack: "Quotes a help flag to bypass the literal-token guard.",
+    residue: "The first pnpm repair rejected --help but accepted the shell-equivalent quoted token without treating it as a help request.",
+    input: {
+      ...baseReadyPr(),
+      body: 'Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\n## Validation\n\n`pnpm test "--help"`',
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "pnpm-formatted-label",
+    category: "verification-laundering",
+    attack: "Uses a bold Verification label to turn an install command into test evidence.",
+    residue: "The first pnpm repair removed bare Verification labels but left Markdown emphasis around the legacy keyword, which bypassed command recognition.",
+    input: {
+      ...baseReadyPr(),
+      body: "Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\n**Verification:** `pnpm install`",
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "pnpm-planned-verification",
+    category: "verification-laundering",
+    attack: "Uses a verification heading and planned pnpm command as if tests were completed.",
+    residue: "The baseline accepted a Verification heading plus 'plan to run pnpm' as passing test and before/after evidence.",
+    input: {
+      ...baseReadyPr(),
+      body: "Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\nVerification: I plan to run `pnpm --filter @pcf/parser run test` tomorrow.",
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "pnpm-unrun-policy-command",
+    category: "verification-laundering",
+    attack: "Repeats the exact repository test command while admitting it has not yet run.",
+    residue: "The baseline counted 'Verification: I have not yet run pnpm' as evidence and separately accepted the raw policy-command match.",
+    input: {
+      ...baseReadyPr(),
+      body: "Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\nVerification: I have not yet run `pnpm --filter @pcf/parser run test`.",
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }],
+      repositoryFiles: [{ path: "CONTRIBUTING.md", content: "Pull requests must include tests. Run `pnpm --filter @pcf/parser run test`." }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification", "needs-project-test-command"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "pnpm-malformed-quoting",
+    category: "verification-laundering",
+    attack: "Presents an unmatched quote under a verification heading as a usable pnpm command.",
+    residue: "An intermediate pnpm recognizer skipped the unmatched quote and accepted the remaining token subsequence; the regression requires complete tokenization.",
+    input: {
+      ...baseReadyPr(),
+      body: 'Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\n## Verification results\n\n- `pnpm --filter "@pcf/parser run test`',
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
     id: "negated-tests-pr",
     category: "verification-laundering",
     attack: "Mentions a real test command while admitting it was not run.",

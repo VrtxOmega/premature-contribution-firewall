@@ -4,13 +4,13 @@ This red-test corpus captures hostile or malformed submissions that previously e
 
 ## Summary
 
-- Version: 2026.07.10
-- Cases: 31/31 passing
+- Version: 2026.09.26
+- Cases: 44/44 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
-- verification-laundering: 1/1 passing
+- verification-laundering: 9/9 passing
 - path-confusion: 1/1 passing
 - secret-evasion: 1/1 passing
 - review-budget-evasion: 1/1 passing
@@ -28,11 +28,24 @@ This red-test corpus captures hostile or malformed submissions that previously e
 - candidate-suppression: 1/1 passing
 - gate-bypass: 3/3 passing
 - evidence-laundering: 5/5 passing
+- claim-integrity: 1/1 passing
+- evidence-authority: 1/1 passing
+- verdict-reachability: 1/1 passing
+- routing-freshness: 1/1 passing
+- scope-inflation: 1/1 passing
 
 ## Cases
 
 | Result | Category | Case | Expected | Actual | Score | Labels / Error | Residue |
 | --- | --- | --- | --- | --- | ---: | --- | --- |
+| PASS | verification-laundering | pnpm-bulleted-example |  | needs-repair | 60 | `needs-tests`, `needs-human-verification`, `needs-repair` | The narrowed prose classifier missed list prefixes, so Example: became reported verification when preceded by a bullet. |
+| PASS | verification-laundering | pnpm-command-pending-suffix |  | needs-repair | 53 | `needs-tests`, `needs-human-verification`, `ci-missing`, `needs-repair` | Narrowing broad prose-word checks lost explicit command-level pending annotations; the report then substituted for missing CI. |
+| PASS | verification-laundering | pnpm-nested-planning |  | needs-repair | 53 | `needs-tests`, `needs-human-verification`, `ci-missing`, `needs-repair` | The first pnpm repair forgot the Test plan ancestor when it entered Commands, promoting unrun work to verification and local CI evidence. |
+| PASS | verification-laundering | pnpm-quoted-help |  | needs-repair | 74 | `needs-tests`, `needs-human-verification`, `needs-repair` | The first pnpm repair rejected --help but accepted the shell-equivalent quoted token without treating it as a help request. |
+| PASS | verification-laundering | pnpm-formatted-label |  | needs-repair | 74 | `needs-tests`, `needs-human-verification`, `needs-repair` | The first pnpm repair removed bare Verification labels but left Markdown emphasis around the legacy keyword, which bypassed command recognition. |
+| PASS | verification-laundering | pnpm-planned-verification |  | needs-repair | 60 | `needs-tests`, `needs-human-verification`, `needs-repair` | The baseline accepted a Verification heading plus 'plan to run pnpm' as passing test and before/after evidence. |
+| PASS | verification-laundering | pnpm-unrun-policy-command |  | low-review-value | 34 | `needs-tests`, `needs-human-verification`, `policy-failed`, `needs-project-test-command` | The baseline counted 'Verification: I have not yet run pnpm' as evidence and separately accepted the raw policy-command match. |
+| PASS | verification-laundering | pnpm-malformed-quoting |  | needs-repair | 74 | `needs-tests`, `needs-human-verification`, `needs-repair` | An intermediate pnpm recognizer skipped the unmatched quote and accepted the remaining token subsequence; the regression requires complete tokenization. |
 | PASS | verification-laundering | negated-tests-pr | needs-repair | needs-repair | 78 | `needs-human-verification`, `needs-repair` | Initial probe passed as ready-for-maintainer because the raw phrase `npm test` counted as verification. |
 | PASS | path-confusion | path-traversal-docs-pr | low-review-value | low-review-value | 70 | `suspicious-path`, `low-review-value` | Initial long-form probe passed as ready-for-maintainer because `docs/../src/server.mjs` looked like docs. |
 | PASS | secret-evasion | aws-secret-pr | low-review-value | low-review-value | 60 | `secrets-risk`, `low-review-value` | Initial probe passed as ready-for-maintainer because only GitHub/OpenAI/private-key patterns were detected. |
@@ -55,12 +68,17 @@ This red-test corpus captures hostile or malformed submissions that previously e
 | PASS | ownership-laundering | serious-scout-overlap-error-promotion | NO_ACTION | NO_ACTION | 100 | `overlap-unverified` | Initial probe returned `PROMOTE` and ignored `overlapCollectionError`, allowing unchecked ownership into the worker handoff. |
 | PASS | candidate-suppression | serious-scout-agent-negation-false-negative | PROMOTE | PROMOTE | 100 | Serious candidate rows cleared the impact, evidence, and scope bar. | Initial probe blocked a serious help-wanted crash because `agent` meant generated tracker and `nobody is working on this` meant claimed work. |
 | PASS | unicode-evasion | serious-scout-zero-width-claimed-work | NO_ACTION | NO_ACTION | 97 | `claimed-work` | Late red-team probe returned PROMOTE because claimed-work matching read 'sub[U+200B]mit' as a different token. |
-| PASS | gate-bypass | lane-gate-order-omission | not-ready | not-ready | n/a | Not ready; 9 gate(s) still need evidence. | Initial probe returned `ready` with only `scout=pass`, silently omitting overlap, policy, repro, diff, preflight, and PR gates. |
+| PASS | gate-bypass | lane-gate-order-omission | not-ready | not-ready | n/a | Not ready; 10 gate(s) still need evidence. | Initial probe returned `ready` with only `scout=pass`, silently omitting overlap, policy, repro, diff, preflight, and PR gates. |
 | PASS | evidence-laundering | repro-verdict-only-laundering | blocked | blocked | n/a | `before-verdict-unsubstantiated`, `after-verdict-unsubstantiated` | Initial probe returned `pass` even though both proof points were unsubstantiated caller-written assertions. |
 | PASS | evidence-laundering | repro-notes-outcome-laundering | blocked | blocked | n/a | `missing-after-evidence`, `missing-before-evidence` | A local regression returned pass because failure/success keywords in narrative notes were treated as outcomes. |
 | PASS | evidence-laundering | repro-notes-presence-laundering | blocked | blocked | n/a | `missing-after-evidence` | A local regression changed blocked to review solely because a note was nonempty. |
 | PASS | context-evasion | repository-context-empty-object-laundering | unchecked | unchecked | n/a | No repository issue/PR context supplied; duplicate and upstream checks were not run. | Independent red-team review found `{}` normalized as hasContext=true and checkStatus=pass. |
 | PASS | gate-bypass | lane-bare-string-pass-laundering | review | review | n/a | Needs review on 10 gate(s); next useful gate is scout. | Independent red-team review found bare string statuses classified as passed and could produce a ready lane. |
 | PASS | gate-bypass | lane-structured-pass-object-laundering | review | review | n/a | Needs review on 10 gate(s); next useful gate is scout. | Independent second-pass review found the first repair blocked bare strings but still accepted `{status: 'pass'}` for every gate as ready. |
-| PASS | evidence-laundering | lane-placeholder-evidence-laundering | review | review | n/a | Needs review on 10 gate(s); next useful gate is scout. | Post-repair probe still returned ready because placeholder evidence objects were counted without a concrete path. |
-| PASS | evidence-laundering | lane-self-verified-laundering | review | review | n/a | Needs review on 10 gate(s); next useful gate is scout. | Post-repair probe returned ready because caller-controlled verified and timestamp fields were accepted as a substitute for an artifact. |
+| PASS | evidence-laundering | lane-placeholder-evidence-laundering | review | review | n/a | Needs review on 11 gate(s); next useful gate is scout. | Post-repair probe still returned ready because placeholder evidence objects were counted without a concrete path. |
+| PASS | evidence-laundering | lane-self-verified-laundering | review | review | n/a | Needs review on 11 gate(s); next useful gate is scout. | Post-repair probe returned ready because caller-controlled verified and timestamp fields were accepted as a substitute for an artifact. |
+| PASS | claim-integrity | claim-verdict-without-surface | blocked | blocked | n/a | `verdict-without-surface` | The Agent Security Harness loop showed that a decisive verdict can be manufactured from an empty/contentless answer unless surface sufficiency is a first-class gate. |
+| PASS | evidence-authority | claim-observed-metadata-spoof | blocked | blocked | n/a | `observed-claim-conflict` | Transport/status metadata must come from the observing layer; body/caller metadata cannot be allowed to spoof authoritative evidence. |
+| PASS | verdict-reachability | claim-unreachable-negative-pole | blocked | blocked | n/a | `negative-verdict-unreachable`, `controls-do-not-discriminate` | The #628/#631 mirror failure showed that suppressing false verdicts is not enough if a valid opposite pole becomes unreachable. |
+| PASS | routing-freshness | claim-stale-route-ownership | blocked | blocked | n/a | `backport-owned-by-maintainer`, `context-evidence-stale` | OpenSSL and ClickHouse outcomes showed that overlap and backport ownership are time-sensitive facts, not permanent authorization. |
+| PASS | scope-inflation | claim-generalization-laundering | blocked | blocked | n/a | `generalization-has-untested-shapes` | The v4.25.0 no-surface claim was correct as written even though the broader invariant still had residue; PCF must preserve that distinction. |

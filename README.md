@@ -288,8 +288,8 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Promotes selected runnable feedback drafts into a separate local candidate corpus and replays that corpus against the current evaluator before anything is folded into the permanent benchmark.
 - Builds an auditable feedback calibration profile from local corrections and promoted candidates, then attaches close matches to future evaluations and queue items without hiding the base heuristic status or score.
 - Evaluates plain-text patch or mbox submissions with `evaluate-patch`, defaulting to `kernel-grade` discipline for email-style review.
-- Ships a deterministic maintainer benchmark corpus with 77 reproducible cases across PRs, issues, feature requests, large-maintainer process issues, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
-- Ships a separate adversarial red-test corpus with 31 cases that preserve breakage residue across contribution evaluation, Unicode/control-text evasion, serious-scout authority, repository context, lane gates, repro evidence, and malformed API input.
+- Ships a deterministic maintainer benchmark corpus with 79 reproducible cases across PRs, issues, feature requests, large-maintainer process issues, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
+- Ships a separate adversarial red-test corpus with 44 cases that preserve breakage residue across contribution evaluation, Unicode/control-text evasion, serious-scout authority, repository context, lane gates, repro evidence, and malformed API input.
 - Exposes callable API endpoints for single, patch, batch, spec, and benchmark evaluation.
 - Includes a stricter `kernel-grade` profile for projects that want Linux-kernel-style patch discipline: concise subsystem subjects, human DCO sign-off, Fixes/stable discipline, maintainer routing, build/test evidence, review-budget control, and transparent tool provenance.
 
@@ -330,7 +330,7 @@ npm run benchmark:write
 
 Current generated results live in [`docs/benchmark-results.md`](docs/benchmark-results.md):
 
-- 77/77 benchmark cases passing
+- 79/79 benchmark cases passing
 - standard PR readiness
 - issue triage readiness
 - repository policy enforcement
@@ -345,6 +345,8 @@ The benchmark is deterministic. It asserts expected outcomes over a public synth
 ## Real-World Calibration
 
 Synthetic fixtures are not enough. PCF's live-pilot rule is: when a real repository exposes a wrong assumption, preserve the evidence, fix the narrow evaluator behavior, and lock the lesson into tests, benchmark cases, red-test residue, or replayable feedback candidates.
+
+A public replay of Karakeep #2864 exposed a missed filtered pnpm command. The [pnpm evidence note](docs/PNPM_TEST_EVIDENCE.md) preserves the failing input, the narrow correction and its limits. This author-run retrospective is not outside adoption or independent validation.
 
 The maintainer proof report is in [docs/PILOT_REPORT.md](docs/PILOT_REPORT.md). The calibration method is documented in [docs/REAL_WORLD_CALIBRATION.md](docs/REAL_WORLD_CALIBRATION.md). The running ledger of pilot repositories, findings, fixes, artifact hashes, and public/private status lives in [docs/PILOT_LEDGER.md](docs/PILOT_LEDGER.md). Future read-only pilot candidates are tracked in [docs/PILOT_TARGETS.md](docs/PILOT_TARGETS.md).
 
