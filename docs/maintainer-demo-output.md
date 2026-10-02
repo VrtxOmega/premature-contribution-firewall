@@ -1,13 +1,13 @@
 # Premature Contribution Firewall Maintainer Demo
 
-Generated: 2026-07-11T04:45:24.639Z
+Generated: 2026-10-02T17:57:27.594Z
 
 Verdict: **PASS**
 
 ## Claims This Demo Proves
 
-- 77/77 deterministic benchmark cases pass.
-- 29/29 adversarial red-test cases pass.
+- 78/78 deterministic benchmark cases pass.
+- 39/39 adversarial red-test cases pass.
 - Maintainer queue sorts 3 supplied GitHub items with repository and upstream context.
 - Feedback calibration attaches 2 matching local candidate signal(s) to future queue output.
 - 1/1 promoted feedback fixture candidates replay cleanly.
@@ -35,8 +35,8 @@ npm run demo:maintainer -- --fail-on-regression
 
 | Surface | Result | Count | Note |
 | --- | --- | --- | --- |
-| Benchmark | PASS | 77/77 | Deterministic fixture corpus |
-| Adversarial red test | PASS | 29/29 | Breakage residue corpus |
+| Benchmark | PASS | 78/78 | Deterministic fixture corpus |
+| Adversarial red test | PASS | 39/39 | Breakage residue corpus |
 | Maintainer queue | PASS | 3 items | 3 context findings |
 | Feedback calibration | PASS | 2 match(es) | 1 candidate fixture(s) |
 | Feedback candidate replay | PASS | 1/1 | Promoted fixture draft |
@@ -70,6 +70,9 @@ Replay comparison: 1 unchanged, 0 improved, 0 regressed, risk stable.
 
 | Case | Category | Status | Residue Preserved |
 | --- | --- | --- | --- |
+| pnpm-planned-verification | verification-laundering | PASS | The baseline accepted a Verification heading plus 'plan to run pnpm' as passing test and before/after evidence. |
+| pnpm-unrun-policy-command | verification-laundering | PASS | The baseline counted 'Verification: I have not yet run pnpm' as evidence and separately accepted the raw policy-command match. |
+| pnpm-malformed-quoting | verification-laundering | PASS | An intermediate pnpm recognizer skipped the unmatched quote and accepted the remaining token subsequence; the regression requires complete tokenization. |
 | negated-tests-pr | verification-laundering | PASS | Initial probe passed as ready-for-maintainer because the raw phrase `npm test` counted as verification. |
 | path-traversal-docs-pr | path-confusion | PASS | Initial long-form probe passed as ready-for-maintainer because `docs/../src/server.mjs` looked like docs. |
 | aws-secret-pr | secret-evasion | PASS | Initial probe passed as ready-for-maintainer because only GitHub/OpenAI/private-key patterns were detected. |
@@ -94,11 +97,18 @@ Replay comparison: 1 unchanged, 0 improved, 0 regressed, risk stable.
 | serious-scout-zero-width-claimed-work | unicode-evasion | PASS | Late red-team probe returned PROMOTE because claimed-work matching read 'sub[U+200B]mit' as a different token. |
 | lane-gate-order-omission | gate-bypass | PASS | Initial probe returned `ready` with only `scout=pass`, silently omitting overlap, policy, repro, diff, preflight, and PR gates. |
 | repro-verdict-only-laundering | evidence-laundering | PASS | Initial probe returned `pass` even though both proof points were unsubstantiated caller-written assertions. |
+| repro-notes-outcome-laundering | evidence-laundering | PASS | A local regression returned pass because failure/success keywords in narrative notes were treated as outcomes. |
+| repro-notes-presence-laundering | evidence-laundering | PASS | A local regression changed blocked to review solely because a note was nonempty. |
 | repository-context-empty-object-laundering | context-evasion | PASS | Independent red-team review found `{}` normalized as hasContext=true and checkStatus=pass. |
 | lane-bare-string-pass-laundering | gate-bypass | PASS | Independent red-team review found bare string statuses classified as passed and could produce a ready lane. |
 | lane-structured-pass-object-laundering | gate-bypass | PASS | Independent second-pass review found the first repair blocked bare strings but still accepted `{status: 'pass'}` for every gate as ready. |
 | lane-placeholder-evidence-laundering | evidence-laundering | PASS | Post-repair probe still returned ready because placeholder evidence objects were counted without a concrete path. |
 | lane-self-verified-laundering | evidence-laundering | PASS | Post-repair probe returned ready because caller-controlled verified and timestamp fields were accepted as a substitute for an artifact. |
+| claim-verdict-without-surface | claim-integrity | PASS | The Agent Security Harness loop showed that a decisive verdict can be manufactured from an empty/contentless answer unless surface sufficiency is a first-class gate. |
+| claim-observed-metadata-spoof | evidence-authority | PASS | Transport/status metadata must come from the observing layer; body/caller metadata cannot be allowed to spoof authoritative evidence. |
+| claim-unreachable-negative-pole | verdict-reachability | PASS | The #628/#631 mirror failure showed that suppressing false verdicts is not enough if a valid opposite pole becomes unreachable. |
+| claim-stale-route-ownership | routing-freshness | PASS | OpenSSL and ClickHouse outcomes showed that overlap and backport ownership are time-sensitive facts, not permanent authorization. |
+| claim-generalization-laundering | scope-inflation | PASS | The v4.25.0 no-surface claim was correct as written even though the broader invariant still had residue; PCF must preserve that distinction. |
 
 ## Release Note
 

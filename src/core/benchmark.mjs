@@ -9,6 +9,18 @@ export const BENCHMARK_VERSION = "2026.06.10";
 
 export const BENCHMARK_CASES = [
   {
+    id: "filtered-pnpm-test-command",
+    category: "standard-pr",
+    name: "Filtered pnpm command is a reported test signal without a test-file shortcut",
+    input: {
+      ...readyPr(),
+      body: readyPr().body.replace("Verification: npm test", "Validation: TZ=UTC pnpm --filter @pcf/web run test -- --run"),
+      changedFiles: 1,
+      files: [{ filename: "src/server.mjs", additions: 30, deletions: 8 }]
+    },
+    expect: { status: "ready-for-maintainer", minScore: 90, absentLabels: ["needs-tests", "needs-human-verification"] }
+  },
+  {
     id: "standard-ready-pr",
     category: "standard-pr",
     name: "Ready PR with issue, tests, and small scope",

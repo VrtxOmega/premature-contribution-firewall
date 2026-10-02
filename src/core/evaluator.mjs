@@ -38,7 +38,7 @@ const SIGNALS = {
   humanAccountability: /\b(tested|verified|reviewed|reproduced|i understand|manual|locally)\b/i,
   dependencyJustification: /\b(dependenc(?:y|ies)|package|lockfile|upgrade|security update|npm install|npm audit|vulnerability)\b/i,
   securityClaim: /\b(vulnerability|cve|exploit|rce|xss|csrf|injection|overflow)\b|\bsecurity\s+(?:vulnerability|issue|bug|flaw|risk|report|advisory|incident|hole)\b/i,
-  negatedVerification: /\b(?:did\s+not|didn't|do\s+not|don't|was\s+not|wasn't|were\s+not|weren't|never|not)\s+(?:personally\s+)?(?:run|execute|test|verify|check)\b|\b(?:tests?|verification|ci|checks?)\s+(?:were\s+)?(?:not|never)\s+(?:run|executed|performed|checked)\b/i,
+  negatedVerification: /\b(?:did\s+not|didn't|do\s+not|don't|was\s+not|wasn't|were\s+not|weren't|haven't|hasn't|never|not)\s+(?:yet\s+)?(?:personally\s+)?(?:run|executed?|test(?:ed)?|verif(?:y|ied)|check(?:ed)?)\b|\b(?:tests?|verification|ci|checks?)\s+(?:were\s+)?(?:not|never)\s+(?:yet\s+)?(?:run|executed|performed|checked)\b/i,
   supportedNoTestsReason: /\b(?:not applicable|docs only|documentation only|no code change|copy only|comment only|manual verification only|no runtime behavior)\b/i,
   generatedJustification: /\b(?:generated|dist|bundle|minified|vendor(?:ed)?|checked[- ]in artifact|built artifact)\b[\s\S]{0,120}\b(?:required|necessary|because|reason|release|snapshot|reproducible|source)\b/i,
   promptInjection: /\b(?:ignore|disregard|forget)\s+(?:all\s+)?(?:previous|prior|above|system|developer|maintainer)\s+instructions\b|\b(?:bypass|override)\s+(?:the\s+)?(?:review|firewall|policy|checks?)\b|\bdo\s+not\s+(?:mention|report|flag|label)\b|\b(?:label|mark)\s+(?:this\s+)?(?:as\s+)?ready-for-maintainer\b/i
@@ -172,9 +172,17 @@ export function evaluatePullRequest(input, options = {}) {
   const suspiciousPathFindings = findSuspiciousPaths(input.files);
   const docsOnly = suspiciousPathFindings.length === 0 && input.files.length > 0 && input.files.every((file) => isDocFile(file.filename));
   const testFiles = input.files.filter((file) => isTestFile(file.filename));
+  const pnpmEvidence = analyzePnpmTestMention(body);
   const hasNegatedVerification = SIGNALS.negatedVerification.test(body);
-  const hasTestMention = SIGNALS.testMention.test(body) && !hasNegatedVerification;
-  const hasNoTestsReason = SIGNALS.noTestsReason.test(body) && !hasNegatedVerification && (docsOnly || SIGNALS.supportedNoTestsReason.test(body));
+  const verificationUnexecuted = hasNegatedVerification || pnpmEvidence.unexecuted;
+  // A section label must not bypass pnpm command recognition. Preserve legacy
+  // non-pnpm reports, and share execution qualifiers across all consumers.
+  const testNarrative = /\bpnpm\b/i.test(body)
+    ? body.replace(/^[ \t]*#{1,6}[ \t]+[^\r\n]*$/gm, "")
+      .replace(/^[ \t]*(?:verification|validation)(?:[ \t]+(?:results|commands|status|plan))?[ \t]*(?::|$)[ \t]*/gmi, "")
+    : body;
+  const hasTestMention = (SIGNALS.testMention.test(testNarrative) || pnpmEvidence.mentioned) && !verificationUnexecuted;
+  const hasNoTestsReason = SIGNALS.noTestsReason.test(body) && !verificationUnexecuted && (docsOnly || SIGNALS.supportedNoTestsReason.test(body));
   const hasIssueLink = SIGNALS.issueLink.test(body);
   const totalLines = input.additions + input.deletions;
   const secretFindings = findSecrets(input);
@@ -239,7 +247,9 @@ export function evaluatePullRequest(input, options = {}) {
       : testFiles.length > 0
         ? `Includes ${testFiles.length} test file(s).`
         : hasTestMention
-          ? "Body includes a test or verification command."
+          ? pnpmEvidence.mentioned
+            ? "Body mentions a supported pnpm test command; execution is not verified by PCF."
+            : "Body includes a test or verification command."
           : hasNoTestsReason
             ? "Body includes an explicit no-test rationale."
             : "No test file, test command, or explicit no-test rationale found."
@@ -248,12 +258,14 @@ export function evaluatePullRequest(input, options = {}) {
   addCheck(checks, labels, {
     id: "negated-verification",
     title: "No contradicted verification claims",
-    status: hasNegatedVerification ? "fail" : "pass",
+    status: verificationUnexecuted ? "fail" : "pass",
     label: "needs-human-verification",
     penalty: 14,
     reason: hasNegatedVerification
       ? "The submission mentions verification language while saying the work was not actually run or checked."
-      : "Verification language is not contradicted by a no-run statement."
+      : pnpmEvidence.unexecuted
+        ? "The pnpm command is planned, unchecked, or example-only, not completed verification."
+        : "Verification language is not contradicted by a no-run statement."
   });
 
   addCheck(checks, labels, {
@@ -263,7 +275,9 @@ export function evaluatePullRequest(input, options = {}) {
     label: "needs-human-verification",
     penalty: hasTestMention || SIGNALS.repro.test(body) ? 8 : 16,
     reason: hasTestMention && (SIGNALS.repro.test(body) || SIGNALS.issueLink.test(body))
-      ? "Includes verification tied to an issue, reproducer, or before/after behavior."
+      ? pnpmEvidence.mentioned
+        ? "Includes a reported pnpm test command tied to an issue, reproducer, or before/after behavior; execution is not verified."
+        : "Includes verification tied to an issue, reproducer, or before/after behavior."
       : "Maintainers need a reproducible reason to believe the change works."
   });
 
@@ -292,6 +306,7 @@ export function evaluatePullRequest(input, options = {}) {
     policyProfile,
     hasTestMention,
     hasNoTestsReason,
+    verificationUnexecuted,
     docsOnly
   });
   addCheck(checks, labels, {
@@ -418,7 +433,7 @@ export function evaluatePullRequest(input, options = {}) {
   }
 
   if (SIGNALS.issueLink.test(body)) strengths.push("Links the change to an issue.");
-  if (testFiles.length > 0 || SIGNALS.testMention.test(body)) strengths.push("Includes a test or verification signal.");
+  if (testFiles.length > 0 || hasTestMention) strengths.push("Includes a test or verification signal.");
   if (input.changedFiles <= 5 && totalLines <= 300) strengths.push("Keeps the diff small enough for focused review.");
 
   addStatusLabel(labels, status);
@@ -1209,6 +1224,74 @@ function repairFor(check) {
 function scoreChecks(checks) {
   const penalty = checks.reduce((sum, check) => sum + (check.status === "pass" ? 0 : check.penalty || 0), 0);
   return Math.max(0, Math.min(100, 100 - penalty));
+}
+
+// Recognize a bounded command grammar, not arbitrary shell text or execution.
+// In particular, option values and arguments to other scripts cannot be `test`.
+function isPnpmTestCommand(text) {
+  const command = text.trim().replace(/^\$[ \t]+/, "");
+  const tokenPattern = /\s*((?:[^\s"'`]+|"[^"\r\n]*"|'[^'\r\n]*')+)/gy;
+  const tokens = [];
+  let consumed = 0;
+  for (let match; (match = tokenPattern.exec(command));) {
+    tokens.push(match[1]);
+    consumed = tokenPattern.lastIndex;
+  }
+  // Never skip malformed quoting to recover a plausible command subsequence.
+  if (consumed !== command.length || tokens.some(token => /^(?:--help|-h|--version)$/.test(token))) return false;
+  let index = tokens[0] === "env" ? 1 : 0;
+  while (/^[A-Za-z_]\w*=/.test(tokens[index] || "")) index += 1;
+  if (tokens[index] === "corepack") index += 1;
+  if (tokens[index++] !== "pnpm") return false;
+  const withValue = new Set(["--filter", "--filter-prod", "-F", "--dir", "-C"]);
+  const flags = new Set(["--recursive", "-r", "--silent", "--workspace-root", "-w"]);
+  while (index < tokens.length) {
+    const token = tokens[index];
+    if (withValue.has(token)) {
+      if (!tokens[index + 1] || tokens[index + 1].startsWith("-")) return false;
+      index += 2;
+    } else if (/^--(?:filter(?:-prod)?|dir)=.+/.test(token) || flags.has(token)) {
+      index += 1;
+    } else break;
+  }
+  if (tokens[index] === "run") index += 1;
+  return /^test(?::[\w:-]+)?$/.test(tokens[index] || "");
+}
+
+function analyzePnpmTestMention(body) {
+  let mentioned = false;
+  let unexecuted = false;
+  const pending = /\b(?:will|would|should|must|plan(?:s|ned|ning)?\s+to|intend(?:s|ed)?\s+to|need(?:s)?\s+to|yet\s+to)\s+(?:run|execute|test)\b|\b(?:plan|planned|pending|todo)\b|\b(?:example|instructions?|usage)\s*:|\b(?:for example|example of)\b|\b(?:docs?|documentation|readme)\b.*\b(?:describes?|mentions?|explains?|says?|shows?|recommends?)\b/i;
+  const contextMode = (text) => /\b(?:examples?|instructions?|usage)\b/i.test(text) ? "example" : pending.test(text) ? "planned" : "";
+  const sections = [{ heading: "", lines: [] }];
+  let fenced = false;
+  for (const line of body.split(/\r?\n/)) {
+    if (/^\s*(?:```|~~~)/.test(line)) { fenced = !fenced; sections.at(-1).lines.push({ line, fenced: true }); continue; }
+    if (!fenced && /^\s*#{1,6}\s/.test(line)) {
+      sections.push({ heading: line, lines: [] });
+      continue;
+    }
+    sections.at(-1).lines.push({ line, fenced });
+  }
+  for (const section of sections) {
+    const headingMode = contextMode(section.heading);
+    // Qualifiers before or after a code block apply throughout its Markdown
+    // section. Mixed completed/planned reports remain conservative.
+    const prose = section.lines.filter(item => !item.fenced).map(item => item.line.replace(/`[^`]*`/g, "")).join("\n");
+    const narrativeMode = contextMode(prose);
+    for (const { line } of section.lines) {
+      const plain = line.trim().replace(/^(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/, "")
+        .replace(/^(?:verification|validation):\s*/i, "")
+        .replace(/^(?:I\s+)?(?:(?:will|plan to|intend to|need to)\s+)?(?:ran|run|executed?|checked)\s+/i, "");
+      const snippets = [plain, ...[...line.matchAll(/`([^`]+)`/g)].map(match => match[1])];
+      if (!snippets.some(isPnpmTestCommand)) continue;
+      mentioned = true;
+      const claimedCompleted = /\[[xX]\]|\b(?:ran|executed)\b/i.test(line);
+      const contextUnexecuted = narrativeMode || headingMode === "example" || (headingMode && !claimedCompleted);
+      if (contextUnexecuted || pending.test(line) || /\[\s\]/.test(line)) unexecuted = true;
+    }
+  }
+  return { mentioned, unexecuted };
 }
 
 function addKernelGradePullRequestChecks({ checks, labels, input, body, title, totalLines, firstTimer, hasTestMention, policyProfile }) {

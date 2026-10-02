@@ -5,12 +5,12 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 ## Summary
 
 - Version: 2026.06.10
-- Cases: 77/77 passing
+- Cases: 78/78 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
-- standard-pr: 9/9 passing
+- standard-pr: 10/10 passing
 - tool-use: 2/2 passing
 - issue: 37/37 passing
 - repo-context: 13/13 passing
@@ -23,6 +23,7 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 
 | Result | Category | Case | Expected | Actual | Score | Labels |
 | --- | --- | --- | --- | --- | ---: | --- |
+| PASS | standard-pr | filtered-pnpm-test-command | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | standard-pr | standard-ready-pr | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | standard-pr | standard-secret-broad-pr | low-review-value | low-review-value | 0 | `needs-clear-summary`, `needs-context`, `too-broad`, `needs-tests` |
 | PASS | standard-pr | docs-only-ready-pr | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
@@ -73,7 +74,7 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 | PASS | issue | security-reproducer-issue | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | issue | issue-missing-duplicate-search | needs-repair | needs-repair | 89 | `duplicate-search-needed`, `needs-technical-analysis`, `needs-repair` |
 | PASS | repo-policy | policy-ready-pr | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
-| PASS | repo-policy | policy-unready-pr | low-review-value | low-review-value | 0 | `needs-clear-summary`, `needs-context`, `needs-tests`, `needs-human-verification` |
+| PASS | repo-policy | policy-unready-pr | low-review-value | low-review-value | 9 | `needs-clear-summary`, `needs-context`, `needs-tests`, `needs-human-verification` |
 | PASS | repo-policy | policy-codeowners-route | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | repo-context | repo-context-similar-open-issue | needs-repair | needs-repair | 90 | `possibly-duplicate`, `needs-repair` |
 | PASS | repo-context | repo-context-comment-linked-issue | needs-repair | needs-repair | 84 | `duplicate-search-needed`, `possibly-duplicate`, `needs-repair` |

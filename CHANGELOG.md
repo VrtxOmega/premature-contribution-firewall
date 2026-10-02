@@ -2,6 +2,12 @@
 
 ## Unreleased - evidence refresh 2026-10-02
 
+### Reported pnpm test commands
+
+- Recognize a bounded set of direct and filtered pnpm test invocations, including environment prefixes, without treating command mentions as proof of execution or inventing CI results.
+- Reject covered planned, example-only, unchecked and negated reports consistently across test evidence, before/after verification, repository-command policy and patch-local CI substitution. Reject malformed quoting and help-only invocations.
+- Preserve the public Karakeep #2864 input and the failing baseline feedback candidate; add synthetic benchmark/adversarial controls and focused regressions. See [scope, provenance and replay instructions](docs/PNPM_TEST_EVIDENCE.md).
+
 ### Installed-package verification and adoption guide
 
 - Added `npm run package:verify`: pack locally or select a local tarball, install offline into an isolated consumer, and exercise all three npm command shims, preflight exit codes, lifecycle, and MCP readiness with PCF network calls blocked.

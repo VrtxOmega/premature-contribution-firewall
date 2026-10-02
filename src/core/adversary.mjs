@@ -20,6 +20,43 @@ export const ADVERSARY_VERSION = "2026.09.26";
 
 export const ADVERSARIAL_CASES = [
   {
+    id: "pnpm-planned-verification",
+    category: "verification-laundering",
+    attack: "Uses a verification heading and planned pnpm command as if tests were completed.",
+    residue: "The baseline accepted a Verification heading plus 'plan to run pnpm' as passing test and before/after evidence.",
+    input: {
+      ...baseReadyPr(),
+      body: "Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\nVerification: I plan to run `pnpm --filter @pcf/parser run test` tomorrow.",
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "pnpm-unrun-policy-command",
+    category: "verification-laundering",
+    attack: "Repeats the exact repository test command while admitting it has not yet run.",
+    residue: "The baseline counted 'Verification: I have not yet run pnpm' as evidence and separately accepted the raw policy-command match.",
+    input: {
+      ...baseReadyPr(),
+      body: "Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\nVerification: I have not yet run `pnpm --filter @pcf/parser run test`.",
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }],
+      repositoryFiles: [{ path: "CONTRIBUTING.md", content: "Pull requests must include tests. Run `pnpm --filter @pcf/parser run test`." }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification", "needs-project-test-command"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "pnpm-malformed-quoting",
+    category: "verification-laundering",
+    attack: "Presents an unmatched quote under a verification heading as a usable pnpm command.",
+    residue: "An intermediate pnpm recognizer skipped the unmatched quote and accepted the remaining token subsequence; the regression requires complete tokenization.",
+    input: {
+      ...baseReadyPr(),
+      body: 'Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\n## Verification results\n\n- `pnpm --filter "@pcf/parser run test`',
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
     id: "negated-tests-pr",
     category: "verification-laundering",
     attack: "Mentions a real test command while admitting it was not run.",
