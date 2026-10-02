@@ -1,0 +1,19 @@
+{
+  "kind": "pull_request",
+  "number": 8376,
+  "title": "Fix UAF in io_uring submit: handle EAGAIN like EBUSY",
+  "body": "Fixes #8255\n\nWhen the kernel returns EAGAIN from io_uring_enter, the SQE is already queued in the submission ring. submit() returned the error, and register_op's submit_or_remove closure called remove_op() + Op::poll dropped the data the SQE points to. A later successful submit executing the stale SQE against freed memory causes use-after-free.",
+  "authorAssociation": "NONE",
+  "changedFiles": 1,
+  "additions": 8,
+  "deletions": 0,
+  "files": [
+    {
+      "filename": "tokio/src/runtime/io/driver/uring.rs",
+      "status": "modified",
+      "additions": 8,
+      "deletions": 0,
+      "patch": "@@ -117,6 +117,14 @@ impl UringContext {\n                 Err(ref e) if e.raw_os_error() == Some(libc::EBUSY) => {\n                     self.dispatch_completions();\n                 }\n+                // EAGAIN means the kernel ran out of resources; drain completions\n+                // and retry, same as EBUSY. Otherwise, the SQE remains queued in\n+                // the kernel ring while we remove_op() and drop the associated data,\n+                // leading to a use-after-free when the kernel eventually executes\n+                // the stale SQE.\n+                Err(ref e) if e.raw_os_error() == Some(libc::EAGAIN) => {\n+                    self.dispatch_completions();\n+                }\n                 // For other errors, we currently return the error as is.\n                 Err(e) => {\n                     return Err(e);"
+    }
+  ]
+}

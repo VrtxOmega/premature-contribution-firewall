@@ -1,0 +1,34 @@
+{
+  "artifact": "pcf-contribution-lifecycle-input",
+  "version": "2026.09.26",
+  "assessmentMode": "live",
+  "repository": "tokio-rs/tokio",
+  "observedAt": "2026-10-02T17:11:21.319Z",
+  "originalContribution": {
+    "url": "https://github.com/tokio-rs/tokio/pull/8376",
+    "number": 8376,
+    "title": "Fix UAF in io_uring submit: handle EAGAIN like EBUSY",
+    "state": "open"
+  },
+  "currentUpstream": {
+    "ref": "master",
+    "commit": "2746c3ae26f8ac0af6023843a7f23d419c334efe",
+    "checkedAt": "2026-10-02T17:11:21.319Z"
+  },
+  "claimUnits": [
+    {
+      "id": "eagain-buffer-lifetime",
+      "title": "Queued operation data survives EAGAIN submission failure",
+      "invariant": "Data referenced by a queued SQE must remain alive until the kernel can no longer access it.",
+      "originalReproduction": "PR #8376 describes a use-after-free after EAGAIN. This evaluation has not executed a Tokio reproducer or checked patch applicability.",
+      "defectState": "unknown",
+      "patchState": "unknown",
+      "upstreamCoverage": "unknown",
+      "evidence": [
+        "https://github.com/tokio-rs/tokio/pull/8376#pullrequestreview-5340792495 asks about duplication with #8366.",
+        "https://github.com/tokio-rs/tokio/pull/8376#issuecomment-5926459092 distinguishes #8376 from the #8366/#8185 overlap.",
+        "All three captured PRs are open and unmerged. Similarity is not equivalent landed coverage; no runtime correctness or current applicability is inferred."
+      ]
+    }
+  ]
+}
