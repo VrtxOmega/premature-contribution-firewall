@@ -20,6 +20,32 @@ export const ADVERSARY_VERSION = "2026.09.26";
 
 export const ADVERSARIAL_CASES = [
   {
+    id: "pnpm-bulleted-example",
+    category: "verification-laundering",
+    attack: "Adds a Markdown bullet before an explicit Example command label.",
+    residue: "The narrowed prose classifier missed list prefixes, so Example: became reported verification when preceded by a bullet.",
+    input: {
+      ...baseReadyPr(),
+      body: "Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\n## Verification\n\n- Example: `pnpm test`",
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
+    id: "pnpm-command-pending-suffix",
+    category: "verification-laundering",
+    attack: "Marks the command pending in a postfix annotation while requesting patch-local CI credit.",
+    residue: "Narrowing broad prose-word checks lost explicit command-level pending annotations; the report then substituted for missing CI.",
+    input: {
+      ...baseReadyPr(),
+      body: "Fixes #101. Before: the parser accepted invalid empty input. After: the parser returns a bounded error without changing the valid path.\n\n## Verification\n\n- `pnpm test` (pending)",
+      submissionFormat: "patch_series",
+      checks: [],
+      files: [{ filename: "src/parser.mjs", additions: 4, deletions: 1 }]
+    },
+    expect: { labels: ["needs-tests", "needs-human-verification", "ci-missing"], absentLabels: ["ready-for-maintainer"] }
+  },
+  {
     id: "pnpm-nested-planning",
     category: "verification-laundering",
     attack: "Places a planned command under a neutral subheading to substitute for patch-local CI.",

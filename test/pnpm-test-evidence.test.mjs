@@ -190,3 +190,31 @@ for (const label of ["**Verification:**", "**Verification**:", "__Verification:_
     assert.equal(check(evaluate(`${label} \`pnpm test\``), "tests").status, "pass");
   });
 }
+
+for (const text of [
+  "- Example: `pnpm test`", "* Example: `pnpm test`", "+ Example: `pnpm test`",
+  "1. Example: `pnpm test`", "1) Example: `pnpm test`",
+  "- `pnpm test` (planned)", "- `pnpm test` (pending)", "- `pnpm test` (example only)",
+  "- pnpm test (planned)"
+]) {
+  test(`explicit command qualifiers survive list formatting: ${text}`, () => {
+    const result = evaluate(`## Verification\n\n${text}`, { repositoryFiles: [{ path: "CONTRIBUTING.md", content: "Pull requests must include tests. Run `pnpm test`." }] });
+    assert.equal(check(result, "tests").status, "fail");
+    assert.notEqual(check(result, "verification").status, "pass");
+    assert.equal(check(result, "project-test-command").status, "fail");
+    assert.equal(check(result, "policy").status, "fail");
+    assert.equal(result.strengths.includes("Includes a test or verification signal."), false);
+    assert.notEqual(result.status, "ready-for-maintainer");
+    const patch = evaluate(`## Verification\n\n${text}`, { submissionFormat: "patch_series", checks: [] });
+    assert.equal(check(patch, "ci").status, "warn");
+    assert.notEqual(patch.status, "ready-for-maintainer");
+  });
+}
+
+for (const invocation of ['pnpm --filter "(planned)" test', 'pnpm test -- --grep "(example only)"']) {
+  test(`parenthesized command arguments are not execution qualifiers: ${invocation}`, () => {
+    const result = evaluate(`## Verification\n\nI ran \`${invocation}\`; all 12 examples passed.`);
+    assert.equal(check(result, "tests").status, "pass");
+    assert.equal(result.status, "ready-for-maintainer");
+  });
+}

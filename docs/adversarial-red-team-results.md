@@ -5,12 +5,12 @@ This red-test corpus captures hostile or malformed submissions that previously e
 ## Summary
 
 - Version: 2026.09.26
-- Cases: 42/42 passing
+- Cases: 44/44 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
-- verification-laundering: 7/7 passing
+- verification-laundering: 9/9 passing
 - path-confusion: 1/1 passing
 - secret-evasion: 1/1 passing
 - review-budget-evasion: 1/1 passing
@@ -38,6 +38,8 @@ This red-test corpus captures hostile or malformed submissions that previously e
 
 | Result | Category | Case | Expected | Actual | Score | Labels / Error | Residue |
 | --- | --- | --- | --- | --- | ---: | --- | --- |
+| PASS | verification-laundering | pnpm-bulleted-example |  | needs-repair | 60 | `needs-tests`, `needs-human-verification`, `needs-repair` | The narrowed prose classifier missed list prefixes, so Example: became reported verification when preceded by a bullet. |
+| PASS | verification-laundering | pnpm-command-pending-suffix |  | needs-repair | 53 | `needs-tests`, `needs-human-verification`, `ci-missing`, `needs-repair` | Narrowing broad prose-word checks lost explicit command-level pending annotations; the report then substituted for missing CI. |
 | PASS | verification-laundering | pnpm-nested-planning |  | needs-repair | 53 | `needs-tests`, `needs-human-verification`, `ci-missing`, `needs-repair` | The first pnpm repair forgot the Test plan ancestor when it entered Commands, promoting unrun work to verification and local CI evidence. |
 | PASS | verification-laundering | pnpm-quoted-help |  | needs-repair | 74 | `needs-tests`, `needs-human-verification`, `needs-repair` | The first pnpm repair rejected --help but accepted the shell-equivalent quoted token without treating it as a help request. |
 | PASS | verification-laundering | pnpm-formatted-label |  | needs-repair | 74 | `needs-tests`, `needs-human-verification`, `needs-repair` | The first pnpm repair removed bare Verification labels but left Markdown emphasis around the legacy keyword, which bypassed command recognition. |

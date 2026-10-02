@@ -289,7 +289,7 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Builds an auditable feedback calibration profile from local corrections and promoted candidates, then attaches close matches to future evaluations and queue items without hiding the base heuristic status or score.
 - Evaluates plain-text patch or mbox submissions with `evaluate-patch`, defaulting to `kernel-grade` discipline for email-style review.
 - Ships a deterministic maintainer benchmark corpus with 79 reproducible cases across PRs, issues, feature requests, large-maintainer process issues, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
-- Ships a separate adversarial red-test corpus with 42 cases that preserve breakage residue across contribution evaluation, Unicode/control-text evasion, serious-scout authority, repository context, lane gates, repro evidence, and malformed API input.
+- Ships a separate adversarial red-test corpus with 44 cases that preserve breakage residue across contribution evaluation, Unicode/control-text evasion, serious-scout authority, repository context, lane gates, repro evidence, and malformed API input.
 - Exposes callable API endpoints for single, patch, batch, spec, and benchmark evaluation.
 - Includes a stricter `kernel-grade` profile for projects that want Linux-kernel-style patch discipline: concise subsystem subjects, human DCO sign-off, Fixes/stable discipline, maintainer routing, build/test evidence, review-budget control, and transparent tool provenance.
 

@@ -1276,7 +1276,8 @@ function pnpmHeadingMode(text) {
 function pnpmProseMode(text) {
   // Classify explicit future/example claims, not isolated words such as
   // "query plan", "examples passed", "usage", or "no pending tests remain".
-  for (const line of text.split(/\r?\n/)) {
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.replace(/^\s*(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/, "");
     const labelMode = pnpmHeadingMode(line);
     if (labelMode) return labelMode;
     if (/^\s*[*_]{0,3}(?:examples?|instructions?|usage)\s*:[*_]{0,3}|^\s*(?:for example|example of)\b|\b(?:this|it|these)\s+(?:is|are)\s+(?:an?\s+)?examples?\b|\b(?:docs?|documentation|readme)\b.*\b(?:describes?|mentions?|explains?|says?|shows?|recommends?)\b/i.test(line)) return "example";
@@ -1315,12 +1316,18 @@ function analyzePnpmTestMention(body) {
     for (const { line } of section.lines) {
       const plain = stripPnpmEvidenceLabel(line).trim().replace(/^(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/, "")
         .replace(/^(?:I\s+)?(?:(?:will|plan to|intend to|need to)\s+)?(?:ran|run|executed?|checked)\s+/i, "");
-      const snippets = [plain, ...[...line.matchAll(/`([^`]+)`/g)].map(match => match[1])];
-      if (!snippets.some(isPnpmTestCommand)) continue;
+      const inlineCommands = [...line.matchAll(/`([^`]+)`/g)].filter(match => isPnpmTestCommand(match[1]));
+      const plainCommand = isPnpmTestCommand(plain);
+      if (!plainCommand && inlineCommands.length === 0) continue;
       mentioned = true;
       const claimedCompleted = /\[[xX]\]|\b(?:ran|executed)\b/i.test(line);
       const contextUnexecuted = scope.some(item => item.narrativeMode || item.headingMode === "example" || (item.headingMode === "planned" && !claimedCompleted));
-      if (contextUnexecuted || /\[\s\]/.test(line)) unexecuted = true;
+      // Only annotations outside an inline command (or at the end of a plain
+      // command) qualify it. Parentheses inside quoted arguments stay arguments.
+      const suffix = /^\s*\(\s*(?:planned|pending|example(?:\s+only)?)\s*\)/i;
+      const annotated = inlineCommands.some(match => suffix.test(line.slice(match.index + match[0].length)))
+        || (plainCommand && /\s+\(\s*(?:planned|pending|example(?:\s+only)?)\s*\)\s*[.!]?\s*$/i.test(plain));
+      if (contextUnexecuted || annotated || /\[\s\]/.test(line)) unexecuted = true;
     }
   }
   return { mentioned, unexecuted };

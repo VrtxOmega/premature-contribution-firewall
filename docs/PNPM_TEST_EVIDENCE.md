@@ -36,6 +36,8 @@ Recognition covers `pnpm test`, `pnpm run test`, and `test:*` script names; comm
 
 Covered English negations, explicit future-work claims, unchecked items and example-only instructions do not count as completed verification. Planning prose before or after a fenced command applies across its Markdown section. Structural **Test plan** or **Examples** headings retain their scope through nested subheadings; a sibling heading ends that ancestry. A checked item under a **Test plan** heading can still report completed work; a checked example remains an example. Incidental prose such as "all 12 examples passed", "query plan" or "no pending tests remain" does not negate a completed report. Common bold/italic **Verification** labels are treated like their plain-text equivalents and cannot supply test evidence themselves.
 
+Explicit example labels retain their meaning in ordinary Markdown lists, including ``- Example: `pnpm test` ``. Postfix annotations such as `` `pnpm test` (planned) ``, `(pending)` and `(example only)` qualify the command as unexecuted. These checks do not treat parenthesized text inside quoted command arguments as an execution qualifier.
+
 The same negative signal reaches discovered repository-command checks and patch-local CI substitution. A filtered pnpm command does not automatically satisfy a repository policy that asks for `npm test`.
 
 The focused tests exercise the captured input, supported forms, malformed/unrelated commands, positive and negative planning context, exact policy-command contradictions, missing behavioral context and missing CI. A passing unit test for a negative input means PCF rejected the misleading evidence.
