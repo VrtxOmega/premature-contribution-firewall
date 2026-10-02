@@ -50,6 +50,14 @@ It must run:
 
 It should upload regenerated proof artifacts after those gates pass, not before.
 
+The `Windows Gates` job must also run `npm run ci:gates`. Study storage is
+intentionally unsupported on native Windows: its API/CLI rejection controls must
+pass without creating a store. The five POSIX study workflow tests run on Linux
+and are explicitly skipped on Windows. The MCP file-symlink test may skip only
+when Windows returns `EPERM` creating that link; direct stdio tests still run.
+Report these platform skips separately from passes. See the
+[study storage requirements](PROSPECTIVE_STUDY.md#private-store).
+
 ## Evidence To Ship
 
 - `docs/benchmark-results.md`

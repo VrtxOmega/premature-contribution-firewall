@@ -83,3 +83,20 @@ jobs:
             docs/claim-integrity-self-assessment.json
             docs/claim-integrity-falsification-packet.json
           if-no-files-found: error
+
+  windows-gates:
+    name: Windows Gates
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Run Windows Proof Gates
+        run: npm run ci:gates

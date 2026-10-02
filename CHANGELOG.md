@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased - evidence refresh 2026-09-27
+## Unreleased - evidence refresh 2026-10-01
+
+### Prospective study storage platform contract
+
+- Reject native Windows study storage before reading or creating a store, with guidance to use Linux or WSL's Linux filesystem. Windows mode bits cannot establish the required owner-only privacy boundary; synthetic mode is subject to the same restriction.
+- Verify study directory permissions during initialization before writing study files, preserving fail-closed POSIX permission and symlink checks.
+- Add native Windows API/CLI rejection controls and a Windows CI proof-gate job. Keep POSIX study workflows covered on Linux; skip the MCP file-symlink test only when Windows denies symlink creation with `EPERM`.
 
 ### September 27 external-verification hardening
 
