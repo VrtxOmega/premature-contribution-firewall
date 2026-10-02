@@ -1,13 +1,13 @@
 # Premature Contribution Firewall Maintainer Demo
 
-Generated: 2026-10-02T17:57:27.594Z
+Generated: 2026-10-02T18:13:33.705Z
 
 Verdict: **PASS**
 
 ## Claims This Demo Proves
 
-- 78/78 deterministic benchmark cases pass.
-- 39/39 adversarial red-test cases pass.
+- 79/79 deterministic benchmark cases pass.
+- 42/42 adversarial red-test cases pass.
 - Maintainer queue sorts 3 supplied GitHub items with repository and upstream context.
 - Feedback calibration attaches 2 matching local candidate signal(s) to future queue output.
 - 1/1 promoted feedback fixture candidates replay cleanly.
@@ -35,8 +35,8 @@ npm run demo:maintainer -- --fail-on-regression
 
 | Surface | Result | Count | Note |
 | --- | --- | --- | --- |
-| Benchmark | PASS | 78/78 | Deterministic fixture corpus |
-| Adversarial red test | PASS | 39/39 | Breakage residue corpus |
+| Benchmark | PASS | 79/79 | Deterministic fixture corpus |
+| Adversarial red test | PASS | 42/42 | Breakage residue corpus |
 | Maintainer queue | PASS | 3 items | 3 context findings |
 | Feedback calibration | PASS | 2 match(es) | 1 candidate fixture(s) |
 | Feedback candidate replay | PASS | 1/1 | Promoted fixture draft |
@@ -70,6 +70,9 @@ Replay comparison: 1 unchanged, 0 improved, 0 regressed, risk stable.
 
 | Case | Category | Status | Residue Preserved |
 | --- | --- | --- | --- |
+| pnpm-nested-planning | verification-laundering | PASS | The first pnpm repair forgot the Test plan ancestor when it entered Commands, promoting unrun work to verification and local CI evidence. |
+| pnpm-quoted-help | verification-laundering | PASS | The first pnpm repair rejected --help but accepted the shell-equivalent quoted token without treating it as a help request. |
+| pnpm-formatted-label | verification-laundering | PASS | The first pnpm repair removed bare Verification labels but left Markdown emphasis around the legacy keyword, which bypassed command recognition. |
 | pnpm-planned-verification | verification-laundering | PASS | The baseline accepted a Verification heading plus 'plan to run pnpm' as passing test and before/after evidence. |
 | pnpm-unrun-policy-command | verification-laundering | PASS | The baseline counted 'Verification: I have not yet run pnpm' as evidence and separately accepted the raw policy-command match. |
 | pnpm-malformed-quoting | verification-laundering | PASS | An intermediate pnpm recognizer skipped the unmatched quote and accepted the remaining token subsequence; the regression requires complete tokenization. |

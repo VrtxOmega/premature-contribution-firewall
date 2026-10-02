@@ -288,8 +288,8 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Promotes selected runnable feedback drafts into a separate local candidate corpus and replays that corpus against the current evaluator before anything is folded into the permanent benchmark.
 - Builds an auditable feedback calibration profile from local corrections and promoted candidates, then attaches close matches to future evaluations and queue items without hiding the base heuristic status or score.
 - Evaluates plain-text patch or mbox submissions with `evaluate-patch`, defaulting to `kernel-grade` discipline for email-style review.
-- Ships a deterministic maintainer benchmark corpus with 78 reproducible cases across PRs, issues, feature requests, large-maintainer process issues, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
-- Ships a separate adversarial red-test corpus with 39 cases that preserve breakage residue across contribution evaluation, Unicode/control-text evasion, serious-scout authority, repository context, lane gates, repro evidence, and malformed API input.
+- Ships a deterministic maintainer benchmark corpus with 79 reproducible cases across PRs, issues, feature requests, large-maintainer process issues, repo-policy, repo-context, patch series, tool-use, kernel-grade, and review-budget pressure.
+- Ships a separate adversarial red-test corpus with 42 cases that preserve breakage residue across contribution evaluation, Unicode/control-text evasion, serious-scout authority, repository context, lane gates, repro evidence, and malformed API input.
 - Exposes callable API endpoints for single, patch, batch, spec, and benchmark evaluation.
 - Includes a stricter `kernel-grade` profile for projects that want Linux-kernel-style patch discipline: concise subsystem subjects, human DCO sign-off, Fixes/stable discipline, maintainer routing, build/test evidence, review-budget control, and transparent tool provenance.
 
@@ -330,7 +330,7 @@ npm run benchmark:write
 
 Current generated results live in [`docs/benchmark-results.md`](docs/benchmark-results.md):
 
-- 78/78 benchmark cases passing
+- 79/79 benchmark cases passing
 - standard PR readiness
 - issue triage readiness
 - repository policy enforcement

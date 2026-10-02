@@ -5,12 +5,12 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 ## Summary
 
 - Version: 2026.06.10
-- Cases: 78/78 passing
+- Cases: 79/79 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
-- standard-pr: 10/10 passing
+- standard-pr: 11/11 passing
 - tool-use: 2/2 passing
 - issue: 37/37 passing
 - repo-context: 13/13 passing
@@ -23,6 +23,7 @@ This is a deterministic local benchmark corpus for maintainer-review readiness. 
 
 | Result | Category | Case | Expected | Actual | Score | Labels |
 | --- | --- | --- | --- | --- | ---: | --- |
+| PASS | standard-pr | completed-pnpm-example-report | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | standard-pr | filtered-pnpm-test-command | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | standard-pr | standard-ready-pr | ready-for-maintainer | ready-for-maintainer | 100 | `ready-for-maintainer` |
 | PASS | standard-pr | standard-secret-broad-pr | low-review-value | low-review-value | 0 | `needs-clear-summary`, `needs-context`, `too-broad`, `needs-tests` |

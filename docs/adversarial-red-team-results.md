@@ -5,12 +5,12 @@ This red-test corpus captures hostile or malformed submissions that previously e
 ## Summary
 
 - Version: 2026.09.26
-- Cases: 39/39 passing
+- Cases: 42/42 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
-- verification-laundering: 4/4 passing
+- verification-laundering: 7/7 passing
 - path-confusion: 1/1 passing
 - secret-evasion: 1/1 passing
 - review-budget-evasion: 1/1 passing
@@ -38,6 +38,9 @@ This red-test corpus captures hostile or malformed submissions that previously e
 
 | Result | Category | Case | Expected | Actual | Score | Labels / Error | Residue |
 | --- | --- | --- | --- | --- | ---: | --- | --- |
+| PASS | verification-laundering | pnpm-nested-planning |  | needs-repair | 53 | `needs-tests`, `needs-human-verification`, `ci-missing`, `needs-repair` | The first pnpm repair forgot the Test plan ancestor when it entered Commands, promoting unrun work to verification and local CI evidence. |
+| PASS | verification-laundering | pnpm-quoted-help |  | needs-repair | 74 | `needs-tests`, `needs-human-verification`, `needs-repair` | The first pnpm repair rejected --help but accepted the shell-equivalent quoted token without treating it as a help request. |
+| PASS | verification-laundering | pnpm-formatted-label |  | needs-repair | 74 | `needs-tests`, `needs-human-verification`, `needs-repair` | The first pnpm repair removed bare Verification labels but left Markdown emphasis around the legacy keyword, which bypassed command recognition. |
 | PASS | verification-laundering | pnpm-planned-verification |  | needs-repair | 60 | `needs-tests`, `needs-human-verification`, `needs-repair` | The baseline accepted a Verification heading plus 'plan to run pnpm' as passing test and before/after evidence. |
 | PASS | verification-laundering | pnpm-unrun-policy-command |  | low-review-value | 34 | `needs-tests`, `needs-human-verification`, `policy-failed`, `needs-project-test-command` | The baseline counted 'Verification: I have not yet run pnpm' as evidence and separately accepted the raw policy-command match. |
 | PASS | verification-laundering | pnpm-malformed-quoting |  | needs-repair | 74 | `needs-tests`, `needs-human-verification`, `needs-repair` | An intermediate pnpm recognizer skipped the unmatched quote and accepted the remaining token subsequence; the regression requires complete tokenization. |

@@ -120,3 +120,73 @@ test("plain-text patches cannot substitute planned pnpm work for CI", () => {
   const result = evaluate(`Verification: I will run \`${command}\` later.`, { submissionFormat: "patch_series", checks: [] });
   assert.equal(check(result, "ci").status, "warn");
 });
+
+for (const report of [
+  "I ran `pnpm test`; all 12 examples passed.",
+  "I ran `pnpm test` to verify the query plan.",
+  "I ran `pnpm test`; no pending tests remain."
+]) {
+  test(`completion reports are not negated by incidental context words: ${report}`, () => {
+    const result = evaluate(`## Verification\n\n${report}`);
+    assert.equal(check(result, "tests").status, "pass");
+    assert.equal(check(result, "verification").status, "pass");
+    assert.equal(check(result, "negated-verification").status, "pass");
+    assert.equal(result.status, "ready-for-maintainer");
+  });
+}
+
+for (const heading of ["Test plan", "Examples"]) {
+  test(`nested command sections retain the ${heading} ancestor in every consumer`, () => {
+    const text = `## ${heading}\n\n### Commands\n\n\`pnpm test\``;
+    const result = evaluate(text, { repositoryFiles: [{ path: "CONTRIBUTING.md", content: "Pull requests must include tests. Run `pnpm test`." }] });
+    assert.equal(check(result, "tests").status, "fail");
+    assert.notEqual(check(result, "verification").status, "pass");
+    assert.equal(check(result, "project-test-command").status, "fail");
+    assert.equal(check(result, "policy").status, "fail");
+    assert.equal(result.strengths.includes("Includes a test or verification signal."), false);
+    assert.notEqual(result.status, "ready-for-maintainer");
+    const patch = evaluate(text, { submissionFormat: "patch_series", checks: [] });
+    assert.equal(check(patch, "ci").status, "warn");
+  });
+}
+
+test("nested plan permits a completed item, while examples never certify completion", () => {
+  const result = evaluate("## Test plan\n\n### Commands\n\n- [x] `pnpm test`");
+  assert.equal(check(result, "tests").status, "pass");
+  const example = evaluate("## Examples\n\n### Commands\n\n- [x] I ran `pnpm test`");
+  assert.equal(check(example, "tests").status, "fail");
+});
+
+for (const heading of ["Test plan", "Examples"]) {
+  test(`a sibling heading ends ${heading} ancestry`, () => {
+    const result = evaluate(`## ${heading}\n\n### Notes\n\nSee the project guide.\n\n## Verification\n\nI ran \`pnpm test\`; all assertions passed.`);
+    assert.equal(check(result, "tests").status, "pass");
+    assert.equal(result.status, "ready-for-maintainer");
+  });
+}
+
+for (const invocation of ['pnpm test "--help"', "pnpm test '--help'", "pnpm run test -- '--help'", 'pnpm test --he"lp"', 'pnpm test "--version"', "pnpm test '-h'"]) {
+  test(`quoted help/version tokens retain their meaning: ${invocation}`, () => {
+    const result = evaluate(`## Verification\n\n\`${invocation}\``);
+    assert.equal(check(result, "tests").status, "fail");
+    assert.notEqual(result.status, "ready-for-maintainer");
+  });
+}
+
+for (const invocation of ['pnpm "test"', 'corepack pnpm --filter "@scope/*" run "test:unit"']) {
+  test(`normalizes supported quoted command tokens: ${invocation}`, () => {
+    assert.equal(check(evaluate(`## Verification\n\n\`${invocation}\``), "tests").status, "pass");
+  });
+}
+
+for (const label of ["**Verification:**", "**Verification**:", "__Verification:__", "_Verification_:", "- **Verification:**"]) {
+  test(`formatted section labels cannot supply test evidence: ${label}`, () => {
+    for (const invocation of ["pnpm install", "pnpm test --help"]) {
+      const result = evaluate(`${label} \`${invocation}\``);
+      assert.equal(check(result, "tests").status, "fail");
+      assert.notEqual(check(result, "verification").status, "pass");
+      assert.notEqual(result.status, "ready-for-maintainer");
+    }
+    assert.equal(check(evaluate(`${label} \`pnpm test\``), "tests").status, "pass");
+  });
+}

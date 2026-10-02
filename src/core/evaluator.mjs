@@ -179,7 +179,7 @@ export function evaluatePullRequest(input, options = {}) {
   // non-pnpm reports, and share execution qualifiers across all consumers.
   const testNarrative = /\bpnpm\b/i.test(body)
     ? body.replace(/^[ \t]*#{1,6}[ \t]+[^\r\n]*$/gm, "")
-      .replace(/^[ \t]*(?:verification|validation)(?:[ \t]+(?:results|commands|status|plan))?[ \t]*(?::|$)[ \t]*/gmi, "")
+      .split("\n").map(stripPnpmEvidenceLabel).join("\n")
     : body;
   const hasTestMention = (SIGNALS.testMention.test(testNarrative) || pnpmEvidence.mentioned) && !verificationUnexecuted;
   const hasNoTestsReason = SIGNALS.noTestsReason.test(body) && !verificationUnexecuted && (docsOnly || SIGNALS.supportedNoTestsReason.test(body));
@@ -1234,7 +1234,9 @@ function isPnpmTestCommand(text) {
   const tokens = [];
   let consumed = 0;
   for (let match; (match = tokenPattern.exec(command));) {
-    tokens.push(match[1]);
+    // Normalize only the supported literal quote segments; never evaluate shell
+    // substitutions or escapes. Quoted flags retain their unquoted meaning.
+    tokens.push(match[1].replace(/"([^"\r\n]*)"|'([^'\r\n]*)'/g, (_match, double, single) => double ?? single));
     consumed = tokenPattern.lastIndex;
   }
   // Never skip malformed quoting to recover a plausible command subsequence.
@@ -1258,37 +1260,67 @@ function isPnpmTestCommand(text) {
   return /^test(?::[\w:-]+)?$/.test(tokens[index] || "");
 }
 
+function stripPnpmEvidenceLabel(line) {
+  // Support common bold/italic labels without changing selector or command text.
+  return line.replace(/^([ \t]*(?:[-*+][ \t]+)?)[*_]{0,3}(?:verification|validation)(?:[ \t]+(?:results|commands|status|plan))?[*_]{0,3}[ \t]*(?::[*_]{0,3}|$)[ \t]*/i, "$1");
+}
+
+function pnpmHeadingMode(text) {
+  const label = text.trim().replace(/^#{1,6}\s+/, "").replace(/\s+#+\s*$/, "")
+    .replace(/^[*_]{1,3}|[*_]{1,3}(?=:?\s*$)/g, "").replace(/:\s*$/, "").trim();
+  if (/^(?:(?:command|test|verification|validation|usage)\s+)?(?:examples?|instructions?|usage)(?:\s+(?:commands?|examples?|instructions?))?$/i.test(label)) return "example";
+  if (/^(?:(?:test|testing|verification|validation)\s+plans?|(?:plans?|planned|pending|todo)(?:\s+(?:tests?|commands?|checks?|verification|validation))?)$/i.test(label)) return "planned";
+  return "";
+}
+
+function pnpmProseMode(text) {
+  // Classify explicit future/example claims, not isolated words such as
+  // "query plan", "examples passed", "usage", or "no pending tests remain".
+  for (const line of text.split(/\r?\n/)) {
+    const labelMode = pnpmHeadingMode(line);
+    if (labelMode) return labelMode;
+    if (/^\s*[*_]{0,3}(?:examples?|instructions?|usage)\s*:[*_]{0,3}|^\s*(?:for example|example of)\b|\b(?:this|it|these)\s+(?:is|are)\s+(?:an?\s+)?examples?\b|\b(?:docs?|documentation|readme)\b.*\b(?:describes?|mentions?|explains?|says?|shows?|recommends?)\b/i.test(line)) return "example";
+    if (/\b(?:will|would|should|must|plan(?:s|ned|ning)?\s+to|intend(?:s|ed)?\s+to|need(?:s)?\s+to|yet\s+to)\s+(?:run|execute|test)\b|\b(?:these|this|(?:the\s+)?(?:commands?|tests?|checks?|verification|validation))\s+(?:(?:are|is|were|was)\s+)?(?:still\s+)?(?:planned|pending)\b/i.test(line)) return "planned";
+  }
+  return "";
+}
+
 function analyzePnpmTestMention(body) {
   let mentioned = false;
   let unexecuted = false;
-  const pending = /\b(?:will|would|should|must|plan(?:s|ned|ning)?\s+to|intend(?:s|ed)?\s+to|need(?:s)?\s+to|yet\s+to)\s+(?:run|execute|test)\b|\b(?:plan|planned|pending|todo)\b|\b(?:example|instructions?|usage)\s*:|\b(?:for example|example of)\b|\b(?:docs?|documentation|readme)\b.*\b(?:describes?|mentions?|explains?|says?|shows?|recommends?)\b/i;
-  const contextMode = (text) => /\b(?:examples?|instructions?|usage)\b/i.test(text) ? "example" : pending.test(text) ? "planned" : "";
-  const sections = [{ heading: "", lines: [] }];
+  const sections = [{ heading: "", level: 0, parent: null, lines: [] }];
+  const ancestors = [sections[0]];
   let fenced = false;
   for (const line of body.split(/\r?\n/)) {
     if (/^\s*(?:```|~~~)/.test(line)) { fenced = !fenced; sections.at(-1).lines.push({ line, fenced: true }); continue; }
-    if (!fenced && /^\s*#{1,6}\s/.test(line)) {
-      sections.push({ heading: line, lines: [] });
+    const heading = !fenced && line.match(/^\s*(#{1,6})\s/);
+    if (heading) {
+      const level = heading[1].length;
+      while (ancestors.at(-1).level >= level) ancestors.pop();
+      const section = { heading: line, level, parent: ancestors.at(-1), lines: [] };
+      sections.push(section);
+      ancestors.push(section);
       continue;
     }
     sections.at(-1).lines.push({ line, fenced });
   }
   for (const section of sections) {
-    const headingMode = contextMode(section.heading);
+    section.headingMode = pnpmHeadingMode(section.heading);
     // Qualifiers before or after a code block apply throughout its Markdown
     // section. Mixed completed/planned reports remain conservative.
     const prose = section.lines.filter(item => !item.fenced).map(item => item.line.replace(/`[^`]*`/g, "")).join("\n");
-    const narrativeMode = contextMode(prose);
+    section.narrativeMode = pnpmProseMode(prose);
+    const scope = [];
+    for (let ancestor = section; ancestor; ancestor = ancestor.parent) scope.push(ancestor);
     for (const { line } of section.lines) {
-      const plain = line.trim().replace(/^(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/, "")
-        .replace(/^(?:verification|validation):\s*/i, "")
+      const plain = stripPnpmEvidenceLabel(line).trim().replace(/^(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/, "")
         .replace(/^(?:I\s+)?(?:(?:will|plan to|intend to|need to)\s+)?(?:ran|run|executed?|checked)\s+/i, "");
       const snippets = [plain, ...[...line.matchAll(/`([^`]+)`/g)].map(match => match[1])];
       if (!snippets.some(isPnpmTestCommand)) continue;
       mentioned = true;
       const claimedCompleted = /\[[xX]\]|\b(?:ran|executed)\b/i.test(line);
-      const contextUnexecuted = narrativeMode || headingMode === "example" || (headingMode && !claimedCompleted);
-      if (contextUnexecuted || pending.test(line) || /\[\s\]/.test(line)) unexecuted = true;
+      const contextUnexecuted = scope.some(item => item.narrativeMode || item.headingMode === "example" || (item.headingMode === "planned" && !claimedCompleted));
+      if (contextUnexecuted || /\[\s\]/.test(line)) unexecuted = true;
     }
   }
   return { mentioned, unexecuted };
