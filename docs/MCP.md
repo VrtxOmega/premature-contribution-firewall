@@ -14,7 +14,12 @@ Claim integrity adds one more rule: evidence must be capable of distinguishing t
 - local lane/evidence writes only under the fixed PCF data directory
 - registry submission is a human-approved public action, not an MCP action
 
-Run it:
+This document describes current source. Published npm **v0.2.0** has 25 tools;
+`pcf_claim_integrity`, `pcf_falsification_packet`, `pcf_residue_register`, and the
+claim-integrity schema are unreleased additions. See the
+[install and upgrade guide](INSTALL.md) for the version boundary.
+
+Run it from a source checkout:
 
 ```bash
 npm run mcp
@@ -37,11 +42,16 @@ For an installed npm package, clients that need an executable command can use:
 ```json
 {
   "command": "npx",
-  "args": ["-y", "-p", "premature-contribution-firewall", "pcf-mcp"]
+  "args": ["--yes", "--package=premature-contribution-firewall@0.2.0", "pcf-mcp"]
 }
 ```
 
 ## Submission Readiness
+
+Before releasing source changes, run `npm run package:verify` from the checkout.
+It installs the actual tarball and exercises the generated CLI/MCP commands from
+an isolated consumer directory; a source-tree smoke test alone cannot detect
+missing packaged files or broken install shims.
 
 PCF MCP exposes a self-audit tool for registry review:
 

@@ -19,24 +19,26 @@ The output is a maintainer queue, not a vibe score: labels, repair checklists, r
 
 PCF v0.2.0 is published on [npm](https://www.npmjs.com/package/premature-contribution-firewall/v/0.2.0) and as a [GitHub release](https://github.com/VrtxOmega/premature-contribution-firewall/releases/tag/v0.2.0). It adds the offline contribution lifecycle and salvage gate while preserving the impact-first serious scout, AI-assisted contribution posture gate, and fail-closed authority boundaries. **Current `main` is ahead of the published release** with additional repro-authority and Windows portability hardening; those changes are unreleased. The recommended adoption path remains read-only first: run one command, inspect one artifact, and decide whether it is useful before enabling anything else.
 
-Try it in one command, no install:
+Print help for the published release without needing any repository files (Node.js 22+):
 
 ```bash
-npx premature-contribution-firewall preflight your-pr-draft.json
+npx --yes --package=premature-contribution-firewall@0.2.0 pcf --help
 ```
+
+Follow the [install, sample preflight, and upgrade guide](docs/INSTALL.md) for a runnable example, pinned MCP setup, and verification of a packed install. `claim-integrity`, `falsify`, and `residue-register` are unreleased source features; installing npm `0.2.0` does not provide them.
 
 Current public state:
 
 - Published on npm: [`premature-contribution-firewall`](https://www.npmjs.com/package/premature-contribution-firewall) with the `pcf` CLI, including `lifecycle`, and the `pcf-mcp` stdio server bin.
 - Published on the GitHub Marketplace as a read-only Action with two modes: `workflow_dispatch` queue artifact and `pull_request` PR gate (step-summary verdict, optional `fail-on` blocking, no GitHub writes).
-- MCP server: `pcf-mcp` / `npm run mcp` exposes default-safe agent tools for scout, policy, repro, diff-shape, lane status/resume, evidence drafts, fixed local lane storage, and registry-readiness self-audit. The release gate verifies `npm pack` includes the bin before publish. See [docs/MCP.md](docs/MCP.md).
+- MCP server: `pcf-mcp` / `npm run mcp` exposes default-safe agent tools for scout, policy, repro, diff-shape, lane status/resume, evidence drafts, fixed local lane storage, and registry-readiness self-audit. Current release gates install the actual tarball and exercise its CLI/MCP command shims before publish. See [docs/MCP.md](docs/MCP.md).
 - Contributor preflight: `pcf preflight` checks a draft PR or patch before submission, with a stable exit-code contract for hooks and CI.
 - Initial release post: [v0.1.0 read-only maintainer queue pilot](docs/RELEASE_POST_V0_1_0.md).
 - Canonical output sample: [maintainer export bundle from PCF's own public queue](docs/MAINTAINER_EXPORT_SAMPLE.md).
 - Build history: [36-hour idea-to-v0.1.0 evidence capsule](docs/BUILD_ARC_36_HOURS.md).
 - Maintainer feedback tracker: [five-maintainer artifact-shape feedback pass](docs/MAINTAINER_FEEDBACK_TRACKER.md).
 - Real-world usage so far: author-run read-only shadow pilots against public queues, plus at least one independently owned public repository running the PCF PR Gate in advisory/read-only mode: [`rygel/outerstellar-platform`](https://github.com/rygel/outerstellar-platform/blob/main/.github/workflows/pcf-pr-gate.yml).
-- Current-main hardening after v0.2.0: narrative repro notes cannot establish gate outcomes or evidence presence; Windows/escaped-path CLI entrypoints and cross-platform path/newline tests were repaired. Latest full Linux gate for this hardening: **331 tests**, **77/77 benchmark**, **36/36 adversarial**, maintainer demo PASS.
+- Current-main hardening after v0.2.0: narrative repro notes cannot establish gate outcomes or evidence presence; Windows/escaped-path CLI entrypoints and cross-platform path/newline tests were repaired. Study storage now rejects native Windows before accessing a store. The [verification workflow](.github/workflows/pcf-verification.yml) checks Linux and Windows, including installed-package commands; consult its completed runs for current results.
 - Claim integrity on current `main`: serious contribution evidence can now be evaluated as a **Claim -> Evidence Surface -> Positive/Negative Controls -> Verdict Reachability** contract. High-risk claims can require an explicit symptom/reachability/invariant/patch-mechanism chain; observed evidence outranks caller claims; routing context can expire; and falsification packets make the exact claim and break procedure portable. The September 27 hardening also fails required freshness closed when time bounds are unusable, refuses to infer evaluator independence from self-declared labels alone, and distinguishes moving refs from immutable source/artifact identity. See [Claim Integrity and Falsification](docs/CLAIM_INTEGRITY.md).
 - External technical feedback loop: [Agent Security Harness #622](https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/622) converted a VrtxOmega reproduction into six upstream repair PRs, a 346-cell/19-family regression register reduced to zero, and release v4.26.0. A separate released-package retest reproduced the repaired nine-pole behavior. Follow-on checks then exposed the **mirror failure class** in [#628](https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/628) and [#631](https://github.com/msaleme/red-team-blue-team-agent-fabric/issues/631): a guard can stop inventing verdicts yet still make legitimate PASS/FAIL outcomes unreachable. A separate Trust Lab Track 1 report by tolegm / AstraNL reproduced all 12 frozen result objects while exposing adjacent heartbeat-freshness and declared-grouping failures; those lessons are recorded in [the September 27 feedback note](docs/TRUST_LAB_EXTERNAL_REPRO_20260927.md). These are technical-impact signals, not PCF/VERITAS validation or direct-merge counts.
 - Upstream contribution learning ledger: [public wins, misses, blocked lanes, and gate changes](docs/UPSTREAM_CONTRIBUTION_LEDGER.md), with the latest [September 25 evidence refresh](docs/UPSTREAM_CONTRIBUTION_LEDGER_ADDENDUM_20260925.md) and [machine-readable census](docs/upstream-contribution-refresh-20260925.json).
@@ -141,6 +143,8 @@ Exit code 0 means ready to submit, 1 means not ready (with a fix-first checklist
 
 ## Claim Integrity And Falsification
 
+This section describes unreleased source. Use the checked-out CLI (`node src/cli.mjs`) until a release containing these commands is published.
+
 PCF no longer treats "there is a test/log/artifact" as the end of the evidence question.
 
 For serious claims it can ask:
@@ -148,8 +152,8 @@ For serious claims it can ask:
 > **What observable surface makes this claim judgeable, and can the proof mechanism still reach both the safe and unsafe verdicts?**
 
 ```bash
-pcf claim-integrity fixtures/claim-integrity-example.json
-pcf falsify falsification-input.json --format json
+node src/cli.mjs claim-integrity fixtures/claim-integrity-example.json
+node src/cli.mjs falsify falsification-input.json --format json
 ```
 
 The claim-integrity gate can fail closed on:
@@ -288,9 +292,12 @@ For the maintainer-facing assumptions behind the tool, see [docs/MAINTAINER_OPER
 - Exposes callable API endpoints for single, patch, batch, spec, and benchmark evaluation.
 - Includes a stricter `kernel-grade` profile for projects that want Linux-kernel-style patch discipline: concise subsystem subjects, human DCO sign-off, Fixes/stable discipline, maintainer routing, build/test evidence, review-budget control, and transparent tool provenance.
 
-## Quick Start
+## Source Checkout And Browser UI
+
+For the published CLI/MCP package, use the [install guide](docs/INSTALL.md). The commands below need a checkout, including its development scripts and `public/` assets:
 
 ```bash
+git clone https://github.com/VrtxOmega/premature-contribution-firewall.git
 cd premature-contribution-firewall
 npm run check
 npm run repo:verify

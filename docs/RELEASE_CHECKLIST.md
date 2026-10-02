@@ -14,6 +14,7 @@ npm run benchmark
 npm run redtest
 npm run demo:maintainer -- --fail-on-regression
 npm run ci:verify
+npm run package:verify
 npm run demo:maintainer:write
 ```
 
@@ -26,6 +27,7 @@ Expected result:
 - Adversarial red test stays at 11/11 or grows with preserved breakage residue.
 - Maintainer demo reports `PASS`.
 - CI workflow verification reports all required gates present and forbidden write posture absent.
+- The packed-install gate exercises all three installed command shims from an isolated consumer directory, including preflight exit codes 0/1/2, lifecycle and MCP readiness. Record its tarball SHA-512 receipt; `npm pack --dry-run` alone is insufficient.
 - The root `action.yml` stays a read-only composite action that runs the public pilot and writes a markdown artifact.
 - `docs/maintainer-demo-output.md` is regenerated from the demo command, not hand-edited.
 
@@ -47,6 +49,7 @@ It must run:
 - `npm run benchmark`
 - `npm run redtest`
 - `npm run demo:maintainer -- --fail-on-regression`
+- `npm run package:verify`
 
 It should upload regenerated proof artifacts after those gates pass, not before.
 
@@ -120,6 +123,7 @@ Report these platform skips separately from passes. See the
 ## Release Blockers
 
 - Any failing unit, benchmark, red-test, or maintainer-demo gate.
+- Any failing packed-install gate, or an unverified final registry tarball after publication. Version selection and publication remain explicit maintainer decisions; a local package with manifest version `0.2.0` can contain unreleased code.
 - Any generated evidence artifact containing local absolute paths, private tokens, or runtime data paths.
 - Any public mode with GitHub writes enabled by default.
 - Any CI workflow that drops `ci:verify`, benchmark, red-test, or maintainer-demo gates.

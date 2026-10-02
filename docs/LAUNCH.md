@@ -8,16 +8,22 @@ This is the operator checklist for taking PCF from a local pilot to public distr
 npm run ci:gates
 ```
 
-All gates must pass: repo hygiene, workflow contract, syntax, unit tests, current benchmark corpus, current red-test corpus, maintainer demo with zero regressions.
+All gates must pass: repo hygiene, workflow contract, syntax, unit tests, current benchmark corpus, current red-test corpus, maintainer demo with zero regressions, and verification of an installed package tarball.
 
 ## 1. npm Publish (unlocks `npx` adoption)
 
 The package is npx-ready: `bin` exposes `pcf`, `premature-contribution-firewall`, and `pcf-mcp`. The `files` whitelist includes `src`, `fixtures`, MCP docs, the MCP smoke script, the pilot/PR-gate scripts, `action.yml`, README, changelog, Glama metadata, and LICENSE.
 
-Publish from `.github/workflows/npm-publish.yml`; do not create or paste a reusable npm token. The workflow verifies the requested version is unpublished, runs every proof gate, checks package contents, and uses GitHub OIDC trusted publishing.
+Publish from `.github/workflows/npm-publish.yml`; do not create or paste a reusable npm token. The workflow verifies the requested version is unpublished, runs every proof gate (including `package:verify`), checks package contents, and uses GitHub OIDC trusted publishing.
+
+**OPERATOR:** choose and approve the next version and update `package.json` and
+release notes first. The current `0.2.0` is already published and cannot be used
+again. Current source includes new commands and a mandatory `claimIntegrity`
+lane gate; account for those upgrade effects when choosing the next version.
+The following commands require separate release authorization.
 
 ```bash
-VERSION=0.2.0
+VERSION="$(node -p "require('./package.json').version")"
 gh workflow run npm-publish.yml --ref main -f version="$VERSION" -f dry-run=true
 # Inspect and require a successful dry-run workflow before continuing.
 gh workflow run npm-publish.yml --ref main -f version="$VERSION" -f dry-run=false
@@ -28,15 +34,20 @@ Notes:
 - The npm trusted publisher must match this repository and the exact workflow filename `npm-publish.yml`.
 - The workflow has `id-token: write`; npm records provenance and the GitHub trusted-publisher identity on the package version.
 - npm does not allow republishing an existing version. If package metadata changes after publication, bump a new patch version before publishing.
-- Smoke test after publish:
+- Retest the exact registry tarball after an approved publish from this checkout.
+  Use `current` for a new release containing the current feature set; the existing
+  v0.2.0 artifact has its own contract in the [install guide](INSTALL.md).
 
 ```bash
-npx premature-contribution-firewall@latest --help
-npx premature-contribution-firewall@latest evaluate fixtures/pr-ready.json
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
-  | npm exec --yes --package=premature-contribution-firewall@latest -- pcf-mcp
+npm pack "premature-contribution-firewall@${VERSION}" --ignore-scripts
+npm run package:verify -- --tarball "./premature-contribution-firewall-${VERSION}.tgz" --contract current
 npm view premature-contribution-firewall version bin
 ```
+
+Record the receipt's SHA-512 identity and the published version's `gitHead`.
+Keep this released-artifact result separate from the pre-publish checkout pack.
+The verifier runs from source; development verification scripts are not an npm
+consumer entrypoint.
 
 ## 2. GitHub Marketplace Listing (unlocks one-click Action adoption)
 
@@ -58,7 +69,7 @@ Current release: [`v0.2.0`](https://github.com/VrtxOmega/premature-contribution-
 
 Recommended adoption ladder, in order:
 
-1. `workflow_dispatch` queue artifact (read-only, zero risk).
+1. `workflow_dispatch` queue artifact (read-only; inspect the result before expanding the rollout).
 2. `pull_request` PR gate with `fail-on: never` (report-only step summary).
 3. `fail-on: low-review-value` once maintainers trust the lane.
 4. `fail-on: needs-repair` only for repos that want a hard readiness gate.

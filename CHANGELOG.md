@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased - evidence refresh 2026-10-01
+## Unreleased - evidence refresh 2026-10-02
+
+### Installed-package verification and adoption guide
+
+- Added `npm run package:verify`: pack locally or select a local tarball, install offline into an isolated consumer, and exercise all three npm command shims, preflight exit codes, lifecycle, and MCP readiness with PCF network calls blocked.
+- Added regression controls for missing installed files and aliases, silent exit-zero entrypoints, and confusion between current-source and v0.2.0 feature contracts. Run the gate on Linux and Windows and before publishing.
+- Added a runnable pinned-release quickstart, explicit released/unreleased feature inventory, upgrade guidance for the mandatory claim-integrity gate, and exact-tarball post-release verification. No version bump or release is included.
 
 ### Prospective study storage platform contract
 
