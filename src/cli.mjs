@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
-import { evaluateContribution, renderMarkdownReport } from "./core/evaluator.mjs";
+import { availableProfiles, evaluateContribution, renderMarkdownReport } from "./core/evaluator.mjs";
 import { parsePatchSubmission } from "./core/patch.mjs";
 import { normalizeRepositoryFiles } from "./core/policy.mjs";
 import { buildMaintainerQueue } from "./core/queue.mjs";
@@ -128,15 +128,21 @@ if (command === "validate-corpus") {
 }
 
 const file = args[1];
+if (command !== "queue" && (!file || (file.startsWith("-") && file !== "-"))) {
+  console.error(`PCF ${command} usage error: Missing input file. Put the input path or '-' before options; prefix dash-leading file names with './'.`);
+  process.exit(2);
+}
 if (!file) {
   console.error("Missing input file.");
   printHelp();
   process.exit(2);
 }
 
-const format = readFlag(args, "--format") || "pretty";
-const profile = readFlag(args, "--profile") || "";
-const policyFiles = await readPolicyFiles(readFlag(args, "--policy"));
+const evaluationOptions = command === "queue"
+  ? { format: readFlag(args, "--format") || "pretty", profile: readFlag(args, "--profile") || "", policy: readFlag(args, "--policy") }
+  : readEvaluationOptions(command, args.slice(2));
+const { format, profile } = evaluationOptions;
+const policyFiles = await readPolicyFiles(evaluationOptions.policy);
 const text = file === "-" ? await readStdin() : await readFile(file, "utf8");
 if (command === "queue") {
   const payload = JSON.parse(text);
@@ -158,7 +164,7 @@ if (command === "preflight") {
   const input = parsePreflightInput(text, file, { profile, policyFiles });
   const evaluation = evaluateContribution(input, { profile: profile || input.profile });
   const claimIntegrity = input.claimIntegrity ? evaluateClaimIntegrity(input.claimIntegrity) : null;
-  const allowRepair = args.includes("--allow-repair");
+  const allowRepair = evaluationOptions.allowRepair;
   const evaluationReady = evaluation.status === "ready-for-maintainer"
     || (allowRepair && evaluation.status === "needs-repair");
   const ready = evaluationReady && (!claimIntegrity || claimIntegrity.status === "pass");
@@ -282,6 +288,40 @@ function printQueuePretty(queue) {
 function readFlag(values, flag) {
   const index = values.indexOf(flag);
   return index >= 0 ? values[index + 1] : "";
+}
+
+function readEvaluationOptions(command, values) {
+  const result = { format: "pretty", profile: "", policy: "", allowRepair: false };
+  const choices = { "--format": ["pretty", "json", "markdown"], "--profile": availableProfiles().map(profile => profile.id) };
+  const names = { "--format": "format", "--profile": "profile", "--policy": "policy" };
+  const seen = new Set();
+  const fail = message => {
+    console.error(`PCF ${command} usage error: ${message}`);
+    process.exit(2);
+  };
+  for (let index = 0; index < values.length; index += 1) {
+    const token = values[index];
+    if (!token.startsWith("--")) fail(`Unexpected argument '${token}'. Supply one input followed by options.`);
+    const equals = token.indexOf("=");
+    const flag = equals < 0 ? token : token.slice(0, equals);
+    const boolean = command === "preflight" && flag === "--allow-repair";
+    if (!Object.hasOwn(names, flag) && !boolean) fail(`Unknown option '${flag}'. Use --help for supported options.`);
+    if (seen.has(flag)) fail(`Duplicate option '${flag}'. Specify each option once.`);
+    seen.add(flag);
+    if (boolean) {
+      if (equals >= 0) fail(`${flag} does not accept a value; omit it to retain the ready-only gate.`);
+      result.allowRepair = true;
+      continue;
+    }
+    let value = equals < 0 ? values[++index] : token.slice(equals + 1);
+    if (value === undefined || !value.trim() || value.startsWith("--")) fail(`${flag} requires a value.`);
+    if (choices[flag]) {
+      value = value.trim();
+      if (!choices[flag].includes(value)) fail(`Unsupported ${flag} value '${value}'. Use ${choices[flag].join(", ")}.`);
+    }
+    result[names[flag]] = value;
+  }
+  return result;
 }
 
 function readStdin() {
