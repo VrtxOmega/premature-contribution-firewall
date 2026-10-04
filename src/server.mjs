@@ -247,6 +247,7 @@ async function route(request, response) {
   if (request.method === "POST" && url.pathname === "/api/evaluate") {
     const rawBody = await readRequestBody(request);
     const payload = JSON.parse(rawBody.toString("utf8"));
+    selectReviewProfile(payload.profile, payload.reviewProfile, payload.input?.profile, payload.input?.reviewProfile);
     const calibration = payload.feedbackCalibration || await loadLocalFeedbackCalibration(payload.repository || payload.input?.repository || "");
     const evaluation = evaluateContribution(payload, { feedbackCalibration: calibration });
     console.log(`[premature-contribution-firewall] evaluated ${evaluation.kind} status=${evaluation.status} score=${evaluation.score}`);
@@ -259,6 +260,7 @@ async function route(request, response) {
     const payload = contentType.includes("application/json")
       ? JSON.parse(rawBody.toString("utf8"))
       : { text: rawBody.toString("utf8") };
+    selectReviewProfile(payload.profile, payload.reviewProfile, payload.input?.profile, payload.input?.reviewProfile);
     const parsed = parsePatchSubmission(payload.text || payload.patchText || "", {
       profile: selectReviewProfile(payload.profile) || "kernel-grade",
       repositoryFiles: payload.repositoryFiles || payload.policyFiles || []

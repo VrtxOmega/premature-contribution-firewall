@@ -63,6 +63,19 @@ test("invalid lower-priority profiles cannot hide behind a valid override", () =
   assert.throws(() => evaluateContribution({ ...fixture, profile: "standard", reviewProfile: false }), invalidProfile);
 });
 
+test("patch text cannot hide invalid nested profile candidates", async () => {
+  for (const profile of [false, "kernel-grdae"]) {
+    for (const field of ["profile", "reviewProfile"]) {
+      const input = { ...fixture, [field]: profile };
+      assert.throws(() => evaluateSubmission({ patchText: patch, input, profile: "kernel-grade" }), invalidProfile);
+      await assert.rejects(callPcfMcpTool("pcf_preflight", { patchText: patch, input, profile: "kernel-grade" }), invalidProfile);
+    }
+  }
+  const mixed = { patchText: patch, input: { ...fixture, profile: "standard" } };
+  assert.equal(evaluateSubmission(mixed).profile.id, "kernel-grade");
+  assert.equal((await callPcfMcpTool("pcf_preflight", mixed)).evaluation.profile.id, "kernel-grade");
+});
+
 test("profile metadata cannot change the evaluator's allowed profile IDs", () => {
   const profile = availableProfiles().find(profile => profile.id === "kernel-grade");
   assert.throws(() => { profile.id = "standard"; }, TypeError);

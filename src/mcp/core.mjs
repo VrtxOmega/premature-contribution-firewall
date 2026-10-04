@@ -521,6 +521,7 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
       return evaluateContribution(input, { profile: selectReviewProfile(args.profile, input.profile) });
     }
     case "pcf_preflight": {
+      selectReviewProfile(args.profile, args.input?.profile, args.input?.reviewProfile);
       const input = args.patchText
         ? parsePatchSubmission(args.patchText, { profile: selectReviewProfile(args.profile) || "kernel-grade", repositoryFiles: args.repositoryFiles || [] })
         : { ...(args.input || {}), profile: selectReviewProfile(args.profile, args.input?.profile) };

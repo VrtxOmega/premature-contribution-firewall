@@ -309,7 +309,7 @@ export function evaluateResidueRegisterSubmission(payload = {}) {
 export function evaluateSubmission(payload = {}, options = {}) {
   payload = plainObject(payload);
   options = plainObject(options);
-  const profile = selectReviewProfile(payload.profile, options.profile, payload.input?.profile, payload.reviewProfile);
+  const profile = selectReviewProfile(payload.profile, options.profile, payload.input?.profile, payload.reviewProfile, payload.input?.reviewProfile);
   const feedbackCalibration = payload.feedbackCalibration || options.feedbackCalibration || null;
   if (payload.text || payload.patchText || payload.kind === "patch") {
     const parsed = parsePatchSubmission(payload.text || payload.patchText || "", {

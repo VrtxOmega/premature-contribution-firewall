@@ -65,6 +65,12 @@ profile; batch item and nested input profiles override the batch default; queue
 item profiles override queue and options defaults. `reviewProfile` remains an
 input alias. Blank candidates are skipped during selection.
 
+When patch text and nested input are both supplied, patch selection is unchanged:
+the patch profile comes from its explicit override or the kernel-grade default.
+Recognized profile/alias fields in the ignored nested input are still validated.
+The HTTP single-evaluation endpoints retain their documented flat payload shapes;
+validation of a nested profile does not make nested input the evaluated payload.
+
 For example, evaluate `fixtures/pr-ready.json` with `profile: "standard"` to get
 score 100 and ready-for-maintainer, then `profile: "kernel-grade"` to get score 11
 and low-review-value. `profile: "kernel-grdae"` now produces an input error rather

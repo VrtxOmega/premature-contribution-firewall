@@ -40,7 +40,10 @@ test("HTTP profile errors are 400 responses and leave valid evaluation reachable
   for (const [path, body] of [
     ["/api/evaluate", { ...fixture, profile: "kernel-grdae" }],
     ["/api/evaluate", { ...fixture, reviewProfile: false }],
+    ["/api/evaluate", { ...fixture, input: { profile: false } }],
     ["/api/evaluate-patch", { text: patch, profile: 0 }],
+    ["/api/evaluate-patch", { text: patch, input: { profile: false } }],
+    ["/api/evaluate-patch", { text: patch, input: { reviewProfile: "kernel-grdae" }, profile: "kernel-grade" }],
     ["/api/github/queue", { items: [fixture], profile: "constructor" }]
   ]) {
     const response = await post(path, body);
@@ -63,7 +66,7 @@ test("HTTP profile errors are 400 responses and leave valid evaluation reachable
     assert.equal(result.evaluation.profile.id, profile);
     assert.equal(result.evaluation.score, profile === "standard" ? 100 : 11);
   }
-  const patchResponse = await post("/api/evaluate-patch", { text: patch });
+  const patchResponse = await post("/api/evaluate-patch", { text: patch, input: { profile: "standard" } });
   assert.equal(patchResponse.status, 200);
   assert.equal((await patchResponse.json()).evaluation.profile.id, "kernel-grade");
 });
