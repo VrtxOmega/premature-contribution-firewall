@@ -13,6 +13,7 @@
 
 - Reject unknown names and non-string review profiles before core, API-helper, patch, supplied-queue and MCP evaluation; inherited object keys cannot select profile metadata. Preserve valid defaults and precedence, and validate supplied lower-priority values before selecting an override.
 - Return HTTP 400 for these invalid evaluation inputs and MCP tool errors without a readiness result. Keep batch item errors isolated; invalid batch defaults reject the batch.
+- Apply accepted second-argument batch profile defaults and direct queue-item envelope profiles, preserving explicit override precedence instead of silently discarding those settings.
 - Document the unreleased contract, the separate `shielded: true` configuration, and excluded feedback/replay and policy-shape validation. Add actual HTTP/MCP and programmatic controls plus adversarial profile-fallback cases.
 
 ### Installed-package verification and adoption guide

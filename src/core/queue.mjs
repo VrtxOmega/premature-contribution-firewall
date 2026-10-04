@@ -225,7 +225,7 @@ export function buildMaintainerQueue(payload = {}, options = {}) {
 export function evaluateQueueItem(rawItem = {}, { index = 0, profile = "", feedbackCalibration = null } = {}) {
   const input = normalizeQueueInput(rawItem);
   const evaluation = evaluateContribution(input, {
-    profile: selectReviewProfile(profile, input.profile),
+    profile: selectReviewProfile(profile, rawItem.profile, input.profile),
     feedbackCalibration
   });
   const signals = queueSignals(evaluation);

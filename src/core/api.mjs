@@ -369,7 +369,7 @@ export function evaluateBatch(payload = {}, options = {}) {
     }
     try {
       const evaluation = evaluateSubmission(item.input ? { ...item.input, profile: selectReviewProfile(item.profile, item.input.profile) } : item, {
-        profile: selectReviewProfile(item.profile, payload.profile),
+        profile: selectReviewProfile(item.profile, payload.profile, options.profile),
         feedbackCalibration: item.feedbackCalibration || payload.feedbackCalibration || options.feedbackCalibration
       });
       return {

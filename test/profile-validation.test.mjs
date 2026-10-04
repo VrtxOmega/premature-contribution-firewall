@@ -94,6 +94,7 @@ test("batch rejects malformed defaults and isolates malformed items", () => {
     assert.deepEqual(defaultFailure.results, []);
     assert.match(defaultFailure.error, /profile/i);
     assert.equal(evaluateBatch({ profile, items: [] }).ok, false);
+    assert.equal(evaluateBatch({ profile: "standard", items: [fixture] }, { profile }).ok, false);
     const mixed = evaluateBatch({ items: [{ input: fixture }, { input: fixture, profile }, { input: { ...fixture, profile } }] });
     assert.equal(mixed.ok, false);
     assert.equal(mixed.summary.evaluated, 1);
@@ -116,9 +117,46 @@ test("queues reject malformed profiles before producing maintainer routes", () =
     assert.throws(() => buildMaintainerQueue({ items: [{ ...fixture, profile }] }), invalidProfile);
     assert.throws(() => buildMaintainerQueue({ items: [{ input: { ...fixture, profile } }] }), invalidProfile);
     assert.throws(() => evaluateQueueItem({ input: fixture, profile }), invalidProfile);
+    assert.throws(() => evaluateQueueItem({ input: fixture, profile }, { profile: "standard" }), invalidProfile);
   }
   assert.equal(buildMaintainerQueue({ profile: "kernel-grade", items: [{ ...fixture, profile: "standard" }] }).items[0].status, "ready-for-maintainer");
   assert.equal(evaluateQueueItem({ input: fixture }, { profile: "kernel-grade" }).evaluation.profile.id, "kernel-grade");
+});
+
+test("direct queue-item envelopes supply a profile below explicit options", () => {
+  for (const [item, options, expected] of [
+    [{ input: fixture, profile: "kernel-grade" }, {}, "kernel-grade"],
+    [{ input: { ...fixture, profile: "standard" }, profile: "kernel-grade" }, {}, "kernel-grade"],
+    [{ input: fixture, profile: "kernel-grade" }, { profile: "standard" }, "standard"],
+    [{ input: fixture, profile: "standard" }, { profile: "kernel-grade" }, "kernel-grade"],
+    [{ input: { ...fixture, profile: "kernel-grade" } }, {}, "kernel-grade"],
+    [{ input: fixture, profile: "kernel-grade" }, { profile: " " }, "kernel-grade"],
+    [{ input: { ...fixture, profile: "kernel-grade" }, profile: null }, {}, "kernel-grade"]
+  ]) {
+    const result = evaluateQueueItem(item, options).evaluation;
+    assert.equal(result.profile.id, expected);
+    assert.equal(result.score, expected === "standard" ? 100 : 11);
+  }
+});
+
+test("batch options supply a profile below item and payload defaults", () => {
+  for (const [payload, options, expected] of [
+    [{ items: [fixture] }, { profile: "kernel-grade" }, "kernel-grade"],
+    [{ items: [{ input: fixture }] }, { profile: "kernel-grade" }, "kernel-grade"],
+    [{ items: [fixture], profile: "standard" }, { profile: "kernel-grade" }, "standard"],
+    [{ items: [{ ...fixture, profile: "standard" }], profile: "kernel-grade" }, { profile: "kernel-grade" }, "standard"],
+    [{ items: [{ input: { ...fixture, profile: "standard" } }], profile: "kernel-grade" }, { profile: "kernel-grade" }, "standard"],
+    [{ items: [{ input: { ...fixture, profile: "standard" }, profile: "kernel-grade" }], profile: "standard" }, { profile: "standard" }, "kernel-grade"],
+    [{ items: [fixture], profile: " " }, { profile: "kernel-grade" }, "kernel-grade"],
+    [{ items: [{ input: { ...fixture, profile: "standard" }, profile: null }], profile: "kernel-grade" }, { profile: "kernel-grade" }, "standard"],
+    [{ items: [{ input: { ...fixture, reviewProfile: "kernel-grade" } }], profile: "standard" }, {}, "standard"],
+    [{ items: [{ input: { ...fixture, reviewProfile: "standard" } }] }, { profile: "kernel-grade" }, "kernel-grade"]
+  ]) {
+    const result = evaluateBatch(payload, options);
+    assert.equal(result.ok, true);
+    assert.equal(result.results[0].profile, expected);
+    assert.equal(result.results[0].score, expected === "standard" ? 100 : 11);
+  }
 });
 
 test("MCP stdio reports a tool error then serves valid requests in the same process", () => {

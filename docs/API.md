@@ -59,11 +59,19 @@ valid value would override it. Fix invalid values instead of relying on fallback
 | `evaluateBatch` / `/api/evaluate-batch` | Invalid batch default rejects the batch; invalid items have errors while valid items are evaluated; HTTP 400 when any item fails |
 | MCP `pcf_evaluate`, `pcf_preflight`, `pcf_queue` | `isError: true`, with no readiness evaluation in that tool result |
 
-Valid precedence is unchanged: core options override input profiles; the API
+Profile precedence is explicit. Core options override input profiles; the API
 submission helper's outer profile overrides its options, then nested input
-profile; batch item and nested input profiles override the batch default; queue
-item profiles override queue and options defaults. `reviewProfile` remains an
-input alias. Blank candidates are skipped during selection.
+profile. For `evaluateBatch`, item and nested input `profile` fields override the
+batch payload default, which overrides the second argument's `options.profile`.
+For `buildMaintainerQueue`, item profiles override queue-payload defaults, then
+options defaults, then nested input profiles. A direct `evaluateQueueItem` call
+uses explicit second-argument options first, then the item's envelope profile,
+then its nested input profile.
+
+Batch options and direct queue-item envelope profiles previously passed validation
+but were discarded; current source now applies these two accepted settings.
+`reviewProfile` remains an input alias below explicit API/batch defaults. Blank
+or null candidates are skipped. Invalid overridden values are still rejected.
 
 When patch text and nested input are both supplied, patch selection is unchanged:
 the patch profile comes from its explicit override or the kernel-grade default.
