@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { availableProfiles, evaluateContribution, renderMarkdownReport } from "./core/evaluator.mjs";
 import { parsePatchSubmission } from "./core/patch.mjs";
-import { normalizeRepositoryFiles } from "./core/policy.mjs";
+import { InvalidPolicyFilesError, normalizeRepositoryFiles, selectRepositoryFiles, validatePolicyFileContainers } from "./core/policy.mjs";
 import { buildMaintainerQueue } from "./core/queue.mjs";
 import { buildSetupGuide, renderSetupGuideMarkdown, renderSetupGuideText } from "./core/setup-guide.mjs";
 import {
@@ -127,72 +127,79 @@ if (command === "validate-corpus") {
   }
 }
 
-const file = args[1];
-if (command !== "queue" && (!file || (file.startsWith("-") && file !== "-"))) {
-  console.error(`PCF ${command} usage error: Missing input file. Put the input path or '-' before options; prefix dash-leading file names with './'.`);
-  process.exit(2);
-}
-if (!file) {
-  console.error("Missing input file.");
-  printHelp();
-  process.exit(2);
-}
-
-const evaluationOptions = command === "queue"
-  ? { format: readFlag(args, "--format") || "pretty", profile: readFlag(args, "--profile") || "", policy: readFlag(args, "--policy") }
-  : readEvaluationOptions(command, args.slice(2));
-const { format, profile } = evaluationOptions;
-const policyFiles = await readPolicyFiles(evaluationOptions.policy);
-const text = file === "-" ? await readStdin() : await readFile(file, "utf8");
-if (command === "queue") {
-  const payload = JSON.parse(text);
-  const queue = buildMaintainerQueue(payload, {
-    profile: profile || payload.profile,
-    now: readFlag(args, "--now") || ""
-  });
-  if (format === "json") {
-    console.log(JSON.stringify(queue, null, 2));
-  } else if (format === "markdown") {
-    console.log(queue.markdown);
-  } else {
-    printQueuePretty(queue);
+try {
+  const file = args[1];
+  if (command !== "queue" && (!file || (file.startsWith("-") && file !== "-"))) {
+    console.error(`PCF ${command} usage error: Missing input file. Put the input path or '-' before options; prefix dash-leading file names with './'.`);
+    process.exit(2);
   }
-  process.exit(0);
-}
+  if (!file) {
+    console.error("Missing input file.");
+    printHelp();
+    process.exit(2);
+  }
 
-if (command === "preflight") {
-  const input = parsePreflightInput(text, file, { profile, policyFiles });
+  const evaluationOptions = command === "queue"
+    ? { format: readFlag(args, "--format") || "pretty", profile: readFlag(args, "--profile") || "", policy: readFlag(args, "--policy") }
+    : readEvaluationOptions(command, args.slice(2));
+  const { format, profile } = evaluationOptions;
+  const policyFiles = await readPolicyFiles(evaluationOptions.policy);
+  const text = file === "-" ? await readStdin() : await readFile(file, "utf8");
+  if (command === "queue") {
+    const payload = JSON.parse(text);
+    const queue = buildMaintainerQueue(payload, {
+      profile: profile || payload.profile,
+      now: readFlag(args, "--now") || ""
+    });
+    if (format === "json") {
+      console.log(JSON.stringify(queue, null, 2));
+    } else if (format === "markdown") {
+      console.log(queue.markdown);
+    } else {
+      printQueuePretty(queue);
+    }
+    process.exit(0);
+  }
+
+  if (command === "preflight") {
+    const input = parsePreflightInput(text, file, { profile, policyFiles });
+    const evaluation = evaluateContribution(input, { profile: profile || input.profile });
+    const claimIntegrity = input.claimIntegrity ? evaluateClaimIntegrity(input.claimIntegrity) : null;
+    const allowRepair = evaluationOptions.allowRepair;
+    const evaluationReady = evaluation.status === "ready-for-maintainer"
+      || (allowRepair && evaluation.status === "needs-repair");
+    const ready = evaluationReady && (!claimIntegrity || claimIntegrity.status === "pass");
+
+    if (format === "json") {
+      console.log(JSON.stringify({ ready, gate: allowRepair ? "allow-repair" : "ready-only", evaluation, claimIntegrity }, null, 2));
+    } else if (format === "markdown") {
+      const parts = [renderMarkdownReport(evaluation)];
+      if (claimIntegrity) parts.push(renderClaimIntegrityMarkdown(claimIntegrity));
+      console.log(parts.join("\n\n"));
+    } else {
+      printPreflightPretty(evaluation, { ready, allowRepair, claimIntegrity });
+    }
+    process.exit(ready ? 0 : 1);
+  }
+
+  const jsonInput = command === "evaluate" ? JSON.parse(text) : null;
+  validatePolicyFileContainers(jsonInput);
+  const input = command === "evaluate-patch"
+    ? parsePatchSubmission(text, { profile: profile || "kernel-grade", repositoryFiles: policyFiles })
+    : { ...jsonInput, repositoryFiles: policyFiles.length ? policyFiles : jsonInput.repositoryFiles };
   const evaluation = evaluateContribution(input, { profile: profile || input.profile });
-  const claimIntegrity = input.claimIntegrity ? evaluateClaimIntegrity(input.claimIntegrity) : null;
-  const allowRepair = evaluationOptions.allowRepair;
-  const evaluationReady = evaluation.status === "ready-for-maintainer"
-    || (allowRepair && evaluation.status === "needs-repair");
-  const ready = evaluationReady && (!claimIntegrity || claimIntegrity.status === "pass");
 
   if (format === "json") {
-    console.log(JSON.stringify({ ready, gate: allowRepair ? "allow-repair" : "ready-only", evaluation, claimIntegrity }, null, 2));
+    console.log(JSON.stringify(evaluation, null, 2));
   } else if (format === "markdown") {
-    const parts = [renderMarkdownReport(evaluation)];
-    if (claimIntegrity) parts.push(renderClaimIntegrityMarkdown(claimIntegrity));
-    console.log(parts.join("\n\n"));
+    console.log(renderMarkdownReport(evaluation));
   } else {
-    printPreflightPretty(evaluation, { ready, allowRepair, claimIntegrity });
+    printPretty(evaluation);
   }
-  process.exit(ready ? 0 : 1);
-}
-
-const jsonInput = command === "evaluate" ? JSON.parse(text) : null;
-const input = command === "evaluate-patch"
-  ? parsePatchSubmission(text, { profile: profile || "kernel-grade", repositoryFiles: policyFiles })
-  : { ...jsonInput, repositoryFiles: policyFiles.length ? policyFiles : jsonInput.repositoryFiles };
-const evaluation = evaluateContribution(input, { profile: profile || input.profile });
-
-if (format === "json") {
-  console.log(JSON.stringify(evaluation, null, 2));
-} else if (format === "markdown") {
-  console.log(renderMarkdownReport(evaluation));
-} else {
-  printPretty(evaluation);
+} catch (error) {
+  if (!(error instanceof InvalidPolicyFilesError)) throw error;
+  console.error(`PCF ${command} input error: ${error.message}`);
+  process.exit(2);
 }
 
 function parsePreflightInput(rawText, fileName, { profile: requestedProfile, policyFiles: files }) {
@@ -200,8 +207,10 @@ function parsePreflightInput(rawText, fileName, { profile: requestedProfile, pol
   if (!looksLikePatchFile) {
     try {
       const parsed = JSON.parse(rawText);
+      validatePolicyFileContainers(parsed);
       return { ...parsed, repositoryFiles: files.length ? files : parsed.repositoryFiles };
-    } catch {
+    } catch (error) {
+      if (error instanceof InvalidPolicyFilesError) throw error;
       // fall through to patch parsing
     }
   }
@@ -337,7 +346,12 @@ async function readPolicyFiles(path) {
   if (!path) return [];
   const text = await readFile(path, "utf8");
   const data = JSON.parse(text);
-  return normalizeRepositoryFiles(Array.isArray(data) ? data : data.repositoryFiles || data.policyFiles || []);
+  if (Array.isArray(data)) return normalizeRepositoryFiles(data);
+  validatePolicyFileContainers(data);
+  if (!Array.isArray(data?.repositoryFiles) && !Array.isArray(data?.policyFiles)) {
+    throw new InvalidPolicyFilesError("--policy JSON array or array wrapper");
+  }
+  return normalizeRepositoryFiles(selectRepositoryFiles(data));
 }
 
 async function runProspectiveStudy(studyArgs) {

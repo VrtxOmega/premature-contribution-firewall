@@ -1,5 +1,6 @@
 import { evaluateContribution } from "./evaluator.mjs";
 import { selectReviewProfile } from "./profiles.mjs";
+import { validatePolicyFileContainers } from "./policy.mjs";
 
 export const QUEUE_VERSION = "2026.05.31";
 export const DEFAULT_QUEUE_LIMIT = 25;
@@ -182,6 +183,7 @@ const REPORTER_EVIDENCE_NEXT_ACTION_LABELS = new Set([
 ]);
 
 export function buildMaintainerQueue(payload = {}, options = {}) {
+  validatePolicyFileContainers(payload, options);
   selectReviewProfile(payload.profile, options.profile);
   const limit = clampLimit(payload.limit ?? options.limit ?? DEFAULT_QUEUE_LIMIT);
   const rawItems = Array.isArray(payload.items)
@@ -264,6 +266,7 @@ export function evaluateQueueItem(rawItem = {}, { index = 0, profile = "", feedb
 }
 
 export function normalizeQueueInput(rawItem = {}) {
+  validatePolicyFileContainers(rawItem, rawItem.input);
   selectReviewProfile(rawItem.profile);
   const input = rawItem.input && typeof rawItem.input === "object" ? rawItem.input : rawItem;
   return {

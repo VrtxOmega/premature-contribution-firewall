@@ -19,6 +19,19 @@ const EXAMPLE_AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/" + "bPxRfiCYEXAMPL
 export const ADVERSARY_VERSION = "2026.09.26";
 
 export const ADVERSARIAL_CASES = [
+  ...[
+    { id: "repository-object", input: { ...baseReadyPr(), repositoryFiles: { path: "CONTRIBUTING.md", content: "DCO sign-off is required." } } },
+    { id: "false-policy-alias", input: { ...baseReadyPr(), repositoryFiles: [], policyFiles: false } },
+    { id: "discarded-envelope", input: { input: baseReadyPr(), repositoryFiles: { path: "CONTRIBUTING.md", content: "DCO sign-off is required." } } }
+  ].map(({ id, input }) => ({
+    id: `invalid-policy-container-${id}`,
+    category: "policy-container",
+    attack: "Supplies a non-array policy-file container that could be silently discarded before evaluation.",
+    residue: "Malformed containers or lower-priority fields previously reached readiness evaluation without their supplied policy evidence.",
+    apiCall: "evaluateBatch",
+    payload: { items: [input] },
+    expect: { ok: false }
+  })),
   ...["kernel-grdae", "constructor", false].map(profile => ({
     id: `invalid-review-profile-${String(profile)}`,
     category: "profile-fallback",

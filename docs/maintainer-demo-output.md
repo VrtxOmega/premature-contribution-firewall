@@ -1,13 +1,13 @@
 # Premature Contribution Firewall Maintainer Demo
 
-Generated: 2026-10-04T16:11:05.965Z
+Generated: 2026-10-04T16:48:27.838Z
 
 Verdict: **PASS**
 
 ## Claims This Demo Proves
 
 - 79/79 deterministic benchmark cases pass.
-- 47/47 adversarial red-test cases pass.
+- 50/50 adversarial red-test cases pass.
 - Maintainer queue sorts 3 supplied GitHub items with repository and upstream context.
 - Feedback calibration attaches 2 matching local candidate signal(s) to future queue output.
 - 1/1 promoted feedback fixture candidates replay cleanly.
@@ -36,7 +36,7 @@ npm run demo:maintainer -- --fail-on-regression
 | Surface | Result | Count | Note |
 | --- | --- | --- | --- |
 | Benchmark | PASS | 79/79 | Deterministic fixture corpus |
-| Adversarial red test | PASS | 47/47 | Breakage residue corpus |
+| Adversarial red test | PASS | 50/50 | Breakage residue corpus |
 | Maintainer queue | PASS | 3 items | 3 context findings |
 | Feedback calibration | PASS | 2 match(es) | 1 candidate fixture(s) |
 | Feedback candidate replay | PASS | 1/1 | Promoted fixture draft |
@@ -70,6 +70,9 @@ Replay comparison: 1 unchanged, 0 improved, 0 regressed, risk stable.
 
 | Case | Category | Status | Residue Preserved |
 | --- | --- | --- | --- |
+| invalid-policy-container-repository-object | policy-container | PASS | Malformed containers or lower-priority fields previously reached readiness evaluation without their supplied policy evidence. |
+| invalid-policy-container-false-policy-alias | policy-container | PASS | Malformed containers or lower-priority fields previously reached readiness evaluation without their supplied policy evidence. |
+| invalid-policy-container-discarded-envelope | policy-container | PASS | Malformed containers or lower-priority fields previously reached readiness evaluation without their supplied policy evidence. |
 | invalid-review-profile-kernel-grdae | profile-fallback | PASS | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
 | invalid-review-profile-constructor | profile-fallback | PASS | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
 | invalid-review-profile-false | profile-fallback | PASS | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |

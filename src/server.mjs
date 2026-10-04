@@ -11,6 +11,7 @@ import { runBenchmark } from "./core/benchmark.mjs";
 import { availableProfiles, evaluateContribution } from "./core/evaluator.mjs";
 import { parsePatchSubmission } from "./core/patch.mjs";
 import { InvalidReviewProfileError, selectReviewProfile } from "./core/profiles.mjs";
+import { InvalidPolicyFilesError, selectRepositoryFiles, validatePolicyFileContainers } from "./core/policy.mjs";
 import { renderSetupGuideMarkdown } from "./core/setup-guide.mjs";
 import { loadConfig } from "./config.mjs";
 import { createGitHubClient } from "./github/client.mjs";
@@ -26,7 +27,7 @@ const server = createServer(async (request, response) => {
   try {
     await route(request, response);
   } catch (error) {
-    if (error instanceof InvalidReviewProfileError) {
+    if (error instanceof InvalidReviewProfileError || error instanceof InvalidPolicyFilesError) {
       return sendJson(response, 400, { ok: false, error: error.message, code: error.code });
     }
     console.error("[premature-contribution-firewall] request failed", error);
@@ -247,6 +248,7 @@ async function route(request, response) {
   if (request.method === "POST" && url.pathname === "/api/evaluate") {
     const rawBody = await readRequestBody(request);
     const payload = JSON.parse(rawBody.toString("utf8"));
+    validatePolicyFileContainers(payload, payload.input);
     selectReviewProfile(payload.profile, payload.reviewProfile, payload.input?.profile, payload.input?.reviewProfile);
     const calibration = payload.feedbackCalibration || await loadLocalFeedbackCalibration(payload.repository || payload.input?.repository || "");
     const evaluation = evaluateContribution(payload, { feedbackCalibration: calibration });
@@ -260,10 +262,11 @@ async function route(request, response) {
     const payload = contentType.includes("application/json")
       ? JSON.parse(rawBody.toString("utf8"))
       : { text: rawBody.toString("utf8") };
+    validatePolicyFileContainers(payload, payload.input);
     selectReviewProfile(payload.profile, payload.reviewProfile, payload.input?.profile, payload.input?.reviewProfile);
     const parsed = parsePatchSubmission(payload.text || payload.patchText || "", {
       profile: selectReviewProfile(payload.profile) || "kernel-grade",
-      repositoryFiles: payload.repositoryFiles || payload.policyFiles || []
+      repositoryFiles: selectRepositoryFiles(payload)
     });
     parsed.repository = payload.repository || "";
     parsed.repositoryContext = payload.repositoryContext || payload.repoContext || null;

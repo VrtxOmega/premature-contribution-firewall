@@ -24,7 +24,7 @@ import {
 } from "../core/mcp-submission.mjs";
 import { parsePatchSubmission } from "../core/patch.mjs";
 import { selectReviewProfile } from "../core/profiles.mjs";
-import { buildPolicyProfile } from "../core/policy.mjs";
+import { buildPolicyProfile, validatePolicyFileContainers } from "../core/policy.mjs";
 import { scanTouchedFilePolicy } from "../core/policy-scan.mjs";
 import { buildMaintainerQueue } from "../core/queue.mjs";
 import { analyzeRepositoryContext } from "../core/repository-context.mjs";
@@ -517,13 +517,15 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
     case "pcf_submission_readiness":
       return submissionReadiness();
     case "pcf_evaluate": {
+      validatePolicyFileContainers(args, args.input);
       const input = args.input || {};
       return evaluateContribution(input, { profile: selectReviewProfile(args.profile, input.profile) });
     }
     case "pcf_preflight": {
+      validatePolicyFileContainers(args, args.input);
       selectReviewProfile(args.profile, args.input?.profile, args.input?.reviewProfile);
       const input = args.patchText
-        ? parsePatchSubmission(args.patchText, { profile: selectReviewProfile(args.profile) || "kernel-grade", repositoryFiles: args.repositoryFiles || [] })
+        ? parsePatchSubmission(args.patchText, { profile: selectReviewProfile(args.profile) || "kernel-grade", repositoryFiles: args.repositoryFiles ?? [] })
         : { ...(args.input || {}), profile: selectReviewProfile(args.profile, args.input?.profile) };
       const evaluation = evaluateContribution(input, { profile: selectReviewProfile(args.profile, input.profile) });
       const claimIntegrity = input.claimIntegrity ? evaluateClaimIntegrity(input.claimIntegrity) : null;
@@ -537,6 +539,7 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
       };
     }
     case "pcf_queue":
+      validatePolicyFileContainers(args, args.queue);
       return buildMaintainerQueue(args.queue || {}, { profile: selectReviewProfile(args.profile, args.queue?.profile) });
     case "pcf_watchlist_report":
       return buildWatchlistReport({ config: args.config || {}, runs: args.runs || [], generatedAt: args.generatedAt || new Date().toISOString() });
@@ -553,7 +556,8 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
     case "pcf_duplicate_assist":
       return buildSemanticDuplicateAssist(args.input || {}, args.repositoryTriage || null);
     case "pcf_policy_profile":
-      return buildPolicyProfile({ repositoryFiles: args.repositoryFiles || [], files: args.files || args.changedFiles || [], contributingText: args.contributingText || "" });
+      validatePolicyFileContainers(args);
+      return buildPolicyProfile({ repositoryFiles: args.repositoryFiles ?? [], files: args.files || args.changedFiles || [], contributingText: args.contributingText || "" });
     case "pcf_policy_scan":
       return scanTouchedFilePolicy(args);
     case "pcf_diff_shape":

@@ -5,11 +5,12 @@ This red-test corpus captures hostile or malformed submissions that previously e
 ## Summary
 
 - Version: 2026.09.26
-- Cases: 47/47 passing
+- Cases: 50/50 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
+- policy-container: 3/3 passing
 - profile-fallback: 3/3 passing
 - verification-laundering: 9/9 passing
 - path-confusion: 1/1 passing
@@ -39,6 +40,9 @@ This red-test corpus captures hostile or malformed submissions that previously e
 
 | Result | Category | Case | Expected | Actual | Score | Labels / Error | Residue |
 | --- | --- | --- | --- | --- | ---: | --- | --- |
+| PASS | policy-container | invalid-policy-container-repository-object | false | not-ok | n/a | none | Malformed containers or lower-priority fields previously reached readiness evaluation without their supplied policy evidence. |
+| PASS | policy-container | invalid-policy-container-false-policy-alias | false | not-ok | n/a | none | Malformed containers or lower-priority fields previously reached readiness evaluation without their supplied policy evidence. |
+| PASS | policy-container | invalid-policy-container-discarded-envelope | false | not-ok | n/a | none | Malformed containers or lower-priority fields previously reached readiness evaluation without their supplied policy evidence. |
 | PASS | profile-fallback | invalid-review-profile-kernel-grdae | false | not-ok | n/a | Invalid review profile "kernel-grdae". Use standard or kernel-grade; omit the value for the default. | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
 | PASS | profile-fallback | invalid-review-profile-constructor | false | not-ok | n/a | Invalid review profile "constructor". Use standard or kernel-grade; omit the value for the default. | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
 | PASS | profile-fallback | invalid-review-profile-false | false | not-ok | n/a | Invalid review profile boolean. Use standard or kernel-grade; omit the value for the default. | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |

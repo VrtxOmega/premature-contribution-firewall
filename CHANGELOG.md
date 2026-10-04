@@ -2,6 +2,12 @@
 
 ## Unreleased - evidence refresh 2026-10-02
 
+### Policy-file container validation (2026-10-04)
+
+- Reject non-array `repositoryFiles`/`policyFiles` containers before selection, unwrapping or CLI replacement can discard supplied policy evidence. Preserve optional null fields, empty-array precedence, file-record aliases and valid policy application boundaries.
+- Return typed policy input errors, HTTP 400 responses, MCP tool errors, isolated batch item errors and CLI input exit 2 without an evaluation for malformed containers. Preserve supported `--policy` arrays and array wrappers.
+- Add synthetic DCO positive/negative controls and adversarial malformed-container cases. This validates outer containers, not record contents or policy completeness, and does not introduce batch/queue policy defaults.
+
 ### Evaluation CLI option validation (2026-10-03)
 
 - Reject malformed options in `evaluate`, `evaluate-patch` and `preflight` before reading inputs. Unknown profiles/formats, misspelled flags, missing values, duplicate options and extra positional arguments now produce usage exit 2 instead of silently selecting defaults.
