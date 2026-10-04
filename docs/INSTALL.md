@@ -6,7 +6,7 @@ a source checkout.
 
 ## Released versus current source
 
-As of October 2, 2026, npm `latest` and the GitHub release are both **v0.2.0**.
+As of October 3, 2026, npm `latest` and the GitHub release are both **v0.2.0**.
 The release's npm `gitHead` and Git tag identify commit
 `8739108af4055c9ac72b033a7da4df770aa43272`.
 
@@ -17,6 +17,7 @@ The release's npm `gitHead` and Git tag identify commit
 | Mandatory `claimIntegrity` contribution-lane gate | Unavailable | Required |
 | Later repro-authority, freshness, and Windows portability hardening | Unavailable | Included |
 | Packaged-install verification from a checkout | Unavailable | `npm run package:verify` |
+| Strict evaluation/preflight CLI option validation | Unavailable; malformed options can silently select defaults | Usage exit 2 before input reads |
 
 Current source still has `version: 0.2.0` in its manifest. That field does **not**
 make a locally packed tarball the published release. Record the source commit and
@@ -107,6 +108,31 @@ git rev-parse HEAD
 npm run ci:gates
 npm run package:verify
 ```
+
+The current-source `evaluate`, `evaluate-patch`, and `preflight` commands validate
+their command-line options before reading policy files, contribution files or
+stdin. This prevents a typo such as `--profile kernel-grdae` from silently using
+the less strict `standard` profile and reporting ready.
+
+- Put the input path (or `-` for stdin) first, followed by options. Prefix a
+  dash-leading file name with `./` so it cannot be mistaken for an option.
+- `--profile` accepts `standard` or `kernel-grade`; `--format` accepts `pretty`,
+  `json` or `markdown`; `--policy` takes a policy-file path.
+- Value options accept either `--name value` or `--name=value`. Surrounding
+  whitespace is trimmed for profile/format names; policy paths are preserved.
+- Specify each option once. Unknown options, missing/empty values, duplicates
+  and extra positional arguments exit **2**, with a diagnostic on stderr and no
+  evaluation output on stdout.
+- `--allow-repair` is a preflight-only switch. Omit it to keep the ready-only
+  gate. Neither `--allow-repair false` nor `--allow-repair=false` is valid.
+
+For example, the standard-ready synthetic fixture is rejected under the valid
+`kernel-grade` profile (preflight exit **1**). Misspelling that profile produces
+usage exit **2**, rather than a standard-profile success. Ordinary ready/not-ready
+results keep exits **0/1**. This CLI validation covers the three commands' argv
+options. Current source also validates review profiles in payloads, API helpers
+and MCP; see the [API profile contract](API.md). Other command parsers are
+unchanged. The published v0.2.0 artifact does not include these corrections.
 
 `package:verify` packs the checkout with lifecycle scripts disabled, installs the
 tarball offline into a temporary consumer directory with an isolated npm cache,

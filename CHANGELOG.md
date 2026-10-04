@@ -2,6 +2,12 @@
 
 ## Unreleased - evidence refresh 2026-10-02
 
+### Evaluation CLI option validation (2026-10-03)
+
+- Reject malformed options in `evaluate`, `evaluate-patch` and `preflight` before reading inputs. Unknown profiles/formats, misspelled flags, missing values, duplicate options and extra positional arguments now produce usage exit 2 instead of silently selecting defaults.
+- Support both space-separated and `--name=value` value options. Keep `--allow-repair` an explicit preflight-only switch; false-valued spellings cannot accidentally relax the gate.
+- Preserve valid preflight exits 0/1, patch detection and core scoring. The regression uses the existing standard-ready fixture: valid `kernel-grade` rejects it, while the former `kernel-grdae` typo incorrectly selected standard and reported ready.
+
 ### Reported pnpm test commands
 
 - Recognize a bounded set of direct and filtered pnpm test invocations, including environment prefixes, without treating command mentions as proof of execution or inventing CI results.
