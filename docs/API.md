@@ -39,6 +39,59 @@ curl http://127.0.0.1:3791/api/spec
 
 Returns endpoint descriptions, supported profiles, schema hints, and request limits.
 
+## Review profile validation (current source, unreleased)
+
+Use `standard` or `kernel-grade` for review profiles. Current source rejects
+unknown strings (including `constructor`), arrays, objects, booleans and numbers
+before evaluation. A typo such as `kernel-grdae` previously silently selected
+standard and could report a contribution ready. Published npm v0.2.0 does not
+contain this correction; see [installation boundaries](INSTALL.md).
+
+Names are trimmed. Omitted, `null`, or blank values mean no override. Normal
+payloads default to standard; patch text defaults to kernel-grade. Every supplied
+profile candidate in these evaluation paths is validated, even when another
+valid value would override it. Fix invalid values instead of relying on fallback.
+
+| Surface | Invalid profile result |
+| --- | --- |
+| `evaluateContribution`, `evaluateSubmission`, patch parser, supplied queue helpers | Throws `InvalidReviewProfileError`, code `PCF_INVALID_PROFILE` |
+| `/api/evaluate`, `/api/evaluate-patch`, supplied `/api/github/queue` | HTTP 400 with `ok: false`, error and code; no evaluation |
+| `evaluateBatch` / `/api/evaluate-batch` | Invalid batch default rejects the batch; invalid items have errors while valid items are evaluated; HTTP 400 when any item fails |
+| MCP `pcf_evaluate`, `pcf_preflight`, `pcf_queue` | `isError: true`, with no readiness evaluation in that tool result |
+
+Profile precedence is explicit. Core options override input profiles; the API
+submission helper's outer profile overrides its options, then nested input
+profile. For `evaluateBatch`, item and nested input `profile` fields override the
+batch payload default, which overrides the second argument's `options.profile`.
+For `buildMaintainerQueue`, item profiles override queue-payload defaults, then
+options defaults, then nested input profiles. A direct `evaluateQueueItem` call
+uses explicit second-argument options first, then the item's envelope profile,
+then its nested input profile.
+
+Batch options and direct queue-item envelope profiles previously passed validation
+but were discarded; current source now applies these two accepted settings.
+`reviewProfile` remains an input alias below explicit API/batch defaults. Blank
+or null candidates are skipped. Invalid overridden values are still rejected.
+
+When patch text and nested input are both supplied, patch selection is unchanged:
+the patch profile comes from its explicit override or the kernel-grade default.
+Recognized profile/alias fields in the ignored nested input are still validated.
+The HTTP single-evaluation endpoints retain their documented flat payload shapes;
+validation of a nested profile does not make nested input the evaluated payload.
+
+For example, evaluate `fixtures/pr-ready.json` with `profile: "standard"` to get
+score 100 and ready-for-maintainer, then `profile: "kernel-grade"` to get score 11
+and low-review-value. `profile: "kernel-grdae"` now produces an input error rather
+than either evaluation. These are synthetic controls, not a correctness or
+adoption claim.
+
+Review profile names are separate from shielded posture. Use `{ shielded: true }`
+or `PCF_SHIELDED=true`; `profile: "shielded"` is no longer accepted by the
+evaluator. This repair covers the listed evaluation paths, not CLI argv parsing,
+feedback/export/replay utilities, collected GitHub queue options, or policy-file
+shape validation. Malformed policy containers still require a separate repair;
+provide policy files as an array of `{ path, content }` records.
+
 ## Evaluate One PR Or Issue
 
 ```bash

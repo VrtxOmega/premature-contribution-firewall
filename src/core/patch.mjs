@@ -1,4 +1,7 @@
+import { selectReviewProfile } from "./profiles.mjs";
+
 export function parsePatchSubmission(text, options = {}) {
+  const profile = selectReviewProfile(options.profile) || "kernel-grade";
   const rawText = String(text || "").replace(/\r\n/g, "\n");
   const messages = splitMessages(rawText).map(parseMessage).filter((message) => message.subject || message.body || message.diff);
   const patchMessages = messages.filter((message) => message.files.length > 0 || /\[PATCH[^\]]*(?:\d+\/\d+|[^\]]*)\]/i.test(message.subject));
@@ -13,7 +16,7 @@ export function parsePatchSubmission(text, options = {}) {
   return {
     kind: "pull_request",
     submissionFormat: "patch_series",
-    profile: options.profile || "kernel-grade",
+    profile,
     title: cover?.subject || subjects[0] || "Patch series submission",
     body,
     files,

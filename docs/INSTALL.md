@@ -129,9 +129,10 @@ the less strict `standard` profile and reporting ready.
 For example, the standard-ready synthetic fixture is rejected under the valid
 `kernel-grade` profile (preflight exit **1**). Misspelling that profile produces
 usage exit **2**, rather than a standard-profile success. Ordinary ready/not-ready
-results keep exits **0/1**. This validation covers the three commands' argv
-options; it does not change payload profile resolution, API/MCP behavior, or
-other commands. The published v0.2.0 artifact does not include this correction.
+results keep exits **0/1**. This CLI validation covers the three commands' argv
+options. Current source also validates review profiles in payloads, API helpers
+and MCP; see the [API profile contract](API.md). Other command parsers are
+unchanged. The published v0.2.0 artifact does not include these corrections.
 
 `package:verify` packs the checkout with lifecycle scripts disabled, installs the
 tarball offline into a temporary consumer directory with an isolated npm cache,

@@ -23,6 +23,7 @@ import {
   safetyDoctrineResource
 } from "../core/mcp-submission.mjs";
 import { parsePatchSubmission } from "../core/patch.mjs";
+import { selectReviewProfile } from "../core/profiles.mjs";
 import { buildPolicyProfile } from "../core/policy.mjs";
 import { scanTouchedFilePolicy } from "../core/policy-scan.mjs";
 import { buildMaintainerQueue } from "../core/queue.mjs";
@@ -75,7 +76,7 @@ const TOOLS = [
     description: "Evaluate one supplied issue or pull request payload using PCF review-readiness logic. Input is caller-supplied JSON only; this tool does not collect GitHub data or mutate anything.",
     inputSchema: objectSchema({
       input: { type: "object", description: "Normalized PCF issue or pull request payload." },
-      profile: { type: "string", description: "Optional PCF profile override such as standard or kernel-grade." }
+      profile: { type: "string", enum: ["standard", "kernel-grade"], description: "Optional PCF review profile. Invalid values return a tool error." }
     }, ["input"]),
     annotations: TOOL_ANNOTATIONS
   },
@@ -87,7 +88,7 @@ const TOOLS = [
       input: { type: "object", description: "Normalized PCF payload. Use this or patchText." },
       patchText: { type: "string", description: "Plain-text patch or mbox content. Uses kernel-grade patch parsing." },
       repositoryFiles: { type: "array", items: { type: "object" }, description: "Optional policy files supplied alongside patchText." },
-      profile: { type: "string", description: "Optional profile override." },
+      profile: { type: "string", enum: ["standard", "kernel-grade"], description: "Optional review profile. Invalid values return a tool error." },
       allowRepair: { type: "boolean", default: false, description: "If true, needs-repair passes the caller's preflight gate." }
     }),
     annotations: TOOL_ANNOTATIONS
@@ -98,7 +99,7 @@ const TOOLS = [
     description: "Build a maintainer queue from supplied items. This is the deterministic queue step only; no repository collection, comments, labels, or GitHub writes are performed.",
     inputSchema: objectSchema({
       queue: { type: "object", description: "Queue payload with repository and items." },
-      profile: { type: "string", description: "Optional profile override." }
+      profile: { type: "string", enum: ["standard", "kernel-grade"], description: "Optional review profile. Invalid values return a tool error." }
     }, ["queue"]),
     annotations: TOOL_ANNOTATIONS
   },
@@ -517,13 +518,14 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
       return submissionReadiness();
     case "pcf_evaluate": {
       const input = args.input || {};
-      return evaluateContribution(input, { profile: args.profile || input.profile });
+      return evaluateContribution(input, { profile: selectReviewProfile(args.profile, input.profile) });
     }
     case "pcf_preflight": {
+      selectReviewProfile(args.profile, args.input?.profile, args.input?.reviewProfile);
       const input = args.patchText
-        ? parsePatchSubmission(args.patchText, { profile: args.profile || "kernel-grade", repositoryFiles: args.repositoryFiles || [] })
-        : { ...(args.input || {}), profile: args.profile || args.input?.profile };
-      const evaluation = evaluateContribution(input, { profile: args.profile || input.profile });
+        ? parsePatchSubmission(args.patchText, { profile: selectReviewProfile(args.profile) || "kernel-grade", repositoryFiles: args.repositoryFiles || [] })
+        : { ...(args.input || {}), profile: selectReviewProfile(args.profile, args.input?.profile) };
+      const evaluation = evaluateContribution(input, { profile: selectReviewProfile(args.profile, input.profile) });
       const claimIntegrity = input.claimIntegrity ? evaluateClaimIntegrity(input.claimIntegrity) : null;
       const evaluationReady = evaluation.status === "ready-for-maintainer" || (args.allowRepair === true && evaluation.status === "needs-repair");
       const ready = evaluationReady && (!claimIntegrity || claimIntegrity.status === "pass");
@@ -535,7 +537,7 @@ export async function callPcfMcpTool(name, arguments_ = {}) {
       };
     }
     case "pcf_queue":
-      return buildMaintainerQueue(args.queue || {}, { profile: args.profile || args.queue?.profile || "" });
+      return buildMaintainerQueue(args.queue || {}, { profile: selectReviewProfile(args.profile, args.queue?.profile) });
     case "pcf_watchlist_report":
       return buildWatchlistReport({ config: args.config || {}, runs: args.runs || [], generatedAt: args.generatedAt || new Date().toISOString() });
     case "pcf_contributor_preflight":
