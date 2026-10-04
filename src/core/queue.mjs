@@ -1,4 +1,5 @@
 import { evaluateContribution } from "./evaluator.mjs";
+import { selectReviewProfile } from "./profiles.mjs";
 
 export const QUEUE_VERSION = "2026.05.31";
 export const DEFAULT_QUEUE_LIMIT = 25;
@@ -181,6 +182,7 @@ const REPORTER_EVIDENCE_NEXT_ACTION_LABELS = new Set([
 ]);
 
 export function buildMaintainerQueue(payload = {}, options = {}) {
+  selectReviewProfile(payload.profile, options.profile);
   const limit = clampLimit(payload.limit ?? options.limit ?? DEFAULT_QUEUE_LIMIT);
   const rawItems = Array.isArray(payload.items)
     ? payload.items
@@ -189,7 +191,7 @@ export function buildMaintainerQueue(payload = {}, options = {}) {
       : [];
   const items = rawItems.slice(0, limit).map((item, index) => evaluateQueueItem(item, {
     index,
-    profile: item.profile || payload.profile || options.profile,
+    profile: selectReviewProfile(item.profile, payload.profile, options.profile),
     feedbackCalibration: item.feedbackCalibration || payload.feedbackCalibration || options.feedbackCalibration
   }));
   const sortedItems = items.sort(compareQueueItems);
@@ -223,7 +225,7 @@ export function buildMaintainerQueue(payload = {}, options = {}) {
 export function evaluateQueueItem(rawItem = {}, { index = 0, profile = "", feedbackCalibration = null } = {}) {
   const input = normalizeQueueInput(rawItem);
   const evaluation = evaluateContribution(input, {
-    profile: profile || input.profile,
+    profile: selectReviewProfile(profile, input.profile),
     feedbackCalibration
   });
   const signals = queueSignals(evaluation);
@@ -262,6 +264,7 @@ export function evaluateQueueItem(rawItem = {}, { index = 0, profile = "", feedb
 }
 
 export function normalizeQueueInput(rawItem = {}) {
+  selectReviewProfile(rawItem.profile);
   const input = rawItem.input && typeof rawItem.input === "object" ? rawItem.input : rawItem;
   return {
     ...input,

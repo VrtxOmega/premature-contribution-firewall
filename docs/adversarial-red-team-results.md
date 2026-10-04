@@ -5,11 +5,12 @@ This red-test corpus captures hostile or malformed submissions that previously e
 ## Summary
 
 - Version: 2026.09.26
-- Cases: 44/44 passing
+- Cases: 47/47 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
+- profile-fallback: 3/3 passing
 - verification-laundering: 9/9 passing
 - path-confusion: 1/1 passing
 - secret-evasion: 1/1 passing
@@ -38,6 +39,9 @@ This red-test corpus captures hostile or malformed submissions that previously e
 
 | Result | Category | Case | Expected | Actual | Score | Labels / Error | Residue |
 | --- | --- | --- | --- | --- | ---: | --- | --- |
+| PASS | profile-fallback | invalid-review-profile-kernel-grdae | false | not-ok | n/a | Invalid review profile "kernel-grdae". Use standard or kernel-grade; omit the value for the default. | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
+| PASS | profile-fallback | invalid-review-profile-constructor | false | not-ok | n/a | Invalid review profile "constructor". Use standard or kernel-grade; omit the value for the default. | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
+| PASS | profile-fallback | invalid-review-profile-false | false | not-ok | n/a | Invalid review profile boolean. Use standard or kernel-grade; omit the value for the default. | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
 | PASS | verification-laundering | pnpm-bulleted-example |  | needs-repair | 60 | `needs-tests`, `needs-human-verification`, `needs-repair` | The narrowed prose classifier missed list prefixes, so Example: became reported verification when preceded by a bullet. |
 | PASS | verification-laundering | pnpm-command-pending-suffix |  | needs-repair | 53 | `needs-tests`, `needs-human-verification`, `ci-missing`, `needs-repair` | Narrowing broad prose-word checks lost explicit command-level pending annotations; the report then substituted for missing CI. |
 | PASS | verification-laundering | pnpm-nested-planning |  | needs-repair | 53 | `needs-tests`, `needs-human-verification`, `ci-missing`, `needs-repair` | The first pnpm repair forgot the Test plan ancestor when it entered Commands, promoting unrun work to verification and local CI evidence. |

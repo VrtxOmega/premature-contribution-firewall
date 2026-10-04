@@ -7,6 +7,7 @@ import { buildSetupStatus } from "./setup.mjs";
 import { evaluateClaimIntegrity } from "./claim-integrity.mjs";
 import { buildFalsificationPacket } from "./falsification-packet.mjs";
 import { evaluateResidueRegister } from "./residue-register.mjs";
+import { selectReviewProfile } from "./profiles.mjs";
 
 export const API_VERSION = "2026-09-26";
 export const DEFAULT_BATCH_LIMIT = 100;
@@ -308,22 +309,23 @@ export function evaluateResidueRegisterSubmission(payload = {}) {
 export function evaluateSubmission(payload = {}, options = {}) {
   payload = plainObject(payload);
   options = plainObject(options);
+  const profile = selectReviewProfile(payload.profile, options.profile, payload.input?.profile, payload.reviewProfile);
   const feedbackCalibration = payload.feedbackCalibration || options.feedbackCalibration || null;
   if (payload.text || payload.patchText || payload.kind === "patch") {
     const parsed = parsePatchSubmission(payload.text || payload.patchText || "", {
-      profile: payload.profile || options.profile || "kernel-grade",
+      profile: selectReviewProfile(payload.profile, options.profile) || "kernel-grade",
       repositoryFiles: payload.repositoryFiles || payload.policyFiles || []
     });
     parsed.repository = payload.repository || payload.input?.repository || "";
     parsed.repositoryContext = payload.repositoryContext || payload.repoContext || null;
     return evaluateContribution(parsed, {
-      profile: payload.profile || options.profile || parsed.profile,
+      profile: selectReviewProfile(payload.profile, options.profile, parsed.profile),
       feedbackCalibration
     });
   }
 
   return evaluateContribution(payload.input || payload, {
-    profile: payload.profile || options.profile || payload.input?.profile || payload.reviewProfile,
+    profile,
     feedbackCalibration
   });
 }
@@ -331,6 +333,11 @@ export function evaluateSubmission(payload = {}, options = {}) {
 export function evaluateBatch(payload = {}, options = {}) {
   payload = plainObject(payload);
   options = plainObject(options);
+  try {
+    selectReviewProfile(payload.profile, options.profile);
+  } catch (error) {
+    return { ok: false, error: error.message, results: [] };
+  }
   if (!Array.isArray(payload.items)) {
     return {
       ok: false,
@@ -361,8 +368,8 @@ export function evaluateBatch(payload = {}, options = {}) {
       };
     }
     try {
-      const evaluation = evaluateSubmission(item.input ? { ...item.input, profile: item.profile || item.input.profile } : item, {
-        profile: item.profile || payload.profile,
+      const evaluation = evaluateSubmission(item.input ? { ...item.input, profile: selectReviewProfile(item.profile, item.input.profile) } : item, {
+        profile: selectReviewProfile(item.profile, payload.profile),
         feedbackCalibration: item.feedbackCalibration || payload.feedbackCalibration || options.feedbackCalibration
       });
       return {

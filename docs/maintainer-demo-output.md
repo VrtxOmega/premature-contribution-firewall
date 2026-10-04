@@ -1,13 +1,13 @@
 # Premature Contribution Firewall Maintainer Demo
 
-Generated: 2026-10-02T18:25:44.789Z
+Generated: 2026-10-04T15:42:48.294Z
 
 Verdict: **PASS**
 
 ## Claims This Demo Proves
 
 - 79/79 deterministic benchmark cases pass.
-- 44/44 adversarial red-test cases pass.
+- 47/47 adversarial red-test cases pass.
 - Maintainer queue sorts 3 supplied GitHub items with repository and upstream context.
 - Feedback calibration attaches 2 matching local candidate signal(s) to future queue output.
 - 1/1 promoted feedback fixture candidates replay cleanly.
@@ -36,7 +36,7 @@ npm run demo:maintainer -- --fail-on-regression
 | Surface | Result | Count | Note |
 | --- | --- | --- | --- |
 | Benchmark | PASS | 79/79 | Deterministic fixture corpus |
-| Adversarial red test | PASS | 44/44 | Breakage residue corpus |
+| Adversarial red test | PASS | 47/47 | Breakage residue corpus |
 | Maintainer queue | PASS | 3 items | 3 context findings |
 | Feedback calibration | PASS | 2 match(es) | 1 candidate fixture(s) |
 | Feedback candidate replay | PASS | 1/1 | Promoted fixture draft |
@@ -70,6 +70,9 @@ Replay comparison: 1 unchanged, 0 improved, 0 regressed, risk stable.
 
 | Case | Category | Status | Residue Preserved |
 | --- | --- | --- | --- |
+| invalid-review-profile-kernel-grdae | profile-fallback | PASS | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
+| invalid-review-profile-constructor | profile-fallback | PASS | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
+| invalid-review-profile-false | profile-fallback | PASS | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
 | pnpm-bulleted-example | verification-laundering | PASS | The narrowed prose classifier missed list prefixes, so Example: became reported verification when preceded by a bullet. |
 | pnpm-command-pending-suffix | verification-laundering | PASS | Narrowing broad prose-word checks lost explicit command-level pending annotations; the report then substituted for missing CI. |
 | pnpm-nested-planning | verification-laundering | PASS | The first pnpm repair forgot the Test plan ancestor when it entered Commands, promoting unrun work to verification and local CI evidence. |

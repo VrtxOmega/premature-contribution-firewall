@@ -19,6 +19,15 @@ const EXAMPLE_AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/" + "bPxRfiCYEXAMPL
 export const ADVERSARY_VERSION = "2026.09.26";
 
 export const ADVERSARIAL_CASES = [
+  ...["kernel-grdae", "constructor", false].map(profile => ({
+    id: `invalid-review-profile-${String(profile)}`,
+    category: "profile-fallback",
+    attack: "Supplies a malformed batch profile to silently select a weaker readiness gate.",
+    residue: "Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result.",
+    apiCall: "evaluateBatch",
+    payload: { profile, items: [baseReadyPr()] },
+    expect: { ok: false, errorIncludes: "Invalid review profile" }
+  })),
   {
     id: "pnpm-bulleted-example",
     category: "verification-laundering",

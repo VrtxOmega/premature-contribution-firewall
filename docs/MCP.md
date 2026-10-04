@@ -19,6 +19,17 @@ This document describes current source. Published npm **v0.2.0** has 25 tools;
 claim-integrity schema are unreleased additions. See the
 [install and upgrade guide](INSTALL.md) for the version boundary.
 
+Current source also validates review profiles for `pcf_evaluate`, `pcf_preflight`
+and `pcf_queue`. Use `standard` or `kernel-grade`; unknown names and non-string
+values return `isError: true` with a diagnostic instead of a readiness evaluation.
+The advertised tool schema lists the two canonical names; runtime compatibility
+also accepts omitted, null or blank values as no override and trims surrounding
+whitespace. Patch preflight still defaults to kernel-grade. Supplied invalid profiles
+are rejected even when a valid higher-priority override is present. Check the MCP
+error flag before reading readiness, and correct the input before retrying.
+Published v0.2.0 does not contain this validation. See the
+[profile contract and scope](API.md#review-profile-validation-current-source-unreleased).
+
 Run it from a source checkout:
 
 ```bash

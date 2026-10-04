@@ -8,6 +8,8 @@ import { analyzeRepositoryContext, normalizeRepositoryContext } from "./reposito
 import { applyFeedbackCalibration } from "./calibration.mjs";
 import { enrichWithMaintainerStack } from "./maintainer-stack.mjs";
 import { canonicalizeAnalysisText } from "./text-safety.mjs";
+import { resolveReviewProfile, selectReviewProfile } from "./profiles.mjs";
+export { availableProfiles } from "./profiles.mjs";
 
 const GENERIC_TITLES = new Set([
   "fix",
@@ -63,19 +65,6 @@ const STATUS_COPY = {
   fail: "fail"
 };
 
-const PROFILES = {
-  standard: {
-    id: "standard",
-    name: "Standard Maintainer",
-    description: "General GitHub maintainer review-readiness checks."
-  },
-  "kernel-grade": {
-    id: "kernel-grade",
-    name: "Kernel-Grade",
-    description: "Strict patch-discipline checks inspired by Linux kernel contribution norms."
-  }
-};
-
 const ISSUE_SOFT_REPAIR_LABELS = new Set([
   "needs-clear-summary",
   "needs-context",
@@ -102,7 +91,7 @@ export function evaluateContribution(rawInput = {}, options = {}) {
   const input = normalizeInput(rawInput);
   const profile = resolveProfile(input, options);
   const kind = input.kind === "issue" ? "issue" : "pull_request";
-  const baseResult = kind === "issue" ? evaluateIssue(input, { ...options, profile }) : evaluatePullRequest(input, { ...options, profile });
+  const baseResult = kind === "issue" ? evaluateIssue(input, { ...options, profile: profile.id }) : evaluatePullRequest(input, { ...options, profile: profile.id });
   baseResult.profile = profile;
   const calibrated = options.feedbackCalibration
     ? applyFeedbackCalibration(baseResult, input, options.feedbackCalibration)
@@ -112,10 +101,6 @@ export function evaluateContribution(rawInput = {}, options = {}) {
   result.profile = profile;
   result.comment = renderMarkdownReport(result);
   return result;
-}
-
-export function availableProfiles() {
-  return Object.values(PROFILES);
 }
 
 export function normalizeInput(rawInput = {}) {
@@ -140,7 +125,7 @@ export function normalizeInput(rawInput = {}) {
     files,
     checks: Array.isArray(rawInput.checks) ? rawInput.checks : [],
     commits: normalizeCommits(rawInput.commits),
-    profile: String(rawInput.profile || rawInput.reviewProfile || ""),
+    profile: selectReviewProfile(rawInput.profile, rawInput.reviewProfile),
     contributingText: canonicalizeAnalysisText(rawInput.contributingText || rawInput.contributing),
     repositoryFiles: normalizeRepositoryFiles(rawInput.repositoryFiles || rawInput.policyFiles),
     repositoryContext: normalizeRepositoryContext(rawInput.repositoryContext || rawInput.repoContext),
@@ -161,7 +146,7 @@ export function normalizeInput(rawInput = {}) {
 }
 
 export function evaluatePullRequest(input, options = {}) {
-  const profile = options.profile || resolveProfile(input, options);
+  const profile = resolveProfile(input, options);
   const checks = [];
   const labels = new Set();
   const repairSteps = [];
@@ -460,7 +445,7 @@ export function evaluatePullRequest(input, options = {}) {
 }
 
 export function evaluateIssue(input, options = {}) {
-  const profile = options.profile || resolveProfile(input, options);
+  const profile = resolveProfile(input, options);
   const checks = [];
   const labels = new Set();
   const repairSteps = [];
@@ -1604,8 +1589,7 @@ function renderFeedbackCalibration(calibration) {
 }
 
 function resolveProfile(input, options = {}) {
-  const requested = String(options.profile || input.profile || "standard").trim() || "standard";
-  return PROFILES[requested] || PROFILES.standard;
+  return resolveReviewProfile(options.profile, input.profile, input.reviewProfile);
 }
 
 function normalizeCommits(commits) {
