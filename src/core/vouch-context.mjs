@@ -1,9 +1,9 @@
-import { normalizeRepositoryFiles } from "./policy.mjs";
+import { normalizeRepositoryFiles, selectRepositoryFiles } from "./policy.mjs";
 
 const VOUCH_FILE = /(?:^|\/)(?:\.github\/)?VOUCHED\.td$/i;
 
 export function analyzeVouchContext(input = {}, login = "") {
-  const files = normalizeRepositoryFiles(input.repositoryFiles || input.policyFiles);
+  const files = normalizeRepositoryFiles(selectRepositoryFiles(input));
   const vouchFile = files.find((file) => VOUCH_FILE.test(file.path));
   if (!vouchFile) {
     return {

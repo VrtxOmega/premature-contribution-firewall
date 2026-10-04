@@ -2,7 +2,8 @@ import {
   buildPolicyProfile,
   evaluatePolicyRequirements,
   evaluateProjectTestCommand,
-  normalizeRepositoryFiles
+  normalizeRepositoryFiles,
+  selectRepositoryFiles
 } from "./policy.mjs";
 import { analyzeRepositoryContext, normalizeRepositoryContext } from "./repository-context.mjs";
 import { applyFeedbackCalibration } from "./calibration.mjs";
@@ -127,7 +128,7 @@ export function normalizeInput(rawInput = {}) {
     commits: normalizeCommits(rawInput.commits),
     profile: selectReviewProfile(rawInput.profile, rawInput.reviewProfile),
     contributingText: canonicalizeAnalysisText(rawInput.contributingText || rawInput.contributing),
-    repositoryFiles: normalizeRepositoryFiles(rawInput.repositoryFiles || rawInput.policyFiles),
+    repositoryFiles: normalizeRepositoryFiles(selectRepositoryFiles(rawInput)),
     repositoryContext: normalizeRepositoryContext(rawInput.repositoryContext || rawInput.repoContext),
     submissionFormat: String(rawInput.submissionFormat || rawInput.format || ""),
     patchSeries: rawInput.patchSeries || null,

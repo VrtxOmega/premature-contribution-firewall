@@ -251,4 +251,11 @@ Do not add a Glama badge until a public Glama listing exists.
 
 ## Non-Claims
 
+Current-source evaluation/preflight, supplied-queue and policy-profile tools
+reject malformed policy-file containers as tool errors without an evaluation.
+Valid arrays and existing policy application boundaries are preserved. See the
+[policy-file contract](API.md#policy-file-containers-current-source); record
+content validation and the separate TODO policy scanner are outside this repair.
+Published npm 0.2.0 does not contain this correction.
+
 PCF MCP does not prove correctness, acceptance, or maintainer endorsement. It packages evidence and prevents agents from skipping review-readiness gates.

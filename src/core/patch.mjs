@@ -1,6 +1,8 @@
 import { selectReviewProfile } from "./profiles.mjs";
+import { validatePolicyFileContainers } from "./policy.mjs";
 
 export function parsePatchSubmission(text, options = {}) {
+  validatePolicyFileContainers(options);
   const profile = selectReviewProfile(options.profile) || "kernel-grade";
   const rawText = String(text || "").replace(/\r\n/g, "\n");
   const messages = splitMessages(rawText).map(parseMessage).filter((message) => message.subject || message.body || message.diff);
@@ -25,7 +27,7 @@ export function parsePatchSubmission(text, options = {}) {
     deletions,
     commits: effectiveMessages.map((message) => message.commitText).filter(Boolean),
     checks: [],
-    repositoryFiles: options.repositoryFiles || [],
+    repositoryFiles: options.repositoryFiles ?? [],
     patchSeries: {
       messageCount: messages.length,
       patchCount: effectiveMessages.filter((message) => message.files.length > 0).length,

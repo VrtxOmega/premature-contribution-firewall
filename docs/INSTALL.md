@@ -134,6 +134,12 @@ options. Current source also validates review profiles in payloads, API helpers
 and MCP; see the [API profile contract](API.md). Other command parsers are
 unchanged. The published v0.2.0 artifact does not include these corrections.
 
+Current source also rejects malformed `repositoryFiles`/`policyFiles` containers
+with input exit **2**, stderr diagnostics and no evaluation output. `--policy`
+accepts a JSON array or a wrapper containing a policy-file array; a single record
+or path-to-content map is invalid. Payload policy fields are checked before an
+external policy replaces them. See the [policy-file contract](API.md#policy-file-containers-current-source).
+
 `package:verify` packs the checkout with lifecycle scripts disabled, installs the
 tarball offline into a temporary consumer directory with an isolated npm cache,
 and runs the generated `pcf`, `premature-contribution-firewall`, and `pcf-mcp`

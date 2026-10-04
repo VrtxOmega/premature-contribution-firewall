@@ -14,8 +14,36 @@ const POLICY_FILE_TYPES = [
 
 const TEST_COMMAND_PATTERN = /`((?:npm|pnpm|yarn|node|pytest|python\s+-m\s+pytest|cargo|go|make|scripts\/checkpatch\.pl|smatch|sparse)[^`]{0,90})`/gi;
 
+export class InvalidPolicyFilesError extends TypeError {
+  constructor(field = "repositoryFiles") {
+    super(`${field} must be an array of policy-file records.`);
+    this.name = "InvalidPolicyFilesError";
+    this.code = "PCF_INVALID_POLICY_FILES";
+  }
+}
+
+function validateContainer(files, field) {
+  if (files !== undefined && files !== null && !Array.isArray(files)) {
+    throw new InvalidPolicyFilesError(field);
+  }
+}
+
+export function validatePolicyFileContainers(...inputs) {
+  for (const input of inputs) {
+    validateContainer(input?.repositoryFiles, "repositoryFiles");
+    validateContainer(input?.policyFiles, "policyFiles");
+  }
+}
+
+export function selectRepositoryFiles(input = {}) {
+  validatePolicyFileContainers(input);
+  // An explicit empty array still takes precedence over the alias.
+  return input?.repositoryFiles ?? input?.policyFiles ?? [];
+}
+
 export function normalizeRepositoryFiles(files = []) {
-  if (!Array.isArray(files)) return [];
+  validateContainer(files, "repositoryFiles");
+  if (files == null) return [];
   return files
     .map((file) => ({
       path: String(file.path || file.filename || file.name || "").trim(),
@@ -25,7 +53,7 @@ export function normalizeRepositoryFiles(files = []) {
 }
 
 export function buildPolicyProfile(input = {}) {
-  const files = normalizeRepositoryFiles(input.repositoryFiles || input.policyFiles);
+  const files = normalizeRepositoryFiles(selectRepositoryFiles(input));
   if (input.contributingText && !files.some((file) => file.path === "CONTRIBUTING excerpt")) {
     files.push({ path: "CONTRIBUTING excerpt", content: String(input.contributingText) });
   }

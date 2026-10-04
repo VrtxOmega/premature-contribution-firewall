@@ -88,9 +88,55 @@ adoption claim.
 Review profile names are separate from shielded posture. Use `{ shielded: true }`
 or `PCF_SHIELDED=true`; `profile: "shielded"` is no longer accepted by the
 evaluator. This repair covers the listed evaluation paths, not CLI argv parsing,
-feedback/export/replay utilities, collected GitHub queue options, or policy-file
-shape validation. Malformed policy containers still require a separate repair;
-provide policy files as an array of `{ path, content }` records.
+feedback/export/replay utilities or collected GitHub queue options. Policy-file
+containers have the separate current-source contract below.
+
+## Policy-File Containers (Current Source)
+
+Supply `repositoryFiles` or its `policyFiles` alias as an array of
+`{ path, content }` records. Omitted, undefined and null optional fields mean no
+container. Every supplied non-null container must be an array: a single record,
+path-to-content map, string, number or boolean is an input error. Both fields are
+validated before selection, including an overridden alias. `repositoryFiles`
+takes precedence, and an explicit empty array still overrides `policyFiles`.
+Existing record aliases (`filename`/`name`, `text`/`body`) remain supported.
+
+Core policy/evaluation helpers and patch parsing throw `PCF_INVALID_POLICY_FILES`
+for these malformed containers. HTTP evaluation returns 400 without an
+evaluation; MCP evaluation/preflight, supplied queues and policy-profile tools
+return tool errors. Batch item errors remain isolated from valid siblings.
+Malformed batch-level policy candidates reject the batch before evaluation.
+The exported `normalizeQueueInput` helper also validates before unwrapping.
+
+Recognized policy fields are validated before wrapper unwrapping, patch selection
+or CLI policy replacement can discard them. This does not add policy defaults:
+non-patch `evaluateSubmission({ input, repositoryFiles })` still evaluates the
+nested input's policy; batch/queue envelope or global policy fields do not become
+defaults; MCP preflight's top-level `repositoryFiles` remains patch-only. Patch
+parser options and the MCP policy-profile tool retain their existing
+`repositoryFiles` application boundary. The HTTP single-evaluation payload stays
+flat. Recognized policy fields in `evaluateSubmission` options are validated but
+do not become defaults. Policy fields in direct core-evaluator and direct
+queue-item options remain unsupported; arbitrary options schemas are not
+validated. Valid policy selection and scoring are unchanged.
+
+The CLI `evaluate`, `evaluate-patch` and `preflight` commands reject malformed
+containers with exit 2, a stderr diagnostic and no evaluation output. `--policy`
+accepts a JSON array or a wrapper with a `repositoryFiles`/`policyFiles` array.
+An explicit policy file containing null, a bare record, a map, or a wrapper without
+an array rejects. A valid external policy cannot hide a malformed input field.
+
+Reproduce the original issue with `fixtures/pr-ready.json` and a policy record
+`{ "path": "CONTRIBUTING.md", "content": "DCO sign-off is required." }`: the
+array form scores 86/needs-repair until a sign-off is supplied; the former
+object-shaped container incorrectly scored 100/ready. Current source rejects
+that object. A valid array plus sign-off still scores 100/ready. These are
+synthetic controls, not production exploitation or outside adoption.
+
+This validates outer containers only. Record field types/content, policy
+completeness, arbitrary payload schemas, feedback/export/replay coercion,
+prospective-study schemas and the separate TODO policy scanner are outside this
+repair. Published npm 0.2.0 does not contain it.
 
 ## Evaluate One PR Or Issue
 

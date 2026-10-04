@@ -541,6 +541,13 @@ Payloads may include `repositoryFiles` or `policyFiles`:
 
 The evaluator reports the inferred policy profile in `policyProfile`, including sources, required template sections, discovered test commands, and owner/maintainer matches for touched files.
 
+Current source rejects non-array policy-file containers instead of silently
+dropping them. Optional null fields remain absent; an empty `repositoryFiles`
+array takes precedence over `policyFiles`. The CLI also accepts `--policy` array
+wrappers and exits 2 for malformed containers. See the [policy-file input
+contract](docs/API.md#policy-file-containers-current-source) for application
+boundaries and limitations. This correction is not in published npm 0.2.0.
+
 ## Repository Context
 
 Payloads may also include `repositoryContext` so the evaluator can surface already-known work before a maintainer spends time:

@@ -8,6 +8,7 @@ import { evaluateClaimIntegrity } from "./claim-integrity.mjs";
 import { buildFalsificationPacket } from "./falsification-packet.mjs";
 import { evaluateResidueRegister } from "./residue-register.mjs";
 import { selectReviewProfile } from "./profiles.mjs";
+import { selectRepositoryFiles, validatePolicyFileContainers } from "./policy.mjs";
 
 export const API_VERSION = "2026-09-26";
 export const DEFAULT_BATCH_LIMIT = 100;
@@ -309,12 +310,13 @@ export function evaluateResidueRegisterSubmission(payload = {}) {
 export function evaluateSubmission(payload = {}, options = {}) {
   payload = plainObject(payload);
   options = plainObject(options);
+  validatePolicyFileContainers(payload, payload.input, options);
   const profile = selectReviewProfile(payload.profile, options.profile, payload.input?.profile, payload.reviewProfile, payload.input?.reviewProfile);
   const feedbackCalibration = payload.feedbackCalibration || options.feedbackCalibration || null;
   if (payload.text || payload.patchText || payload.kind === "patch") {
     const parsed = parsePatchSubmission(payload.text || payload.patchText || "", {
       profile: selectReviewProfile(payload.profile, options.profile) || "kernel-grade",
-      repositoryFiles: payload.repositoryFiles || payload.policyFiles || []
+      repositoryFiles: selectRepositoryFiles(payload)
     });
     parsed.repository = payload.repository || payload.input?.repository || "";
     parsed.repositoryContext = payload.repositoryContext || payload.repoContext || null;
@@ -335,6 +337,7 @@ export function evaluateBatch(payload = {}, options = {}) {
   options = plainObject(options);
   try {
     selectReviewProfile(payload.profile, options.profile);
+    validatePolicyFileContainers(payload, options);
   } catch (error) {
     return { ok: false, error: error.message, results: [] };
   }
@@ -368,6 +371,7 @@ export function evaluateBatch(payload = {}, options = {}) {
       };
     }
     try {
+      validatePolicyFileContainers(item, item.input);
       const evaluation = evaluateSubmission(item.input ? { ...item.input, profile: selectReviewProfile(item.profile, item.input.profile) } : item, {
         profile: selectReviewProfile(item.profile, payload.profile, options.profile),
         feedbackCalibration: item.feedbackCalibration || payload.feedbackCalibration || options.feedbackCalibration
