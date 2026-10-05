@@ -5,11 +5,12 @@ This red-test corpus captures hostile or malformed submissions that previously e
 ## Summary
 
 - Version: 2026.09.26
-- Cases: 47/47 passing
+- Cases: 51/51 passing
 - Runtime: measured by the runner and returned in JSON as `durationMs`; it varies by machine
 
 ## Categories
 
+- evidence-laundering: 9/9 passing
 - profile-fallback: 3/3 passing
 - verification-laundering: 9/9 passing
 - path-confusion: 1/1 passing
@@ -28,7 +29,6 @@ This red-test corpus captures hostile or malformed submissions that previously e
 - ownership-laundering: 1/1 passing
 - candidate-suppression: 1/1 passing
 - gate-bypass: 3/3 passing
-- evidence-laundering: 5/5 passing
 - claim-integrity: 1/1 passing
 - evidence-authority: 1/1 passing
 - verdict-reachability: 1/1 passing
@@ -39,6 +39,10 @@ This red-test corpus captures hostile or malformed submissions that previously e
 
 | Result | Category | Case | Expected | Actual | Score | Labels / Error | Residue |
 | --- | --- | --- | --- | --- | ---: | --- | --- |
+| PASS | evidence-laundering | repro-invalid-exit-code-false | invalid-input | invalid-input | n/a | `PCF_INVALID_REPRO_EXIT_CODE` | Numeric coercion and rounding previously converted malformed exit codes to zero and returned PASS. |
+| PASS | evidence-laundering | repro-invalid-exit-code-0.5 | invalid-input | invalid-input | n/a | `PCF_INVALID_REPRO_EXIT_CODE` | Numeric coercion and rounding previously converted malformed exit codes to zero and returned PASS. |
+| PASS | evidence-laundering | repro-invalid-before-exit-verdict-mask | invalid-input | invalid-input | n/a | `PCF_INVALID_REPRO_EXIT_CODE` | Mapping an invalid code to unknown let a verdict and artifact substitute for the malformed command result. |
+| PASS | evidence-laundering | repro-invalid-exit-discarded-record | invalid-input | invalid-input | n/a | `PCF_INVALID_REPRO_EXIT_CODE` | Discarding the record let an after verdict and artifact produce PASS despite the supplied invalid exit code. |
 | PASS | profile-fallback | invalid-review-profile-kernel-grdae | false | not-ok | n/a | Invalid review profile "kernel-grdae". Use standard or kernel-grade; omit the value for the default. | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
 | PASS | profile-fallback | invalid-review-profile-constructor | false | not-ok | n/a | Invalid review profile "constructor". Use standard or kernel-grade; omit the value for the default. | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
 | PASS | profile-fallback | invalid-review-profile-false | false | not-ok | n/a | Invalid review profile boolean. Use standard or kernel-grade; omit the value for the default. | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |

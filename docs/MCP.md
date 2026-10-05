@@ -80,6 +80,31 @@ pcf://mcp/server-card
 
 `glama.json` is intentionally minimal because the live Glama schema currently requires only `maintainers`. Richer review metadata lives in `pcf://mcp/server-card`, where MCP clients can read it without risking invalid registry metadata.
 
+## Repro command exit codes (current source, unreleased)
+
+`pcf_repro_gate` accepts integer numbers for command exit codes, with `0` meaning
+success and any nonzero integer meaning failure. Null or an omitted code means
+unknown. This matches the `integer|null` contract in `pcf://schemas/repro`.
+
+Current source rejects malformed selected exit-code values before filtering or
+classifying commands. Booleans, fractions, strings (including numeric, empty and
+whitespace strings), arrays and objects return an MCP tool result with
+`isError: true` and an `Invalid repro command exit code` diagnostic, without a gate
+verdict. The exported core evaluator throws a `TypeError` with code
+`PCF_INVALID_REPRO_EXIT_CODE`. Correct the value before retrying; do not treat a
+tool error as validation success. Published npm v0.2.0 still performs the old
+numeric coercion and does not contain this repair.
+
+Runtime compatibility aliases keep their existing precedence: `before || baseline`,
+`after || validation`, phase `commands || command`, and command
+`exitCode ?? code ?? status`. Only the selected exit-code value is validated;
+shadowed aliases are unchanged. Top-level `commands` are validated before phase
+filtering, including records without a recognized phase or command name.
+Valid incomplete evidence and artifact-backed verdicts retain their existing
+review/blocked/pass behavior. This is exit-code type validation, not full evidence
+schema validation, artifact authentication or command execution. There is no
+dedicated repro-gate CLI command or HTTP endpoint.
+
 ## Tools
 
 | Tool | Access | Purpose |

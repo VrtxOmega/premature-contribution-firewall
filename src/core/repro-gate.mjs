@@ -216,9 +216,11 @@ function hasFailureEvidence(evidence) {
 }
 
 function normalizeExitCode(value) {
-  if (value === null || value === undefined || value === "") return null;
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? Math.floor(numeric) : null;
+  if (value === null || value === undefined) return null;
+  if (Number.isInteger(value)) return value;
+  const error = new TypeError("Invalid repro command exit code: expected an integer or null; omit it when unknown.");
+  error.code = "PCF_INVALID_REPRO_EXIT_CODE";
+  throw error;
 }
 
 function normalizeStatus(value) {

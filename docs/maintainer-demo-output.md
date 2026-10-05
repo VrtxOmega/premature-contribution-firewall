@@ -1,13 +1,13 @@
 # Premature Contribution Firewall Maintainer Demo
 
-Generated: 2026-10-04T16:11:05.965Z
+Generated: 2026-10-05T15:52:40.586Z
 
 Verdict: **PASS**
 
 ## Claims This Demo Proves
 
 - 79/79 deterministic benchmark cases pass.
-- 47/47 adversarial red-test cases pass.
+- 51/51 adversarial red-test cases pass.
 - Maintainer queue sorts 3 supplied GitHub items with repository and upstream context.
 - Feedback calibration attaches 2 matching local candidate signal(s) to future queue output.
 - 1/1 promoted feedback fixture candidates replay cleanly.
@@ -36,7 +36,7 @@ npm run demo:maintainer -- --fail-on-regression
 | Surface | Result | Count | Note |
 | --- | --- | --- | --- |
 | Benchmark | PASS | 79/79 | Deterministic fixture corpus |
-| Adversarial red test | PASS | 47/47 | Breakage residue corpus |
+| Adversarial red test | PASS | 51/51 | Breakage residue corpus |
 | Maintainer queue | PASS | 3 items | 3 context findings |
 | Feedback calibration | PASS | 2 match(es) | 1 candidate fixture(s) |
 | Feedback candidate replay | PASS | 1/1 | Promoted fixture draft |
@@ -70,6 +70,10 @@ Replay comparison: 1 unchanged, 0 improved, 0 regressed, risk stable.
 
 | Case | Category | Status | Residue Preserved |
 | --- | --- | --- | --- |
+| repro-invalid-exit-code-false | evidence-laundering | PASS | Numeric coercion and rounding previously converted malformed exit codes to zero and returned PASS. |
+| repro-invalid-exit-code-0.5 | evidence-laundering | PASS | Numeric coercion and rounding previously converted malformed exit codes to zero and returned PASS. |
+| repro-invalid-before-exit-verdict-mask | evidence-laundering | PASS | Mapping an invalid code to unknown let a verdict and artifact substitute for the malformed command result. |
+| repro-invalid-exit-discarded-record | evidence-laundering | PASS | Discarding the record let an after verdict and artifact produce PASS despite the supplied invalid exit code. |
 | invalid-review-profile-kernel-grdae | profile-fallback | PASS | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
 | invalid-review-profile-constructor | profile-fallback | PASS | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
 | invalid-review-profile-false | profile-fallback | PASS | Unknown names, inherited object keys and false-valued overrides previously fell through to a ready standard-profile result. |
