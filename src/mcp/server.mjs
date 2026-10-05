@@ -25,6 +25,11 @@ export async function handleMcpRequest(message) {
   if (!message || typeof message !== "object" || Array.isArray(message)) {
     return errorResult(null, -32600, "Invalid Request");
   }
+  // JSON-RPC notifications have no ID and must never produce a response.
+  // None currently require server-side handling; do not dispatch request tools.
+  if (message.jsonrpc === "2.0" && typeof message.method === "string" && !Object.hasOwn(message, "id")) {
+    return null;
+  }
   if (message.method === "initialize") {
     return result(message.id, {
       protocolVersion: message.params?.protocolVersion || "2025-06-18",
@@ -36,7 +41,6 @@ export async function handleMcpRequest(message) {
       serverInfo: SERVER_INFO
     });
   }
-  if (message.method === "notifications/initialized") return null;
   if (message.method === "ping") return result(message.id, {});
   if (message.method === "tools/list") return result(message.id, { tools: listPcfMcpTools() });
   if (message.method === "tools/call") {
