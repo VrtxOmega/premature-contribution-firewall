@@ -19,6 +19,40 @@ const EXAMPLE_AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/" + "bPxRfiCYEXAMPL
 export const ADVERSARY_VERSION = "2026.09.26";
 
 export const ADVERSARIAL_CASES = [
+  ...[false, 0.5].map(exitCode => ({
+    id: `repro-invalid-exit-code-${String(exitCode)}`,
+    category: "evidence-laundering",
+    attack: "Supplies a boolean or fractional validation exit code as command evidence.",
+    residue: "Numeric coercion and rounding previously converted malformed exit codes to zero and returned PASS.",
+    reproInput: {
+      before: { commands: [{ command: "test-before", exitCode: 1 }] },
+      after: { commands: [{ command: "test-after", exitCode }] }
+    },
+    expect: { status: "invalid-input", ok: false, labels: ["PCF_INVALID_REPRO_EXIT_CODE"] }
+  })),
+  {
+    id: "repro-invalid-before-exit-verdict-mask",
+    category: "evidence-laundering",
+    attack: "Combines a malformed before-command exit code with a declared failure and a log path.",
+    residue: "Mapping an invalid code to unknown let a verdict and artifact substitute for the malformed command result.",
+    reproInput: {
+      before: { verdict: "before-fails", commands: [{ command: "test-before", exitCode: {}, outputPath: "before.log" }] },
+      after: { commands: [{ command: "test-after", exitCode: 0 }] }
+    },
+    expect: { status: "invalid-input", ok: false, labels: ["PCF_INVALID_REPRO_EXIT_CODE"] }
+  },
+  {
+    id: "repro-invalid-exit-discarded-record",
+    category: "evidence-laundering",
+    attack: "Omits a command name and path so a malformed exit code disappears during normalization.",
+    residue: "Discarding the record let an after verdict and artifact produce PASS despite the supplied invalid exit code.",
+    reproInput: {
+      before: { commands: [{ command: "test-before", exitCode: 1 }] },
+      after: { verdict: "passed", commands: [{ exitCode: false }] },
+      artifacts: [{ path: "after.log", kind: "after-validation" }]
+    },
+    expect: { status: "invalid-input", ok: false, labels: ["PCF_INVALID_REPRO_EXIT_CODE"] }
+  },
   ...["kernel-grdae", "constructor", false].map(profile => ({
     id: `invalid-review-profile-${String(profile)}`,
     category: "profile-fallback",
@@ -643,7 +677,20 @@ function evaluateRedCase(testCase) {
     };
   }
   if (testCase.reproInput) {
-    const result = evaluateReproGate(testCase.reproInput);
+    let result;
+    try {
+      result = evaluateReproGate(testCase.reproInput);
+    } catch (error) {
+      if (error.code !== "PCF_INVALID_REPRO_EXIT_CODE") throw error;
+      return {
+        status: "invalid-input",
+        score: null,
+        labels: [error.code],
+        ok: false,
+        reason: error.message,
+        error: error.message
+      };
+    }
     return {
       status: result.status,
       score: null,
