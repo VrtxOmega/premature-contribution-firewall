@@ -31,7 +31,7 @@ Current public state:
 
 - Published on npm: [`premature-contribution-firewall`](https://www.npmjs.com/package/premature-contribution-firewall) with the `pcf` CLI, including `lifecycle`, and the `pcf-mcp` stdio server bin.
 - Published on the GitHub Marketplace as a read-only Action with two modes: `workflow_dispatch` queue artifact and `pull_request` PR gate (step-summary verdict, optional `fail-on` blocking, no GitHub writes).
-- MCP server: `pcf-mcp` / `npm run mcp` exposes default-safe agent tools for scout, policy, repro, diff-shape, lane status/resume, evidence drafts, fixed local lane storage, and registry-readiness self-audit. Current release gates install the actual tarball and exercise its CLI/MCP command shims before publish. See [docs/MCP.md](docs/MCP.md).
+- MCP server: `pcf-mcp` / `npm run --silent mcp` exposes default-safe agent tools for scout, policy, repro, diff-shape, lane status/resume, evidence drafts, fixed local lane storage, and registry-readiness self-audit. Current release gates install the actual tarball and exercise its CLI/MCP command shims before publish. See [docs/MCP.md](docs/MCP.md).
 - Contributor preflight: `pcf preflight` checks a draft PR or patch before submission, with a stable exit-code contract for hooks and CI.
 - Public contribution replay: [actual signals, misses, and source-versus-npm differences](docs/examples/public-contributions/README.md), with frozen public inputs and an offline runner.
 - Initial release post: [v0.1.0 read-only maintainer queue pilot](docs/RELEASE_POST_V0_1_0.md).
