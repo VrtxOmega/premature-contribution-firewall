@@ -145,7 +145,7 @@ export function buildMcpServerCard({ packageInfo, tools, resources, prompts }) {
     },
     install: {
       npmPackage: packageInfo.name,
-      localCommand: "npm run mcp",
+      localCommand: "npm run --silent mcp",
       smokeCommand: "npm run mcp:smoke",
       clientConfig: {
         command: "npx",

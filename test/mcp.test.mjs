@@ -97,6 +97,39 @@ test("submission readiness and server card expose registry-safe MCP posture", as
   assert.ok(card.submissionNotes.some((note) => /Glama/.test(note)));
 });
 
+test("server card source launch keeps stdout limited to MCP responses", {
+  skip: !process.env.npm_execpath && "Run with npm test to exercise the advertised npm launch"
+}, async () => {
+  const card = JSON.parse((await readPcfMcpResource("pcf://mcp/server-card")).text);
+  const [command, ...args] = card.install.localCommand.split(/\s+/);
+  assert.equal(command, "npm");
+  const requests = [
+    { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } },
+    { jsonrpc: "2.0", id: 2, method: "ping", params: {} }
+  ];
+  // Windows environment keys are case-insensitive. Remove every spelling so an
+  // inherited silent setting cannot hide lifecycle banners in the regression.
+  const launchEnv = Object.fromEntries(Object.entries(process.env)
+    .filter(([key]) => key.toLowerCase() !== "npm_config_loglevel"));
+  launchEnv.npm_config_loglevel = "notice";
+  const launch = spawnSync(process.execPath, [process.env.npm_execpath, ...args], {
+    cwd: repoRoot,
+    env: launchEnv,
+    input: requests.map((request) => JSON.stringify(request)).join("\n") + "\n",
+    encoding: "utf8",
+    timeout: 15_000,
+    windowsHide: true
+  });
+  assert.ifError(launch.error);
+  assert.equal(launch.status, 0, launch.stderr);
+  const responses = launch.stdout.trim().split(/\r?\n/).map((line) => JSON.parse(line));
+  assert.equal(responses.length, requests.length);
+  assert.ok(responses.every((response) => response.jsonrpc === "2.0" && !response.error));
+  assert.deepEqual(responses.map((response) => response.id), [1, 2]);
+  assert.equal(responses[0].result.serverInfo.name, card.packageName);
+  assert.deepEqual(responses[1].result, {});
+});
+
 test("scout ranks supplied contributor candidates without network collection", async () => {
   const scout = await callPcfMcpTool("pcf_scout", {
     generatedAt: "2026-06-11T20:00:00Z",

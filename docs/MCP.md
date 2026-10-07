@@ -33,8 +33,12 @@ Published v0.2.0 does not contain this validation. See the
 Run it from a source checkout:
 
 ```bash
-npm run mcp
+npm run --silent mcp
 ```
+
+Keep `--silent` when a client launches through npm: it suppresses npm's lifecycle
+banners so stdout contains only MCP messages. The server can also be launched
+directly with `node src/mcp/server.mjs` from the checkout root.
 
 Smoke-check the stdio server before wiring an agent:
 
