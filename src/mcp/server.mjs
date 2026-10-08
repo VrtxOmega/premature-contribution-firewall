@@ -16,6 +16,8 @@ const SERVER_INFO = {
   name: PCF_MCP_SERVER_NAME,
   version: PCF_MCP_PROTOCOL_VERSION
 };
+// The negotiated wire version is separate from PCF's implementation version.
+const SUPPORTED_MCP_PROTOCOL_VERSION = "2025-06-18";
 const MAX_MCP_FRAME_BYTES = 2_000_000;
 const MAX_MCP_HEADER_BYTES = 16_384;
 const EMPTY_FRAME = Symbol("pcf-mcp-empty-frame");
@@ -26,8 +28,12 @@ export async function handleMcpRequest(message) {
     return errorResult(null, -32600, "Invalid Request");
   }
   if (message.method === "initialize") {
+    if (typeof message.params?.protocolVersion !== "string") {
+      return errorResult(message.id, -32602, "initialize.params.protocolVersion must be a string");
+    }
     return result(message.id, {
-      protocolVersion: message.params?.protocolVersion || "2025-06-18",
+      // Unsupported strings negotiate to the version this server implements.
+      protocolVersion: SUPPORTED_MCP_PROTOCOL_VERSION,
       capabilities: {
         tools: {},
         resources: {},

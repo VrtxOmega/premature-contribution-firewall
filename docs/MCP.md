@@ -57,6 +57,26 @@ For an installed npm package, clients that need an executable command can use:
 }
 ```
 
+## Protocol Version Negotiation (Current Source, Unreleased)
+
+The stdio server negotiates the MCP wire version `2025-06-18`. An initialize
+request for that version receives the same version; any other string receives
+`2025-06-18` as the supported fallback. This includes an empty string, which the
+protocol schema does not prohibit. A client that cannot use the returned version
+should disconnect, as described in the
+[MCP negotiation rules](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle#version-negotiation).
+
+The required `params.protocolVersion` must be a string. Missing, null, boolean,
+numeric, object or array values receive JSON-RPC error `-32602`, preserving the
+request ID and returning no initialization result. Correct the request before
+retrying. This validation is limited to the version field; it does not add a
+complete initialization schema validator or enforce session ordering.
+
+The wire version is separate from `serverInfo.version`, which remains PCF's
+implementation version. Run `node --test test/mcp-protocol-negotiation.test.mjs`
+to check negotiation, malformed inputs, request correlation and subsequent ping
+responses with newline and PCF's Content-Length framing.
+
 ## Submission Readiness
 
 Before releasing source changes, run `npm run package:verify` from the checkout.
